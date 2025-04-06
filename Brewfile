@@ -1,4 +1,8 @@
-# GACLI v0.3
+# GACLI v0.4
+
+######### NEEDED #########
+
+brew "coreutils" # !!! NEVER REMOVE THIS ONE, GACLI NEEDS IT TO RUN !!!
 
 ######### CORE #########
 
@@ -38,9 +42,6 @@ brew "pandoc"
 cask "stats"
 
 ######### QoL #########
-
-# ASCII banner generator
-brew "figlet"
 
 # Clipboard manager (macOS)
 cask "maccy"

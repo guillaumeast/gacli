@@ -90,11 +90,27 @@ update_tools
 💡 `update_tools` runs the following `Homebrew` commands before updating the `next_update` date in the `.config` file :
 ```bash
 brew update
-brew bundle --file="<path>/Brewfile" --cleanup
+brew bundle --file="<path>/Brewfile"
 brew upgrade
 brew cleanup
 ```
 
+⚠️ `formulae` and `casks` removed from the `Brewfile` are **NOT** automatically uninstalled  
+(because it would also delete your previously installed `formulae` and `casks`)
+
+To remove them manually, you can run the following commands:
+```bash
+# Uninstall a formula
+brew uninstall <formula_name>
+
+# Uninstall a cask
+brew uninstall --cask <cask_name>
+```
+
+Or, to uninstall all `formulae` and `casks` that are ***NOT*** in the `Brewfile`:
+```bash
+brew bundle --file="<path>/Brewfile" --cleanup
+```
 
 ---
 

@@ -1,5 +1,14 @@
 #!/usr/bin/env zsh
-print "\e[90m✌️  Don't panic...\e[0m"
+print "\033[90m✌️  Don't panic...\033[0m"
+
+# OS
+IS_MACOS=false
+IS_LINUX=false
+
+case "$OSTYPE" in
+  darwin*) IS_MACOS=true ;;
+  linux*)  IS_LINUX=true ;;
+esac
 
 # MODULES
 SCRIPTS_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"
@@ -20,10 +29,14 @@ fi
 # MAIN
 main() {
     # ASCII art
-    print "${ORANGE}"
-    figlet -f "big" "GACLI"
-    print -n "${NONE}"
-
+    print "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
+    print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
+    print "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
+    print "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
+    print "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    print ""
+                                    
     # Install or update
     if [[ -f "$SCRIPTS_PATH/.config" ]]; then
         # Update if needed
@@ -46,6 +59,18 @@ main() {
 ########################
 #   INSTALL
 ########################
+
+# Create config file
+create_config_file() {
+    # Compute next update date (MacOS + Linux fallback)
+    local freq_days=$1
+    local next_update=$(add_days $TODAY $freq_days)
+
+    # Create config file
+    echo "date = $TODAY" > "$SCRIPTS_PATH/.config"
+    echo "update_frequency = $freq_days" >> "$SCRIPTS_PATH/.config"
+    echo "next_update = $next_update" >> "$SCRIPTS_PATH/.config"
+}
 
 # Install GACLI
 install_gacli() {
@@ -76,47 +101,41 @@ install_gacli() {
     # Install tools
     print ""
     printStyled "info" "Installing all tools (this may take a few minutes) ⏳"
-    install_tools
-    printStyled "success" "Ready to go 🚀"
-    print ""
+    install_brew
+    install_coreutils
+    update_tools
 }
 
-# Create config file
-create_config_file() {
-    # Compute next update date (MacOS + Linux fallback)
-    local freq_days=$1
-    local next_update=$(add_days $TODAY $freq_days)
-
-    # Create config file
-    echo "date = $TODAY" > "$SCRIPTS_PATH/.config"
-    echo "update_frequency = $freq_days" >> "$SCRIPTS_PATH/.config"
-    echo "next_update = $next_update" >> "$SCRIPTS_PATH/.config"
-}
-
-# Install Homebrew & formulae & casks
-install_tools() {
-    # Check Homebrew
+# Install Homebrew
+install_brew() {
+    # Homebrew install
     if ! command -v brew >/dev/null 2>&1; then
-        # Install Homebrew
-        printStyled "info" "Installation de ${ORANGE}Homebrew${GREY}..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        printStyled info "Installing ${ORANGE}Homebrew${GREY}..."
 
-        # Add Homebrew to PATH for current session
-        if [[ -d /opt/homebrew/bin ]]; then
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-        elif [[ -d /usr/local/bin ]]; then
-            eval "$(/usr/local/bin/brew shellenv)"
+        if $IS_MACOS; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        elif $IS_LINUX; then
+            NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        else
+            printStyled error "install_brew" "Unsupported OS: $OSTYPE"
+            return 1
         fi
+
+        # Add Homebrew to PATH for current session (cross-platform)
+        local brew_path="$(command -v brew | sed 's|/bin/brew||')"
+        eval "$("$brew_path/bin/brew" shellenv)"
 
         # Refresh command hash table
         hash -r
     fi
+}
 
-    # Install formulae and casks
-    brew bundle --file="$SCRIPTS_PATH/Brewfile" >/dev/null
-
-    # Refresh command hash table
-    hash -r
+# Install coreutils (for cross-platform compatibility)
+install_coreutils() {
+    if ! command -v gdate >/dev/null 2>&1; then
+        printStyled info "Installing ${ORANGE}coreutils${GREY} (for cross-platform compatibility)..."
+        brew install coreutils
+    fi
 }
 
 ########################
@@ -126,13 +145,13 @@ install_tools() {
 # Update homebrew & formulae & casks
 update_tools() {
     print ""
-    printStyled "info" "Updating GACLI..."
+    printStyled "info" "Updating GACLI tools..."
 
     # Update Homebrew
     brew update 1>/dev/null
 
     # Install/uninstall formulae & casks referring to the Brewfile
-    brew bundle --file="$SCRIPTS_PATH/Brewfile" --cleanup
+    brew bundle --file="$SCRIPTS_PATH/Brewfile"
 
     # Update formulae & casks
     brew upgrade 1>/dev/null
@@ -170,10 +189,18 @@ print_tools() {
 
     # formulae
     for formula in $FORMULAE; do
-        if command -v $formula >/dev/null 2>&1; then
-            output_formulae+="${ICON_ON}"
+        if [[ "$formula" = "coreutils" ]]; then
+            if command -v gdate >/dev/null 2>&1; then
+                output_formulae+="${ICON_ON}"
+            else
+                output_formulae+="${ICON_OFF}"
+            fi
         else
-            output_formulae+="${ICON_OFF}"
+            if command -v $formula >/dev/null 2>&1; then
+                output_formulae+="${ICON_ON}"
+            else
+                output_formulae+="${ICON_OFF}"
+            fi
         fi
         output_formulae+=" ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
     done
