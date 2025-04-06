@@ -1,5 +1,3 @@
-Parfait ?
-
 # 🚀 GACLI
 
 ✌️ *Managing and cloning your local dev environment has never been so easy* ⚡
