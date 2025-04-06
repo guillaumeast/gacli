@@ -11,10 +11,10 @@
 ## 🧰 Features
 
 - Automatically installs `Homebrew` if missing
-- Installs all tools defined in the `Brewfile`
+- Installs all `formulae` and `casks` defined in the `Brewfile`
 - Manages automatic updates with custom frequency defined in `.config`
 - Displays each tool’s status (installed or not) at terminal startup
-- Partial support for Linux (built-in fallbacks)
+- Fully compatible with macOS and Linux
 
 
 ---
@@ -43,14 +43,14 @@ cd gacli
 zsh main.zsh
 ```
 
-No need to preinstall `Homebrew`, `coreutils` or anything else: `GACLI` detects and installs them if needed 💡
+💡 No need to preinstall `Homebrew`, `coreutils` or anything else: `GACLI` detects and installs them if needed
 
 
 ---
 
 ## 🧠 How it works
 
-1. `GACLI` asks your desired auto-update frequency (in days), stored in `.config`
+1. `GACLI` asks your desired auto-update frequency, stored in `.config`
 2. `GACLI` installs everything (`Homebrew`, `formulae`, `casks`) defined in the `Brewfile`
 3. On every run, `GACLI` updates if needed and shows **tools status** 📊
 
@@ -79,6 +79,7 @@ cask "iterm2"
 ## 📅 Update
 
 ⏰ If the configured update date is reached, `GACLI` automatically performs an update.
+
 ⚠️ If `coreutils` is not installed, `GACLI` will skip the date check and disable auto-update.
 
 👉 You also can manually update at any time simply by running:
@@ -119,7 +120,7 @@ brew bundle --file="<path>/Brewfile" --cleanup
 
 1. Delete the `gacli` folder
 2. Remove the following lines from your `.zshrc` file:
-```txt
+```bash
 # GACLI
 export PATH="$PATH:/<path>/gacli"
 source "/<path>/gacli/main.zsh"
