@@ -1,3 +1,6 @@
+###################################################
+# FICHIER style.zsh
+###################################################
 #!/usr/bin/env zsh
 
 # Formatting
@@ -41,6 +44,62 @@ if command -v gls >/dev/null 2>&1; then
     *.tar=35:*.tgz=35:*.gz=35:*.zip=35"
 fi
 
+# ASCII art logo
+ascii_logo() {
+    print "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
+    print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
+    print "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
+    print "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
+    print "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    print ""
+}
+
+# Print tools status
+print_tools() {
+    local output_formulae=""
+    local output_casks=""
+
+    # formulae
+    for formula in $FORMULAE; do
+        if [[ "$formula" = "coreutils" ]]; then
+            if command -v gdate >/dev/null 2>&1; then
+                output_formulae+="${ICON_ON}"
+            else
+                output_formulae+="${ICON_OFF}"
+            fi
+        else
+            if command -v $formula >/dev/null 2>&1; then
+                output_formulae+="${ICON_ON}"
+            else
+                output_formulae+="${ICON_OFF}"
+            fi
+        fi
+        output_formulae+=" ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
+    done
+
+    # Casks
+    for cask in $CASKS; do
+        # "my-cask-name" → "My Cask Name.app"
+        local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
+
+        # Check .app folders first for speed, fallback to brew if missing
+        if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
+            output_casks+="${ICON_ON}"
+        elif brew list --cask "$cask" >/dev/null 2>&1; then
+            output_casks+="${ICON_ON}"
+        else
+            output_casks+="${ICON_OFF}"
+        fi
+        output_casks+=" ${CYAN}$cask${NONE} ${GREY}|${NONE} "
+    done
+
+    # Print both lines (removing trailing " | ")
+    print "${output_formulae% ${GREY}|${NONE} }"
+    print "${output_casks% ${GREY}|${NONE} }"
+    print ""
+}
+
 # Formatted output
 printStyled() {
 
@@ -51,42 +110,52 @@ printStyled() {
     local color=$NONE
 
     # Argument check
-    if [ -z "$style" -o -z "$rawMessage" ]; then
-        printStyled error "Veuillez fournir un ${yellow}style${red} et un ${yellow}message${red} pour afficher du texte"
+    if [[ -z "$style" || -z "$rawMessage" ]]; then
+        printStyled error "Veuillez fournir un ${YELLOW}style${RED} et un ${YELLOW}message${RED} pour afficher du texte"
         return 1
     fi
 
     # Formatting
-    if [ "$style" = "error" ]; then
-        color=$RED
-        rawMessage="❌ ${rawMessage:-"❌ Oups, quelque chose s'est mal passe... 😶‍🌫️"}"
-        finalMessage="${RED}$rawMessage${color}"
-        print "${color}${BOLD}$finalMessage${NONE}" >&2
-    else
-        if [ "$style" = "success" ]; then
+    case "$style" in
+        error)
+            color=$RED
+            rawMessage="❌ ${rawMessage:-"❌ Oups, quelque chose s'est mal passe... 😶‍🌫️"}"
+            finalMessage="${RED}$rawMessage${color}"
+            print "${color}${BOLD}$finalMessage${NONE}" >&2
+            return
+            ;;
+        success)
             color=$GREEN
             rawMessage="✦ ${rawMessage:-"✦ Bravo, tout s'est bien passe ! 🎉"}"
             finalMessage="$rawMessage"
-        elif [ "$style" = "warning" ]; then
+            ;;
+        warning)
             color=$YELLOW
             rawMessage="⚠️  ${rawMessage:-"⚠️  Attention, quelque chose s'est mal passe... 👀"}"
-            finalMessage="${bold}$rawMessage"
-        elif [ "$style" = "info" ]; then
+            finalMessage="${BOLD}$rawMessage"
+            ;;
+        info)
             color=$GREY
             rawMessage="✧ ${rawMessage:-"✧ Voilà où on est est 🫡"}"
             finalMessage="${rawMessage}"
-        elif [ "$style" = "highlight" ]; then
+            ;;
+        highlight)
             color=$NONE
             rawMessage="👉 ${rawMessage:-"👉 Jette un oeil à ça..."}"
             finalMessage="$rawMessage"
-        elif [ "$style" = "debug" ]; then
+            ;;
+        debug)
             color=$YELLOW
             rawMessage="🔦 ===> ${BOLD}${rawMessage:-"🔦 ===> Alors, ça marche ? 🤷‍♂️"}${NONE}"
             finalMessage="$rawMessage"
-        fi
+            ;;
+        *)
+            print "$rawMessage"
+            return
+            ;;
+    esac
 
-        # Display
-        print "${color}$finalMessage${NONE}"
-    fi
-
+    # Display
+    print "${color}$finalMessage${NONE}"
 }
+

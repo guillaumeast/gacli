@@ -23,11 +23,13 @@
 
 ```
 gacli/
-├── main.zsh         # Main script
-├── style.zsh        # Styling & colors
-├── tools.zsh        # Utility functions (e.g. date computing)
 ├── Brewfile         # List of tools to install (formulae and casks)
-└── .config          # Generated config file with update frequency
+├── .config          # Generated config file with update frequency
+├── main.zsh         # Main script
+├── tools.zsh        # Utility functions (e.g. date computing)
+├── style.zsh        # Styling & colors
+├── install.zsh      # Installs GACLI (Homebrew + formulae + casks + .config file)
+└── update.zsh       # Updates GACLI (Homebrew + formulae + casks + .config file) 
 ```
 
 
@@ -41,18 +43,16 @@ cd gacli
 zsh main.zsh
 ```
 
-No need to preinstall `Homebrew`: `GACLI` detects and installs it if needed 💡
+No need to preinstall `Homebrew`, `coreutils` or anything else: `GACLI` detects and installs them if needed 💡
 
 
 ---
 
 ## 🧠 How it works
 
-1. Run `main.zsh`
-2. Set your desired auto-update frequency (in days)
-3. `GACLI` installs everything (`Homebrew`, `formulae`, `casks`) defined in the `Brewfile`
-4. It stores config in `.config`
-5. On every run, it updates if needed and shows **tools status** 📊
+1. `GACLI` asks your desired auto-update frequency (in days), stored in `.config`
+2. `GACLI` installs everything (`Homebrew`, `formulae`, `casks`) defined in the `Brewfile`
+3. On every run, `GACLI` updates if needed and shows **tools status** 📊
 
 
 ---
@@ -78,7 +78,8 @@ cask "iterm2"
 
 ## 📅 Update
 
-⏰ If today’s date reaches or exceeds the configured update date, `GACLI` triggers an update automatically.
+⏰ If the configured update date is reached, `GACLI` automatically performs an update.
+⚠️ If `coreutils` is not installed, `GACLI` will skip the date check and disable auto-update.
 
 👉 You also can manually update at any time simply by running:
 ```bash
@@ -107,7 +108,7 @@ brew uninstall <formula_name>
 brew uninstall --cask <cask_name>
 ```
 
-Or, to uninstall all `formulae` and `casks` that are ***NOT*** in the `Brewfile`:
+Or, to uninstall all `formulae` and `casks` that are **NOT** in the `Brewfile`:
 ```bash
 brew bundle --file="<path>/Brewfile" --cleanup
 ```
@@ -120,7 +121,8 @@ brew bundle --file="<path>/Brewfile" --cleanup
 2. Remove the following lines from your `.zshrc` file:
 ```txt
 # GACLI
-source /<path>/gacli/main.zsh
+export PATH="$PATH:/<path>/gacli"
+source "/<path>/gacli/main.zsh"
 ```
 
 💡 Uninstalling `GACLI` will **NOT** uninstall `Homebrew`, `formulae` or `casks`.
