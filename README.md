@@ -63,7 +63,7 @@ Feel free to add `formulae` and `casks` to the `Brewfile`!
 
 ♻️ Make any changes at any time, then just restart your terminal or run:
 ```bash
-update_tools
+gacli update
 ```
 
 ⚠️ `formulae` and `casks` removed from the `Brewfile` are **NOT** automatically uninstalled
@@ -119,7 +119,7 @@ cask "iterm2"
 <summary>👉 Manual updates</summary>
   
   ```bash
-  update_tools
+  gacli update
   ```
 
 </details>
@@ -127,7 +127,7 @@ cask "iterm2"
 <details>
 <summary>💡 See what update does</summary>
   
-  `update_tools` runs the following `Homebrew` commands before updating the `next_update` date in the `.config` file :
+  `gacli update` runs the following `Homebrew` commands before updating the `next_update` date in the `.config` file :
   ```bash
   brew update
   brew bundle --file="<path>/Brewfile"

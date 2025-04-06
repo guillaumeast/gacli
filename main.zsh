@@ -2,7 +2,7 @@
 # FICHIER main.zsh
 ###################################################
 #!/usr/bin/env zsh
-print "\033[90m✌️  Don't panic...\033[0m"
+print "\033[90m🐥 Don't panic...\033[0m"
 
 # OS
 IS_MACOS=false
@@ -57,6 +57,11 @@ main() {
     # Log tools status
     print_tools
 }
+
+# Manual update command
+if [[ "$1" == "update" ]]; then
+    update_tools
+fi
 
 main
 
