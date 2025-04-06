@@ -13,7 +13,7 @@ TODAY="$(date "+%Y-%m-%d")"
 if [[ ! -f "$SCRIPTS_PATH/Brewfile" ]]; then
     printStyled "error" "⛔ Brewfile not found in $SCRIPTS_PATH"
 else
-    FORMULAES=($(grep '^brew "' "$SCRIPTS_PATH/Brewfile" | cut -d'"' -f2))
+    FORMULAE=($(grep '^brew "' "$SCRIPTS_PATH/Brewfile" | cut -d'"' -f2))
     CASKS=($(grep '^cask "' "$SCRIPTS_PATH/Brewfile" | cut -d'"' -f2))
 fi
 
@@ -93,7 +93,7 @@ create_config_file() {
     echo "next_update = $next_update" >> "$SCRIPTS_PATH/.config"
 }
 
-# Install Homebrew & formulaes & casks
+# Install Homebrew & formulae & casks
 install_tools() {
     # Check Homebrew
     if ! command -v brew >/dev/null 2>&1; then
@@ -112,7 +112,7 @@ install_tools() {
         hash -r
     fi
 
-    # Install formulaes and casks
+    # Install formulae and casks
     brew bundle --file="$SCRIPTS_PATH/Brewfile" >/dev/null
 
     # Refresh command hash table
@@ -123,7 +123,7 @@ install_tools() {
 #   UPDATE
 ########################
 
-# Update homebrew & formulaes & casks
+# Update homebrew & formulae & casks
 update_tools() {
     print ""
     printStyled "info" "Updating GACLI..."
@@ -131,7 +131,10 @@ update_tools() {
     # Update Homebrew
     brew update 1>/dev/null
 
-    # Update formulaes & casks
+    # Install/uninstall formulae & casks referring to the Brewfile
+    brew bundle --file="$SCRIPTS_PATH/Brewfile" --cleanup
+
+    # Update formulae & casks
     brew upgrade 1>/dev/null
 
     # Cleanup
@@ -162,17 +165,17 @@ update_config_file() {
 
 # Print tools status
 print_tools() {
-    local output_formulaes=""
+    local output_formulae=""
     local output_casks=""
 
-    # Formulaes
-    for formulae in $FORMULAES; do
-        if command -v $formulae >/dev/null 2>&1; then
-            output_formulaes+="${ICON_ON}"
+    # formulae
+    for formula in $FORMULAE; do
+        if command -v $formula >/dev/null 2>&1; then
+            output_formulae+="${ICON_ON}"
         else
-            output_formulaes+="${ICON_OFF}"
+            output_formulae+="${ICON_OFF}"
         fi
-        output_formulaes+=" ${ORANGE}$formulae${NONE} ${GREY}|${NONE} "
+        output_formulae+=" ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
     done
 
     # Casks
@@ -192,7 +195,7 @@ print_tools() {
     done
 
     # Print both lines (removing trailing " | ")
-    print "${output_formulaes% ${GREY}|${NONE} }"
+    print "${output_formulae% ${GREY}|${NONE} }"
     print "${output_casks% ${GREY}|${NONE} }"
     print ""
 }

@@ -1,20 +1,25 @@
-# GACLI v0.2
+# GACLI v0.3
 
-######### CODE #########
+######### CORE #########
+
+# Directory structure visualizer
+brew "tree"
 
 # IDE
 cask "visual-studio-code"
 
 # Versionning
 brew "git"
+
+# Hosting
 brew "gh"
 
 ######### LANGUAGES #########
 
-# Json
+# Json processor
 brew "jq"
 
-# Python
+# Python version manager
 brew "pyenv"
 
 ######### IA #########
@@ -24,23 +29,20 @@ cask "ollama"
 
 ######### FILES #########
 
-# File converter
+# Universal document converter
 brew "pandoc"
 
 ######### MONITORING #########
 
-# Arborescence Visulaisation
-brew "tree"
-
-# Hardware monitoring
+# Hardware monitor (macOS)
 cask "stats"
 
 ######### QoL #########
 
-# ASCII art (v0.2)
+# ASCII banner generator
 brew "figlet"
 
-# Clipboard manager
+# Clipboard manager (macOS)
 cask "maccy"
 
 
