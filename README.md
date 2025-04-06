@@ -24,7 +24,7 @@
 ```bash
 git clone https://github.com/guillaumeast/gacli.git
 cd gacli
-zsh main.zsh
+zsh gacli.zsh
 ```
 
 💡 No need to preinstall `Homebrew`, `coreutils` or anything else: `GACLI` detects and installs them if needed
@@ -47,7 +47,7 @@ zsh main.zsh
 gacli/
 ├── Brewfile         # List of tools to install (formulae and casks)
 ├── .config          # Generated config file with update frequency
-├── main.zsh         # Main script
+├── gacli.zsh        # Main script (command support, install and update trigger)
 ├── tools.zsh        # Utility functions (e.g. date computing)
 ├── style.zsh        # Styling & colors
 ├── install.zsh      # Installs GACLI (Homebrew + formulae + casks + .config file)
@@ -146,8 +146,8 @@ cask "iterm2"
 2. Remove the following lines from your `.zshrc` file:
 ```bash
 # GACLI
-export PATH="$PATH:/<path>/gacli"
-source "/<path>/gacli/main.zsh"
+source "/<path>/gacli/gacli.zsh"
+alias gacli="zsh /<path>/gacli/gacli.zsh"
 ```
 
 💡 Uninstalling `GACLI` will **NOT** uninstall `Homebrew`, `formulae` or `casks`.

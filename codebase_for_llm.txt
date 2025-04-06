@@ -1,57 +1,5 @@
 ###################################################
-# FICHIER Brewfile
-###################################################
-
-# GACLI v0.4
-
-######### NEEDED #########
-
-brew "coreutils" # !!! NEVER REMOVE THIS ONE, GACLI NEEDS IT TO RUN !!!
-
-######### CORE #########
-
-# Directory structure visualizer
-brew "tree"
-
-# IDE
-cask "visual-studio-code"
-
-# Versionning
-brew "git"
-
-# Hosting
-brew "gh"
-
-######### LANGUAGES #########
-
-# Json processor
-brew "jq"
-
-# Python version manager
-brew "pyenv"
-
-######### IA #########
-
-# Local LLM engine
-cask "ollama"
-
-######### FILES #########
-
-# Universal document converter
-brew "pandoc"
-
-######### MONITORING #########
-
-# Hardware monitor (macOS)
-cask "stats"
-
-######### QoL #########
-
-# Clipboard manager (macOS)
-cask "maccy"
-
-###################################################
-# FICHIER main.zsh
+# FICHIER gacli.zsh
 ###################################################
 #!/usr/bin/env zsh
 print "\033[90m🐥 Don't panic...\033[0m"
@@ -83,7 +31,7 @@ else
     CASKS=($(grep '^cask "' "$GACLI_PATH/Brewfile" | cut -d'"' -f2))
 fi
 
-# MAIN
+# Main function (triggered on each terminal startup)
 main() {
     # Show ASCII art logo
     ascii_logo
@@ -101,21 +49,25 @@ main() {
             printStyled error "[main] coreutils is required for date comparison"
             printStyled warning "Auto-update has been disabled"
         fi
+        print_tools
     else
         # Install GACLI
         install_gacli
-    fi
-
-    # Log tools status
-    print_tools
+    fi    
 }
 
-# Manual update command
-if [[ "$1" == "update" ]]; then
-    update_tools
-fi
-
-main
+# Commands
+case "$1" in
+    update)
+        update_tools
+        ;;
+    --no-main)
+        # Do nothing (used for silent sourcing)
+        ;;
+    *)
+        main
+        ;;
+esac
 
 ###################################################
 # FICHIER tools.zsh
@@ -380,7 +332,7 @@ create_config_file() {
     fi
 }
 
-# Update zshrc (source + path)
+# Update zshrc
 update_zshrc() {
     local zshrc_path="$HOME/.zshrc"
 
@@ -391,15 +343,22 @@ update_zshrc() {
         read -r zshrc_path
     done
 
-    # Add GACLI to PATH (if not already present)
-    if ! grep -q "export PATH=.*$GACLI_PATH" "$zshrc_path"; then
-        echo "\n# GACLI\nexport PATH=\"\$PATH:$GACLI_PATH\"" >> "$zshrc_path"
+    echo "" >> "$zshrc_path"
+    echo "# GACLI" >> "$zshrc_path"
+
+    # Source gacli.zsh (if not already present)
+    if ! grep -q "source \"$GACLI_PATH/gacli.zsh\"" "$zshrc_path"; then
+        echo "source \"$GACLI_PATH/gacli.zsh\"" >> "$zshrc_path"
     fi
 
-    # Source main.zsh (if not already present)
-    if ! grep -q "source \"$GACLI_PATH/main.zsh\"" "$zshrc_path"; then
-        echo "source \"$GACLI_PATH/main.zsh\"" >> "$zshrc_path"
+    # Add alias to run GACLI as command
+    if ! grep -q 'alias gacli=' "$zshrc_path"; then
+        echo "alias gacli=\"zsh $GACLI_PATH/gacli.zsh\"" >> "$zshrc_path"
     fi
+
+    # Confirm
+    printStyled warning "Restart your terminal or run 'source ~/.zshrc' to unlock gacli commands"
+    print ""
 }
 
 ###################################################
@@ -446,4 +405,52 @@ update_config_file() {
         echo "next_update = $next_update" >> "$config_file"
     fi
 }
+
+# GACLI v0.4
+
+######### NEEDED #########
+
+brew "coreutils" # !!! NEVER REMOVE THIS ONE, GACLI NEEDS IT TO RUN !!!
+
+######### CORE #########
+
+# Directory structure visualizer
+brew "tree"
+
+# IDE
+cask "visual-studio-code"
+
+# Versionning
+brew "git"
+
+# Hosting
+brew "gh"
+
+######### LANGUAGES #########
+
+# Json processor
+brew "jq"
+
+# Python version manager
+brew "pyenv"
+
+######### IA #########
+
+# Local LLM engine
+cask "ollama"
+
+######### FILES #########
+
+# Universal document converter
+brew "pandoc"
+
+######### MONITORING #########
+
+# Hardware monitor (macOS)
+cask "stats"
+
+######### QoL #########
+
+# Clipboard manager (macOS)
+cask "maccy"
 

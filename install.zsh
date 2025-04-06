@@ -82,7 +82,7 @@ create_config_file() {
     fi
 }
 
-# Update zshrc (source + path)
+# Update zshrc
 update_zshrc() {
     local zshrc_path="$HOME/.zshrc"
 
@@ -93,14 +93,21 @@ update_zshrc() {
         read -r zshrc_path
     done
 
-    # Add GACLI to PATH (if not already present)
-    if ! grep -q "export PATH=.*$GACLI_PATH" "$zshrc_path"; then
-        echo "\n# GACLI\nexport PATH=\"\$PATH:$GACLI_PATH\"" >> "$zshrc_path"
+    echo "" >> "$zshrc_path"
+    echo "# GACLI" >> "$zshrc_path"
+
+    # Source gacli.zsh (if not already present)
+    if ! grep -q "source \"$GACLI_PATH/gacli.zsh\"" "$zshrc_path"; then
+        echo "source \"$GACLI_PATH/gacli.zsh\"" >> "$zshrc_path"
     fi
 
-    # Source main.zsh (if not already present)
-    if ! grep -q "source \"$GACLI_PATH/main.zsh\"" "$zshrc_path"; then
-        echo "source \"$GACLI_PATH/main.zsh\"" >> "$zshrc_path"
+    # Add alias to run GACLI as command
+    if ! grep -q 'alias gacli=' "$zshrc_path"; then
+        echo "alias gacli=\"zsh $GACLI_PATH/gacli.zsh\"" >> "$zshrc_path"
     fi
+
+    # Confirm
+    printStyled warning "Restart your terminal or run 'source ~/.zshrc' to unlock gacli commands"
+    print ""
 }
 

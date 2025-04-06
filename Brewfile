@@ -46,6 +46,3 @@ cask "stats"
 # Clipboard manager (macOS)
 cask "maccy"
 
-
-
-

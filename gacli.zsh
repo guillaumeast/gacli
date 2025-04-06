@@ -1,5 +1,5 @@
 ###################################################
-# FICHIER main.zsh
+# FICHIER gacli.zsh
 ###################################################
 #!/usr/bin/env zsh
 print "\033[90m🐥 Don't panic...\033[0m"
@@ -31,7 +31,7 @@ else
     CASKS=($(grep '^cask "' "$GACLI_PATH/Brewfile" | cut -d'"' -f2))
 fi
 
-# MAIN
+# Main function (triggered on each terminal startup)
 main() {
     # Show ASCII art logo
     ascii_logo
@@ -49,19 +49,23 @@ main() {
             printStyled error "[main] coreutils is required for date comparison"
             printStyled warning "Auto-update has been disabled"
         fi
+        print_tools
     else
         # Install GACLI
         install_gacli
-    fi
-
-    # Log tools status
-    print_tools
+    fi    
 }
 
-# Manual update command
-if [[ "$1" == "update" ]]; then
-    update_tools
-fi
-
-main
+# Commands
+case "$1" in
+    update)
+        update_tools
+        ;;
+    --no-main)
+        # Do nothing (used for silent sourcing)
+        ;;
+    *)
+        main
+        ;;
+esac
 
