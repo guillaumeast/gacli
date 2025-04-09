@@ -2,7 +2,7 @@
 
 ✌️ *Managing and bootstrapping your dev environment has never been so easy* ⚡
 
-✨ `GACLI` is a **modular CLI** designed to **automate setup, updates and tooling**.
+✨ `GACLI` is a **modular CLI** designed to **automate setup, updates and tooling** for both `macOS` and `Linux`.
 
 ---
 
@@ -58,6 +58,28 @@ gacli/
 
 ---
 
+## 📦 Brewfile
+
+Edit `Brewfile` to add or remove tools.
+
+```bash
+# Add a formula
+brew "formula_name"
+
+# Add a cask
+cask "cask_name"
+```
+
+⚠️ **DO NOT** remove `coreutils` from the `Brewfile` (**required dependencie** for `GACLI`'s cross-platform compatibility)
+
+
+Apply changes by restarting your terminal or running:
+```bash
+gacli update
+```
+
+---
+
 ## 🧩 Modules
 
 `GACLI` is fully modular: each optional command is defined in a separate module.
@@ -86,28 +108,6 @@ hello_world() {
 ```
 
 </details>
-
----
-
-## 📦 Brewfile
-
-Edit `Brewfile` to add or remove tools.
-
-```bash
-# Add a formula
-brew "formula_name"
-
-# Add a cask
-cask "cask_name"
-```
-
-⚠️ **DO NOT** remove `coreutils` from the `Brewfile` (**required dependencie** for `GACLI`'s cross-platform compatibility)
-
-
-Apply changes by restarting your terminal or running:
-```bash
-gacli update
-```
 
 ---
 
