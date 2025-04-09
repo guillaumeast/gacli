@@ -2,7 +2,7 @@
 
 ✌️ *Managing and bootstrapping your dev environment has never been so easy* ⚡
 
-✨ `GACLI` is a modular CLI launcher designed to **automate setup, updates and tooling** on both `macOS` and `Linux`.
+✨ `GACLI` is a **modular CLI** designed to **automate setup, updates and tooling**.
 
 ---
 
@@ -60,7 +60,7 @@ gacli/
 
 ## 🧩 Modules
 
-GACLI is fully modular: each optional command is defined in a separate module.
+`GACLI` is fully modular: each optional command is defined in a separate module.
 
 You can add new modules by:
 1. Creating a `.zsh` file in `modules/tools/<your_module>/`
@@ -95,26 +95,27 @@ Edit `Brewfile` to add or remove tools.
 
 ```bash
 # Add a formula
-brew "jq"
+brew "formula_name"
 
 # Add a cask
-cask "visual-studio-code"
+cask "cask_name"
 ```
+
+⚠️ **DO NOT** remove `coreutils` from the `Brewfile` (**required dependencie** for `GACLI`'s cross-platform compatibility)
+
 
 Apply changes by restarting your terminal or running:
 ```bash
 gacli update
 ```
 
-⚠️ **DO NOT** remove `coreutils` from the `Brewfile` as it is a **required dependencie** for `GACLI`'s cross-platform compatibility !
-
 ---
 
 ## 🔄 Update
 
-GACLI performs 4 steps while updating:
-1. `brew update` → Updates Homebrew itself (core system and metadata)
-2. `brew bundle --file=Brewfile` → Installs all formulae and casks listed in the Brewfile
+`GACLI` performs 4 steps while updating:
+1. `brew update` → Updates `Homebrew` itself (core system and metadata)
+2. `brew bundle --file=Brewfile` → Installs all `formulae` and `casks` listed in the Brewfile
 3. `brew upgrade` → Upgrades all installed packages (if newer versions are available)
 4. `brew cleanup` → Removes old versions and cached files to free up disk space
 
@@ -138,7 +139,7 @@ gacli uninstall
 
 This will:
 - Remove the `config` file
-- Clean `~/.zshrc` entries created by GACLI
+- Clean `~/.zshrc` entries created by `GACLI`
 
 It will **NOT**:
 - Uninstall `Homebrew`
