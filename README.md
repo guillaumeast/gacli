@@ -1,21 +1,20 @@
 # 🚀 GACLI
 
-✌️ *Managing and cloning your local dev environment has never been so easy* ⚡
+✌️ *Managing and bootstrapping your dev environment has never been so easy* ⚡
 
-✨ `GACLI` **automates** everything: `Homebrew`, `formulae`, `casks` and `status display`.
-
-⏰ Choose an **auto-update** frequency, and `GACLI` takes care of the rest.
+✨ `GACLI` is a modular CLI launcher designed to **automate setup, updates and tooling** on both `macOS` and `Linux`.
 
 ---
 
 ## 🧰 Features
 
-- Automatically installs `Homebrew` if missing
-- Installs all `formulae` and `casks` defined in the `Brewfile`
-- Manages automatic updates with custom frequency defined in `.config`
-- Displays each tool’s status (installed or not) at terminal startup
-- Fully compatible with macOS and Linux
-
+- Installs `Homebrew` if not available
+- Installs all `formulae` and `casks` listed in the `Brewfile`
+- Initializes a configuration with an **auto-update** frequency
+- Updates everything with a **single command**
+- Modular structure with optional **command-based extensions**
+- Shows **tools status** on launch
+- 100% compatible with `macOS` and `Linux`
 
 ---
 
@@ -27,131 +26,126 @@ cd gacli
 zsh gacli.zsh
 ```
 
-💡 No need to preinstall `Homebrew`, `coreutils` or anything else: `GACLI` detects and installs them if needed
-
+💡 `Homebrew` and `coreutils` are auto-installed if missing.
 
 ---
 
 ## 🧠 How it works
 
-1. `GACLI` asks your desired auto-update frequency, stored in `.config`
-2. `GACLI` installs everything (`Homebrew`, `formulae`, `casks`) defined in the `Brewfile`
-3. On every run, `GACLI` updates if needed and shows **tools status** 📊
-
+1. Asks for update frequency and stores it in the `config` file
+2. Installs `Homebrew` if missing
+3. Installs `formulae` and `casks` from the `Brewfile`
+4. Loads core `modules`
+5. Loads user `modules` from `gacli/modules/tools/`
+6. Performs `auto-update` if needed
+7. Shows a `status summary` at terminal startup
 
 ---
 
-## 🗂️ Structure
+## 🗂️ Project Structure
 
-```
+```bash
 gacli/
-├── Brewfile         # List of tools to install (formulae and casks)
-├── .config          # Generated config file with update frequency
-├── gacli.zsh        # Main script (command support, install and update trigger)
-├── tools.zsh        # Utility functions (e.g. date computing)
-├── style.zsh        # Styling & colors
-├── install.zsh      # Installs GACLI (Homebrew + formulae + casks + .config file)
-└── update.zsh       # Updates GACLI (Homebrew + formulae + casks + .config file) 
+├── Brewfile             # List of formulae and casks to install
+├── config               # Auto-generated config with update frequency
+├── gacli.zsh            # Main launcher script
+├── modules              # All logic and features organized by scope
+│   ├── module_manager.zsh      # Loads and dispatches modules
+│   ├── .core                   # Required modules (style, brew, date)
+│   ├── .install                # Lifecycle modules (install, update, uninstall)
+│   └── tools                   # Optional user modules (1 folder = 1 module)
 ```
-
 
 ---
 
-## 📜 Brewfile
+## 🧩 Modules
 
-Feel free to add `formulae` and `casks` to the `Brewfile`!
+GACLI is fully modular: each optional command is defined in a separate module.
 
-♻️ Make any changes at any time, then just restart your terminal or run:
+You can add new modules by:
+1. Creating a `.zsh` file in `modules/tools/<your_module>/`
+2. Exposing commands via a `get_commands` function as:
+```zsh
+get_commands() {
+  echo "command_name=function_name"
+}
+```
+
+<details>
+<summary>Example</summary>
+
+Example implementation of `gacli hello` command:
+```zsh
+get_commands() {
+  echo "hello=hello_world"
+}
+
+hello_world() {
+  printStyled info "Hello, world!"
+}
+```
+
+</details>
+
+---
+
+## 📦 Brewfile
+
+Edit `Brewfile` to add or remove tools.
+
+```bash
+# Add a formula
+brew "jq"
+
+# Add a cask
+cask "visual-studio-code"
+```
+
+Apply changes by restarting your terminal or running:
 ```bash
 gacli update
 ```
 
-⚠️ `formulae` and `casks` removed from the `Brewfile` are **NOT** automatically uninstalled
-<details>
-<summary>🗑️ Uninstall formulae and casks</summary>
-
-This is because it would also delete your previously installed `formulae` and `casks`
-
-To remove them manually, you can run the following commands:
-```bash
-# Uninstall a formula
-brew uninstall <formula_name>
-
-# Uninstall a cask
-brew uninstall --cask <cask_name>
-```
-
-Or, to uninstall all `formulae` and `casks` that are **NOT** in the `Brewfile`:
-```bash
-brew bundle --file="<path>/Brewfile" --cleanup
-```
-
-</details>  
-
-<details>
-<summary>📄 Minimal recommended Brewfile</summary>
-
-```ruby
-brew "jq"
-brew "tree"
-cask "iterm2"
-```
-
-</details>
-
+⚠️ **DO NOT** remove `coreutils` from the `Brewfile` as it is a **required dependencie** for `GACLI`'s cross-platform compatibility !
 
 ---
 
-## 📅 Update
+## 🔄 Update
 
-📦 `Homebrew`, `formulae` and `casks` are updated at once so you don't have to deal with multiple command lines.
+GACLI performs 4 steps while updating:
+1. `brew update` → Updates Homebrew itself (core system and metadata)
+2. `brew bundle --file=Brewfile` → Installs all formulae and casks listed in the Brewfile
+3. `brew upgrade` → Upgrades all installed packages (if newer versions are available)
+4. `brew cleanup` → Removes old versions and cached files to free up disk space
 
-<details>
-<summary>⏰ Auto-updates</summary>
-  
-  If the configured update date is reached, `GACLI` automatically performs an update.
-  
-  ⚠️ If `coreutils` is not installed, `GACLI` will skip the date check and disable auto-update.
-  
-</details>
+If auto-update is enabled and due, this is done automatically.
 
-<details>
-<summary>👉 Manual updates</summary>
-  
-  ```bash
-  gacli update
-  ```
+You can also run it manually:
 
-</details>
-
-<details>
-<summary>💡 See what update does</summary>
-  
-  `gacli update` runs the following `Homebrew` commands before updating the `next_update` date in the `.config` file :
-  ```bash
-  brew update
-  brew bundle --file="<path>/Brewfile"
-  brew upgrade
-  brew cleanup
-  ```
-
-</details>
-
+```bash
+gacli update
+```
 
 ---
 
 ## 🧹 Uninstall
 
-1. Delete the `gacli` folder
-2. Remove the following lines from your `.zshrc` file:
+Run:
+
 ```bash
-# GACLI
-source "/<path>/gacli/gacli.zsh"
-alias gacli="zsh /<path>/gacli/gacli.zsh"
+gacli uninstall
 ```
 
-💡 Uninstalling `GACLI` will **NOT** uninstall `Homebrew`, `formulae` or `casks`.
+This will:
+- Remove the `config` file
+- Clean `~/.zshrc` entries created by GACLI
 
+It will **NOT**:
+- Uninstall `Homebrew`
+- Uninstall any `formula` or `cask`
+- Delete `gacli` folder
+
+Feel free to remove those manually if you want to fully clean your environment.
 
 ---
 
