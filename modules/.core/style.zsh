@@ -39,6 +39,10 @@ NONE='\033[0m'
 ICON_ON="${GREEN}⊙${NONE}"
 ICON_OFF="${RED}○${NONE}"
 
+# ────────────────────────────────────────────────────────────────
+# Functions - PUBLIC
+# ────────────────────────────────────────────────────────────────
+
 # ASCII art logo
 display_ascii_logo() {
     print "${ORANGE}  _____          _____ _      _____ ${NONE}"

@@ -18,15 +18,61 @@
 
 ---
 
-## ⚙️ Installation
+## 🚀 Installation
 
-```bash
-git clone https://github.com/guillaumeast/gacli.git
-cd gacli
-zsh gacli.zsh
+GACLI requires your default shell to be `zsh`:
+  - macOS: preinstalled (if default shell is different, run `chsh -s /bin/zsh`)
+  - Linux: `sudo apt install zsh`
+
+### Quick command
+
+```sh
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/install.sh)"
 ```
 
-💡 `Homebrew` and `coreutils` are auto-installed if missing.
+This command:
+
+1. Checks and installs required dependencies automatically
+2. Clones the repository into `~/.gacli`
+3. Creates a symbolic link in `~/.local/bin`
+4. Adds `~/.local/bin` to your `PATH` if necessary
+
+<details>
+<summary>📦 Dependencies (auto-installed)</summary>
+
+When possible, dependencies are automatically installed using `curl` `Homebrew` or your system’s package manager (`apt`, `dnf`, `pacman`, etc.).
+
+- `curl`
+  - macOS: preinstalled
+  - Linux: auto-installed via your `system's package manager`
+
+- `git`
+  - macOS: auto-installed via `xcode-select --install`
+  - Linux: auto-installed via your `system's package manager`
+
+- `Homebrew`
+  - Auto-installed via `curl`
+
+- `coreutils`  
+  - Auto-installed via `Homebrew`
+
+</details>
+
+### Available options
+
+| Option       | Description                                                                    |
+|--------------|--------------------------------------------------------------------------------|
+| `--custom`   | Choose a custom installation folder (default: `~/.gacli`)                      |
+| `--force`    | Overwrite an existing installation (useful for manual updates)                 |
+
+**Combined example**:
+
+```sh
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/install.sh)" -- --custom ~/Repos/gacli --force
+```
+
+> ⚠️ Options must be passed **after `--`**, otherwise they will be interpreted by `curl` instead of the script.
+
 
 ---
 
@@ -35,10 +81,11 @@ zsh gacli.zsh
 1. Asks for update frequency and stores it in the `config` file
 2. Installs `Homebrew` if missing
 3. Installs `formulae` and `casks` from the `Brewfile`
-4. Loads core `modules`
-5. Loads user `modules` from `gacli/modules/tools/`
-6. Performs `auto-update` if needed
-7. Shows a `status summary` at terminal startup
+4. Loads core `modules` from `gacli/modules/.core/`
+5. Loads launcher `modules` from `gacli/modules/.launcher/`
+6. Loads user `modules` from `gacli/modules/user_modules/`
+7. Performs `auto-update` if needed
+8. Shows a `status summary` at terminal startup
 
 ---
 
@@ -53,7 +100,7 @@ gacli/
 │   ├── module_manager.zsh      # Loads and dispatches modules
 │   ├── .core                   # Required modules (style, brew, date)
 │   ├── .install                # Lifecycle modules (install, update, uninstall)
-│   └── tools                   # Optional user modules (1 folder = 1 module)
+│   └── user_modules                   # Optional user modules (1 folder = 1 module)
 ```
 
 ---
@@ -85,7 +132,7 @@ gacli update
 `GACLI` is fully modular: each optional command is defined in a separate module.
 
 You can add new modules by:
-1. Creating a `.zsh` file in `modules/tools/<your_module>/`
+1. Creating a `.zsh` file in `modules/user_modules/<your_module>/`
 2. Exposing commands via a `get_commands` function as:
 ```zsh
 get_commands() {

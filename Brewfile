@@ -2,11 +2,22 @@
 # FICHIER Brewfile
 ###############################
 
-######### NEEDED #########
+###############################
+# GACLI required dependencies (NEVER REMOVE THOSE!)
+###############################
 
-brew "coreutils" # !!! NEVER REMOVE THIS ONE, GACLI NEEDS IT TO RUN !!!
+# Cross-platform tools
+brew "coreutils"
 
-######### CORE #########
+# Versionning
+brew "git"
+
+# Json processor
+brew "jq"
+
+###############################
+# YOUR dependencies (you can edit those above here)
+###############################
 
 # Directory structure visualizer
 brew "tree"
@@ -14,16 +25,10 @@ brew "tree"
 # IDE
 cask "visual-studio-code"
 
-# Versionning
-brew "git"
-
 # Hosting
 brew "gh"
 
 ######### LANGUAGES #########
-
-# Json processor
-brew "jq"
 
 # Python version manager
 brew "pyenv"

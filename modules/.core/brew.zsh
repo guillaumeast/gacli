@@ -10,10 +10,14 @@ BREWFILE=""
 FORMULAE=()
 CASKS=()
 
+# ────────────────────────────────────────────────────────────────
+# MAIN
+# ────────────────────────────────────────────────────────────────
+
 # Install Homebrew if needed and check if Brewfile exists
 brew_init() {
     # Resolve Brewfile path
-    brew_resolve || return 1
+    _brew_resolve || return 1
 
     # Install Homebrew if needed
     if ! command -v brew >/dev/null 2>&1; then
@@ -25,8 +29,12 @@ brew_init() {
     load_brewfile || return 1
 }
 
+# ────────────────────────────────────────────────────────────────
+# Functions - PRIVATE
+# ────────────────────────────────────────────────────────────────
+
 # Resolve paths
-brew_resolve() {
+_brew_resolve() {
     # Resolve Brewfile path
     BREWFILE="${GACLI_PATH}/${BREWFILE_REL_PATH}"
 
@@ -36,6 +44,10 @@ brew_resolve() {
         return 1
     fi
 }
+
+# ────────────────────────────────────────────────────────────────
+# Functions - PUBLIC (Logic)
+# ────────────────────────────────────────────────────────────────
 
 # Install Homebrew
 brew_install() {
@@ -118,6 +130,10 @@ load_brewfile() {
     fi
 }
 
+# ────────────────────────────────────────────────────────────────
+# Functions - PUBLIC (I/O)
+# ────────────────────────────────────────────────────────────────
+
 # Print formulae status
 print_formulae() {
     local output_formulae=""
@@ -167,6 +183,10 @@ print_casks() {
     # Display (removing trailing " | ")
     print "${output_casks% ${GREY}|${NONE} }"
 }
+
+# ────────────────────────────────────────────────────────────────
+# RUN
+# ────────────────────────────────────────────────────────────────
 
 # Init
 brew_init || return 1
