@@ -1,5 +1,8 @@
 # 🚀 GACLI
 
+### 🚧 **WORK IN PROGRESS: `modules.json` support is not implemented yet** 🚧  
+👉 Please install your modules manually in `gacli/modules/user_modules/`
+
 ✌️ *Managing and bootstrapping your dev environment has never been so easy* ⚡
 
 ✨ `GACLI` is a **modular CLI** designed to **automate setup, updates and tooling** for both `macOS` and `Linux`.
