@@ -38,13 +38,13 @@ gacli_uninstall() {
     fi
     printStyled success "Updated"
 
-    # Remove symlink
+    # Remove GACLI wrapper
     print ""
-    printStyled info "Removing symlink... ⏳"
-    local sym_path="${HOME}/.local/bin/gacli"
-    if [[ -L "${sym_path}" ]]; then
-        rm "${sym_path}" || {
-            printStyled warning "[gacli_uninstall] Failed to delete symlink ${sym_path}"
+    printStyled info "Removing wrapper... ⏳"
+    local wrapper_path="${HOME}/.local/bin/gacli"
+    if [[ -f "${wrapper_path}" ]]; then
+        rm -f "${wrapper_path}" || {
+            printStyled warning "[gacli_uninstall] Failed to delete wrapper ${wrapper_path}"
         }
     fi
     printStyled success "Removed"
