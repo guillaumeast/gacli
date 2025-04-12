@@ -18,15 +18,6 @@ AUTO_UPDATE_KEY="update_auto"
 AUTO_UPDATE=""
 
 # ────────────────────────────────────────────────────────────────
-# COMMANDS
-# ────────────────────────────────────────────────────────────────
-
-get_commands() {
-    echo 'update=gacli_update'
-    echo 'config=update_config'
-}
-
-# ────────────────────────────────────────────────────────────────
 # MAIN
 # ────────────────────────────────────────────────────────────────
 
@@ -114,12 +105,12 @@ update_auto() {
 
     # If update is due
     if (( today >= NEXT_UPDATE )); then
-        gacli_update || return 1
+        update_manual || return 1
     fi
 }
 
 # Update homebrew & formulae & casks
-gacli_update() {
+update_manual() {
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
     brew_update || return 1
 
@@ -127,7 +118,7 @@ gacli_update() {
     LAST_UPDATE="$(get_current_ts)"
     if [[ $AUTO_UPDATE = true ]]; then
         if ! NEXT_UPDATE="$(date_add "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
-            printStyled warning "[gacli_update] Failed to compute next update date"
+            printStyled warning "[update_manual] Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""

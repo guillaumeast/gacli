@@ -54,7 +54,7 @@ style_ascii_logo() {
     print ""
 }
 
-# Formatted output
+# Display formatted message
 printStyled() {
     # Variables
     local style=$1

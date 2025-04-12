@@ -6,7 +6,7 @@
 
 # Resolve path
 MODULES_PATH=""
-if ! MODULES_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"; then
+if ! MODULES_PATH="$(cd "$(dirname "${0}")" && pwd)"; then
     echo "[resolve_path] Error: unable to resolve MODULES_PATH" >&2
     return 1
 fi

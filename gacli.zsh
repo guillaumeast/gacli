@@ -70,7 +70,7 @@ _check_os() {
 # Resolve and store the absolute path to the gacli directory
 _gacli_resolve() {
     # Root path
-    if ! GACLI_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"; then
+    if ! GACLI_PATH="$(cd "$(dirname "${0}")" && pwd)"; then
         echo "[_gacli_resolve] Error: Unable to resolve root path" >&2
         return 1
     fi
@@ -97,14 +97,17 @@ _gacli_resolve() {
 _gacli_dispatch() {
     case "$1" in
         "")
-            style_ascii_logo              # Implemented in gacli/modules/.core/io.zsh
+            style_ascii_logo                # Implemented in gacli/modules/.core/io.zsh
             print_tools
             ;;
         "help")
             help
             ;;
+        "config")
+            update_config                   # Implemented in gacli/modules/.core/.launcher/update.zsh
+            ;;
         "update")
-            gacli_update                    # Implemented in gacli/modules/.core/.launcher/update.zsh
+            update_manual                   # Implemented in gacli/modules/.core/.launcher/update.zsh
             ;;
         "uninstall")
             gacli_uninstall                 # Implemented in gacli/modules/.core/.launcher/uninstall.zsh

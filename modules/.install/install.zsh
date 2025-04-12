@@ -74,7 +74,7 @@ main() {
 
     # Configure GACLI
     echo ""
-    printStyled info "Installing GACLI... ${EMOJI_WAIT}"
+    printStyled info "Installing GACLI into ${GACLI_DIR}... {EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_symlink || exit 11       # Create a symlink to enable `gacli <command>` commands
@@ -402,8 +402,7 @@ gacli_download() {
     fi
 
     # Clone repo
-    printStyled info "Installing GACLI into ${GACLI_DIR}"
-    if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}"; then
+    if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}" 2>&1; then
         printStyled error "[GACLI] Error: Failed to clone repository"
         return 1
     fi
@@ -453,6 +452,7 @@ update_zshrc() {
     # Append GACLI block
     {
         echo ""
+        echo ""
         echo "# GACLI"
         echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
         echo "source \"\$HOME/.gacli/gacli.zsh\""
@@ -467,7 +467,7 @@ update_zshrc() {
 # Launch GACLI after install (only if shell is zsh)
 auto_launch() {
     echo ""
-    printStyled success "GACLI installed !"
+    printStyled success "GACLI installed! 🚀"
     echo ""
 
     # Launch only if shell is zsh
@@ -496,6 +496,7 @@ display_ascii_logo() {
     print ""
 }
 
+# Display formatted message
 printStyled() {
     # Variables
     local style=$1
@@ -512,24 +513,24 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            print "${RED}${BOLD}${ICON_ERROR} ${raw_message}${NONE}" >&2
+            print "${RED}${BOLD}${EMOJI_ERROR} ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${ICON_WARN}  ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${raw_message}${NONE}" >&2
             return
             ;;
         success)
             color=$GREEN
-            final_message="${ICON_SUCCESS} ${raw_message}"
+            final_message="${EMOJI_SUCCESS} ${raw_message}"
             ;;
         info)
             color=$GREY
-            final_message="${ICON_INFO} ${raw_message}"
+            final_message="${EMOJI_INFO} ${raw_message}"
             ;;
         highlight)
             color=$NONE
-            final_message="${ICON_HIGHLIGHT} ${raw_message}"
+            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
             ;;
         *)
             color=$NONE
