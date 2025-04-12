@@ -130,19 +130,6 @@ check_unicode() {
 parse_args() {
     for arg in "$@"; do
         case "$arg" in
-            --custom)
-                # Ask for custom path
-                while true; do
-                    echo "Please provide the full path where you want to install GACLI:"
-                    printf "${EMOJI_HIGHLIGHT} "
-                    read custom_path
-                    if [ -n "${custom_path}" ]; then
-                        GACLI_DIR="${custom_path}"
-                        break
-                    fi
-                    printStyled warning "[GACLI] Warning: Installation path cannot be empty"
-                done
-                ;;
             --force)
                 # Enable force mode
                 FORCE_MODE="true"

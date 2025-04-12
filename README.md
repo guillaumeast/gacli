@@ -62,13 +62,12 @@ When possible, dependencies are automatically installed using `curl` `Homebrew` 
 
 | Option       | Description                                                                    |
 |--------------|--------------------------------------------------------------------------------|
-| `--custom`   | Choose a custom installation folder (default: `~/.gacli`)                      |
 | `--force`    | Overwrite an existing installation (useful for manual updates)                 |
 
 **Combined example**:
 
 ```bash
-/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/modules/.install/install.zsh)" -- --custom ~/Repos/gacli --force
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/modules/.install/install.zsh)" -- --force
 ```
 
 > ⚠️ Options must be passed **after `--`**, otherwise they will be interpreted by `curl` instead of the script.

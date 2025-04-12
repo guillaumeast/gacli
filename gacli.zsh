@@ -70,15 +70,13 @@ _check_os() {
 
 # Resolve and store the absolute path to the gacli directory
 _gacli_resolve() {
-    # Root path (Follow symlink if necessary)
-    local entry="${0:A}"
-    if [[ -L "$entry" ]]; then
-        entry="$(readlink "$entry")"
-    fi
-    if ! GACLI_PATH="$(cd "$(dirname "$entry")" && pwd)"; then
-        echo "[_gacli_resolve] Error: Failed to resolve path" >&2
-        return 1
-    fi
+    # CF STACKOVERFLOW
+    script_path="${(%):-%x}"
+    script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+    echo "[_gacli_resolve] Debug: script_path = $script_path"
+    echo "[_gacli_resolve] Debug: script_dir = $script_dir"
+    echo "[_gacli_resolve] Debug: GACLI_PATH = $GACLI_PATH"
+    
     # # Root path
     # if [[ -n "${BASH_SOURCE[0]}" ]]; then
     #     GACLI_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
