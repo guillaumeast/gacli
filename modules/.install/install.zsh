@@ -74,7 +74,7 @@ main() {
 
     # Configure GACLI
     echo ""
-    printStyled info "Installing GACLI into ${GACLI_DIR}... {EMOJI_WAIT}"
+    printStyled info "Installing GACLI into ${GACLI_DIR}... ${EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_symlink || exit 11       # Create a symlink to enable `gacli <command>` commands
@@ -197,7 +197,7 @@ resolve_paths() {
     done
 
     # Display success
-    printStyled success "Initialization completed"
+    printStyled success "Paths resolved"
 }
 
 # Check if zsh is installed
@@ -402,7 +402,7 @@ gacli_download() {
     fi
 
     # Clone repo
-    if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}" 2>&1; then
+    if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}" > /dev/null 2>&1; then
         printStyled error "[GACLI] Error: Failed to clone repository"
         return 1
     fi
@@ -430,8 +430,15 @@ create_symlink() {
         return 1
     fi
 
-    # Create symlink to run gacli globally
-    if ! ln -sf "${GACLI_ENTRY_POINT}" "${GACLI_SYMLINK}"; then
+    # Remove previous symlink or file if exists
+    if [[ -e "${GACLI_SYMLINK}" || -L "${GACLI_SYMLINK}" ]]; then
+        rm -f "${GACLI_SYMLINK}" || {
+            printStyled warning "[GACLI] Failed to delete existing symlink or file at ${GACLI_SYMLINK}"
+        }
+    fi
+
+    # Create new symlink
+    if ! ln -s "${GACLI_ENTRY_POINT}" "${GACLI_SYMLINK}"; then
         printStyled error "[GACLI] Error: Failed to create symlink at ${GACLI_SYMLINK}"
         return 1
     fi

@@ -5,16 +5,12 @@
 #!/usr/bin/env zsh
 
 # Resolve path
-MODULES_PATH=""
-if ! MODULES_PATH="$(cd "$(dirname "${0}")" && pwd)"; then
-    echo "[resolve_path] Error: unable to resolve MODULES_PATH" >&2
-    return 1
-fi
+MODULES_DIR="${GACLI_PATH}/${MODULE_DIR_NAME}"
 
 # Modules and commands
-CORE_DIR="${MODULES_PATH}/.core"
-LAUNCHER_DIR="${MODULES_PATH}/.launcher"
-USER_DIR="${MODULES_PATH}/user_modules"
+CORE_DIR="${MODULES_DIR}/.core"
+LAUNCHER_DIR="${MODULES_DIR}/.launcher"
+USER_DIR="${MODULES_DIR}/user_modules"
 COMMANDS=()
 
 # ────────────────────────────────────────────────────────────────
