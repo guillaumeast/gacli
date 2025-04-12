@@ -399,7 +399,7 @@ make_executable() {
 }
 
 # Create executable wrapper script for GACLI (instead of symlink for cross-shell compatibility)
-create_symlink() {
+create_wrapper() {
     # Create bin folder if needed
     if ! mkdir -p "${GACLI_SYM_DIR}"; then
         printStyled error "[GACLI] Error: Failed to create ${GACLI_SYM_DIR}"
