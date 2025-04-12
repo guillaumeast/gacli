@@ -58,12 +58,12 @@ style_ascii_logo() {
 printStyled() {
     # Variables
     local style=$1
-    local rawMessage=$2
-    local finalMessage=""
+    local raw_message=$2
+    local final_message=""
     local color=$NONE
 
     # Argument check
-    if [[ -z "$style" || -z "$rawMessage" ]]; then
+    if [[ -z "$style" || -z "$raw_message" ]]; then
         printStyled error "Veuillez fournir un ${YELLOW}style${RED} et un ${YELLOW}message${RED} pour afficher du texte"
         return 1
     fi
@@ -71,45 +71,37 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            color=$RED
-            rawMessage="❌ ${rawMessage:-"❌ Oups, quelque chose s'est mal passe... 😶‍🌫️"}"
-            finalMessage="${RED}$rawMessage${color}"
-            print "${color}${BOLD}$finalMessage${NONE}" >&2
+            print "${RED}${BOLD}❌ ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            color=$YELLOW
-            rawMessage="⚠️  ${rawMessage:-"⚠️  Attention, quelque chose s'est mal passe... 👀"}"
-            finalMessage="${BOLD}$rawMessage" >&2
+            print "${YELLOW}${BOLD}⚠️  ${raw_message}${NONE}" >&2
+            return
             ;;
         success)
             color=$GREEN
-            rawMessage="✦ ${rawMessage:-"✦ Bravo, tout s'est bien passe ! 🎉"}"
-            finalMessage="$rawMessage"
+            final_message="✦ ${raw_message}"
             ;;
         info)
             color=$GREY
-            rawMessage="✧ ${rawMessage:-"✧ Voilà où on est est 🫡"}"
-            finalMessage="${rawMessage}"
+            final_message="✧ ${raw_message}"
             ;;
         highlight)
             color=$NONE
-            rawMessage="👉 ${rawMessage:-"👉 Jette un oeil à ça..."}"
-            finalMessage="$rawMessage"
+            final_message="👉 ${raw_message}"
             ;;
         debug)
             color=$YELLOW
-            rawMessage="🔦 ===> ${BOLD}${rawMessage:-"🔦 ===> Alors, ça marche ? 🤷‍♂️"}${NONE}"
-            finalMessage="$rawMessage"
+            final_message="🔦 ===> ${BOLD}${raw_message}${NONE}"
             ;;
         *)
-            print "$rawMessage"
-            return
+            color=$NONE
+            final_message="${raw_message}"
             ;;
     esac
 
     # Display
-    print "${color}$finalMessage${NONE}"
+    print "${color}$final_message${NONE}"
 }
 
 # Use gls for custom LS_COLORS compatibility (triggered by init_modules in module_manager.zsh)

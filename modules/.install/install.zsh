@@ -40,10 +40,10 @@ GREY="$(printf '\033[90m')"
 NONE="$(printf '\033[0m')"
 
 # Emojis (used only if system supports unicode emojis)
-EMOJI_SUCCESS="${GREEN}✦${NONE}"
+EMOJI_SUCCESS="✦"
 EMOJI_WARN="⚠️"
 EMOJI_ERR="❌"
-EMOJI_INFO="${GREY}✧${NONE}"
+EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_WAIT="⏳"
 
@@ -59,14 +59,14 @@ main() {
     
     # Init
     display_ascii_logo
-    echo "${EMOJI_INFO} Initializing... ${EMOJI_WAIT}"
+    printStyled info "Initializing... ${EMOJI_WAIT}"
     parse_args "$@" || exit 02      # Parse args and set command relative variables
     resolve_paths || exit 03        # Resolve relative paths to absolute paths
     check_zsh || exit 04            # Needed to run GACLI
 
     # Install dependencies
     echo ""
-    echo "${EMOJI_INFO} Installing dependencies... ${EMOJI_WAIT}"
+    printStyled info "Installing dependencies... ${EMOJI_WAIT}"
     curl_install || exit 05         # Needed to install Homebrew
     git_install || exit 06          # Needed to install Homebrew
     brew_install || exit 07         # Needed to install coreutils
@@ -74,7 +74,7 @@ main() {
 
     # Configure GACLI
     echo ""
-    echo "${EMOJI_INFO} Installing GACLI... ${EMOJI_WAIT}"
+    printStyled info "Installing GACLI... ${EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_symlink || exit 11       # Create a symlink to enable `gacli <command>` commands
@@ -108,7 +108,7 @@ check_os() {
     esac
     
     # Display success
-    echo "${EMOJI_SUCCESS} OS supported: ${OSTYPE}"
+    printStyled success "OS supported: ${OSTYPE}"
 }
 
 # Check if system supports unicode emojis
@@ -120,9 +120,9 @@ check_unicode() {
         EMOJI_INFO="[i]"
         EMOJI_HIGHLIGHT="=>"
         EMOJI_WAIT="..."
-        echo "${EMOJI_WARN} Emojis disabled for compatibilty"
+        printStyled warning "Emojis disabled for compatibilty"
     else
-        echo "${EMOJI_SUCCESS} Emojis enabled"
+        printStyled success "Emojis enabled"
     fi
 }
 
@@ -140,7 +140,7 @@ parse_args() {
                         GACLI_DIR="${custom_path}"
                         break
                     fi
-                    echo "${EMOJI_WARN} [GACLI] Warning: Installation path cannot be empty"
+                    printStyled warning "[GACLI] Warning: Installation path cannot be empty"
                 done
                 ;;
             --force)
@@ -148,21 +148,21 @@ parse_args() {
                 FORCE_MODE="true"
                 ;;
             *)
-                echo "${EMOJI_ERR} [GACLI] Error: Unknown option [${arg}]"
+                printStyled error "[GACLI] Error: Unknown option [${arg}]"
                 return 1
                 ;;
         esac
     done
 
     # Display success
-    echo "${EMOJI_SUCCESS} Arguments parsed"
+    printStyled success "Arguments parsed"
 }
 
 # Resolve paths
 resolve_paths() {
     # Resolve $HOME path
     if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
-        echo "${EMOJI_ERR} [GACLI] Error: \$HOME is not set or invalid"
+        printStyled error "[GACLI] Error: \$HOME is not set or invalid"
         return 1
     fi
 
@@ -173,7 +173,7 @@ resolve_paths() {
     else
         # Check custom path correctness
         if [ -z "${GACLI_DIR}" ]; then
-            echo "${EMOJI_ERR} [GACLI] Error: invalid destination folder: ${GACLI_DIR}"
+            printStyled error "[GACLI] Error: invalid destination folder: ${GACLI_DIR}"
             return 1
         fi
     fi
@@ -186,18 +186,18 @@ resolve_paths() {
 
     # Check .zshrc path
     while [ -z "${ZSHRC_FILE}" ] || [ ! -f "${ZSHRC_FILE}" ]; do
-        echo "${EMOJI_WARN}  .zshrc not found at ${ZSHRC_FILE}"
-        echo "${EMOJI_HIGHLIGHT}  Please provide the correct path to your .zshrc file:"
+        printStyled warning ".zshrc not found at ${ZSHRC_FILE}"
+        printStyled highlight "Please provide the correct path to your .zshrc file:"
         printf "> "
         read ZSHRC_FILE
         if [ -z "${ZSHRC_FILE}" ]; then
-            echo "${EMOJI_ERR} Path cannot be empty"
+            printStyled error "Path cannot be empty"
             exit 1
         fi
     done
 
     # Display success
-    echo "${EMOJI_SUCCESS} Initialization completed"
+    printStyled success "Initialization completed"
 }
 
 # Check if zsh is installed
@@ -205,17 +205,17 @@ check_zsh() {
 
     # Check
     if ! command -v zsh >/dev/null 2>&1; then
-        echo "${EMOJI_ERR} [GACLI] Error: zsh is not installed"
+        printStyled error "[GACLI] Error: zsh is not installed"
         echo ""
-        echo "${EMOJI_HIGHLIGHT} Please install zsh manually before continuing"
-        echo "${EMOJI_INFO} macOS : already available, enable it via System Preferences > Shell"
-        echo "${EMOJI_INFO} Linux : sudo apt install zsh   # or your distro equivalent"
+        printStyled highlight "Please install zsh manually before continuing"
+        printStyled info "macOS : already available, enable it via System Preferences > Shell"
+        printStyled info "Linux : sudo apt install zsh   # or your distro equivalent"
         echo ""
         return 1
     fi
 
     # Display success
-    echo "${ICON_SUCCESS} Zsh detected"
+    printStyled success "Zsh detected"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -228,45 +228,45 @@ curl_install() {
     # Check
     if ! command -v curl >/dev/null 2>&1; then
 
-        echo "${EMOJI_HIGHLIGHT} Installing curl (your password may be asked)... ${EMOJI_WAIT}"
+        printStyled highlight "Installing curl (your password may be asked)... ${EMOJI_WAIT}"
 
         # Try auto-install
         if [ "$IS_MACOS" = true ]; then
             if brew install curl; then
-                echo "${EMOJI_SUCCESS} Curl installed"
+                printStyled success "Curl installed"
                 return 0
             fi
         elif [ "$IS_LINUX" = true ]; then
             if command -v apt >/dev/null 2>&1; then
                 if sudo apt install curl; then
-                    echo "${EMOJI_SUCCESS} Curl installed"
+                    printStyled success "Curl installed"
                     return 0
                 fi
             elif command -v dnf >/dev/null 2>&1; then
                 if sudo dnf install curl; then
-                    echo "${EMOJI_SUCCESS} Curl installed"
+                    printStyled success "Curl installed"
                     return 0
                 fi
             elif command -v pacman >/dev/null 2>&1; then
                 if sudo pacman -S curl; then
-                    echo "${EMOJI_SUCCESS} Curl installed"
+                    printStyled success "Curl installed"
                     return 0
                 fi
             fi
         fi
 
         # Manual fallback
-        echo "${EMOJI_ERR} [GACLI] Error: curl is not installed"
+        printStyled error "[GACLI] Error: curl is not installed"
         echo ""
-        echo "${EMOJI_HIGHLIGHT} Please install curl manually before continuing"
-        echo "${EMOJI_INFO} macOS : brew install curl"
-        echo "${EMOJI_INFO} Linux : Use your package manager"
+        printStyled highlight "Please install curl manually before continuing"
+        printStyled info "macOS : brew install curl"
+        printStyled info "Linux : Use your package manager"
         echo ""
         return 1
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} Curl detected"
+    printStyled success "Curl detected"
 }
 
 # Install git
@@ -275,53 +275,53 @@ git_install() {
     # Check
     if ! command -v git >/dev/null 2>&1; then
 
-        echo "${EMOJI_HIGHLIGHT} Installing git (your password may be asked)... ${EMOJI_WAIT}"
+        printStyled highlight "Installing git (your password may be asked)... ${EMOJI_WAIT}"
 
         # Try auto-install
         if [ "$IS_MACOS" = true ]; then
             if xcode-select --install; then
-                echo "${EMOJI_SUCCESS} Git installed"
+                printStyled success "Git installed"
                 return 0
             fi
         elif [ "$IS_LINUX" = true ]; then 
             if command -v apt >/dev/null 2>&1; then
                 if sudo apt install git; then
-                    echo "${EMOJI_SUCCESS} Git installed"
+                    printStyled success "Git installed"
                     return 0
                 fi
             elif command -v dnf >/dev/null 2>&1; then
                 if sudo dnf install git; then
-                    echo "${EMOJI_SUCCESS} Git installed"
+                    printStyled success "Git installed"
                     return 0
                 fi
             elif command -v pacman >/dev/null 2>&1; then
                 if sudo pacman -S git; then
-                    echo "${EMOJI_SUCCESS} Git installed"
+                    printStyled success "Git installed"
                     return 0
                 fi
             fi
         fi
 
         # Manual fallback
-        echo "${EMOJI_ERR} [GACLI] Error: git is not installed"
+        printStyled error "[GACLI] Error: git is not installed"
         echo ""
-        echo "${EMOJI_HIGHLIGHT} Please install git manually before continuing"
-        echo "${EMOJI_INFO} macOS : xcode-select --install"
-        echo "${EMOJI_INFO} Linux : Use your package manager"
+        printStyled highlight "Please install git manually before continuing"
+        printStyled info "macOS : xcode-select --install"
+        printStyled info "Linux : Use your package manager"
         echo ""
         return 1
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} Git detected"
+    printStyled success "Git detected"
 }
 
 # Install Homebrew
 brew_install() {
 
     # Check if Homebrew is already installed
-    if ! command -v brew >/dev/null 2>&1; then
-        echo "${EMOJI_SUCCESS} Homebrew detected"
+    if command -v brew >/dev/null 2>&1; then
+        printStyled success "Homebrew detected"
         return 0
     fi
 
@@ -361,7 +361,7 @@ brew_install() {
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} Homebrew installed"
+    printStyled success "Homebrew installed"
 }
 
 # Install coreutils
@@ -369,16 +369,16 @@ coreutils_install() {
 
     # Check if Coreutils is already installed
     if command -v gdate >/dev/null 2>&1; then
-        echo "${EMOJI_SUCCESS} Coreutils detected"
+        printStyled success "Coreutils detected"
         return 0
     fi
 
     # Install coreutils
-    echo "${EMOJI_INFO} coreutils not found → installing with Homebrew..."
+    printStyled info "coreutils not found → installing with Homebrew..."
     if brew install coreutils; then
-        echo "${EMOJI_SUCCESS} Coreutils installed"
+        printStyled success "Coreutils installed"
     else
-        echo "${EMOJI_ERR} Failed to install coreutils"
+        printStyled error "Failed to install coreutils"
         return 1
     fi
 }
@@ -395,50 +395,50 @@ gacli_download() {
         if [ "$FORCE_MODE" = "true" ]; then
             rm -rf "${GACLI_DIR}"
         else
-            echo "${EMOJI_ERR} [GACLI] Error: already installed at ${GACLI_DIR}"
-            echo "${EMOJI_HIGHLIGHT} Use --force to overwrite"
+            printStyled error "[GACLI] Error: already installed at ${GACLI_DIR}"
+            printStyled highlight "Use --force to overwrite"
             return 1
         fi
     fi
 
     # Clone repo
-    echo "${EMOJI_INFO} Installing GACLI into ${GACLI_DIR}"
+    printStyled info "Installing GACLI into ${GACLI_DIR}"
     if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}"; then
-        echo "${EMOJI_ERR} [GACLI] Error: Failed to clone repository"
+        printStyled error "[GACLI] Error: Failed to clone repository"
         return 1
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} GACLI downloaded"
+    printStyled success "GACLI downloaded"
 }
 
 # Make main script executable
 make_executable() {
     if ! chmod +x "${GACLI_ENTRY_POINT}"; then
-        echo "${EMOJI_ERR} [GACLI] Error: Failed to make ${GACLI_ENTRY_REL} executable"
+        printStyled error "[GACLI] Error: Failed to make ${GACLI_ENTRY_REL} executable"
         return 1
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} GACLI has been made executable"
+    printStyled success "GACLI has been made executable"
 }
 
 # Create symlink
 create_symlink() {
     # Create bin folder if needed
     if ! mkdir -p "${GACLI_SYM_DIR}"; then
-        echo "${EMOJI_ERR} [GACLI] Error: Failed to create ${GACLI_SYM_DIR}"
+        printStyled error "[GACLI] Error: Failed to create ${GACLI_SYM_DIR}"
         return 1
     fi
 
     # Create symlink to run gacli globally
     if ! ln -sf "${GACLI_ENTRY_POINT}" "${GACLI_SYMLINK}"; then
-        echo "${EMOJI_ERR} [GACLI] Error: Failed to create symlink at ${GACLI_SYMLINK}"
+        printStyled error "[GACLI] Error: Failed to create symlink at ${GACLI_SYMLINK}"
         return 1
     fi
 
     # Display success
-    echo "${EMOJI_SUCCESS} Symlink created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
+    printStyled success "Symlink created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
 }
 
 # Update ~/.zshrc to include GACLI in PATH and source gacli.zsh
@@ -446,7 +446,7 @@ update_zshrc() {
 
     # Check if GACLI is already in zshrc
     if grep -q '# GACLI' "${ZSHRC_FILE}"; then
-        echo "${EMOJI_SUCCESS} .zshrc already configured"
+        printStyled success ".zshrc already configured"
         return 0
     fi
 
@@ -457,27 +457,26 @@ update_zshrc() {
         echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
         echo "source \"\$HOME/.gacli/gacli.zsh\""
     } >> "${ZSHRC_FILE}" || {
-        echo "${EMOJI_ERR} Failed to update ${ZSHRC_FILE}"
+        printStyled error "Failed to update ${ZSHRC_FILE}"
         return 1
     }
 
-    echo "${EMOJI_SUCCESS} .zshrc updated"
+    printStyled success ".zshrc updated"
 }
-
 
 # Launch GACLI after install (only if shell is zsh)
 auto_launch() {
     echo ""
-    echo "${EMOJI_SUCCESS} GACLI installed !"
+    printStyled success "GACLI installed !"
     echo ""
 
     # Launch only if shell is zsh
     if [ -n "${ZSH_VERSION}" ]; then
-        echo "${EMOJI_INFO} Reloading shell environment... ${EMOJI_WAIT}"
+        printStyled info "Reloading shell environment... ${EMOJI_WAIT}"
         echo ""
         source "${ZSHRC_FILE}"
     else
-        echo "${EMOJI_WARN} Open a new terminal window or run: source ~/.zshrc"
+        printStyled warning "Open a new terminal window or run: source ~/.zshrc"
         echo ""
     fi
 }
@@ -486,20 +485,60 @@ auto_launch() {
 # Functions - I/O
 # ────────────────────────────────────────────────────────────────
 
-# Display ASCII logo
+# Display ASCII art logo
 display_ascii_logo() {
-    printf "%s\n" "${ORANGE}  _____          _____ _      _____ ${NONE}"
-    printf "%s\n" "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
-    printf "%s\n" "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
-    printf "%s\n" "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
-    printf "\n"
+    print "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
+    print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
+    print "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
+    print "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
+    print "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    print ""
 }
 
-# Display installation confirm + prompt to reload shell
-display_confirm() {
+printStyled() {
+    # Variables
+    local style=$1
+    local raw_message=$2
+    local final_message=""
+    local color=$NONE
 
+    # Argument check
+    if [[ -z "$style" || -z "$raw_message" ]]; then
+        printStyled error "Veuillez fournir un ${YELLOW}style${RED} et un ${YELLOW}message${RED} pour afficher du texte"
+        return 1
+    fi
+
+    # Formatting
+    case "$style" in
+        error)
+            print "${RED}${BOLD}${ICON_ERROR} ${raw_message}${NONE}" >&2
+            return
+            ;;
+        warning)
+            print "${YELLOW}${BOLD}${ICON_WARN}  ${raw_message}${NONE}" >&2
+            return
+            ;;
+        success)
+            color=$GREEN
+            final_message="${ICON_SUCCESS} ${raw_message}"
+            ;;
+        info)
+            color=$GREY
+            final_message="${ICON_INFO} ${raw_message}"
+            ;;
+        highlight)
+            color=$NONE
+            final_message="${ICON_HIGHLIGHT} ${raw_message}"
+            ;;
+        *)
+            color=$NONE
+            final_message="${raw_message}"
+            ;;
+    esac
+
+    # Display
+    print "${color}$final_message${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
