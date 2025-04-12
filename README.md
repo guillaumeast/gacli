@@ -13,8 +13,20 @@
 - Initializes a configuration with an **auto-update** frequency
 - Updates everything with a **single command**
 - Modular structure with optional **command-based extensions**
+- Supports nested modules and per-module dependencies
 - Shows **tools status** on launch
 - 100% compatible with `macOS` and `Linux`
+
+---
+
+## 🎓 Educational Purpose
+
+This project was designed to **learn how to build modular tools from scratch**, without relying on external boilerplates or frameworks.
+
+Its goal is to help understand low-level mechanics behind tools like `Homebrew`, `Oh My Zsh`, `asdf`, or CLI wrappers — how they work, how they can be replaced, and how to design cross-platform automation from scratch.
+
+**This project is not meant to be universally useful.**  
+It’s a learning sandbox and a productivity tool for my own setup — but feel free to fork, reuse or contribute if you find it useful!
 
 ---
 
@@ -40,31 +52,19 @@ This command:
 <details>
 <summary>📦 Dependencies (auto-installed)</summary>
 
-When possible, dependencies are automatically installed using `curl` `Homebrew` or your system’s package manager (`apt`, `dnf`, `pacman`, etc.).
-
-- `curl`
-  - macOS: preinstalled
-  - Linux: auto-installed via your `system's package manager`
-
 - `git`
-  - macOS: auto-installed via `xcode-select --install`
-  - Linux: auto-installed via your `system's package manager`
-
+- `curl`
 - `Homebrew`
-  - Auto-installed via `curl`
-
-- `coreutils`  
-  - Auto-installed via `Homebrew`
+- `coreutils`
+- `jq`
 
 </details>
 
 ### Available options
 
-| Option       | Description                                                                    |
-|--------------|--------------------------------------------------------------------------------|
-| `--force`    | Overwrite an existing installation (useful for manual updates)                 |
+Use `--force` option to overwrite an existing installation
 
-**Combined example**:
+**Example**:
 
 ```bash
 /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/modules/.install/install.zsh)" -- --force
@@ -83,116 +83,128 @@ When possible, dependencies are automatically installed using `curl` `Homebrew` 
 4. Loads core `modules` from `gacli/modules/.core/`
 5. Loads launcher `modules` from `gacli/modules/.launcher/`
 6. Loads user `modules` from `gacli/modules/user_modules/`
-7. Performs `auto-update` if needed
-8. Shows a `status summary` at terminal startup
+7. If found, loads declared `nested modules` from `modules.json`
+8. Performs `auto-update` if needed
+9. Shows a `status summary` at terminal startup
 
 ---
 
 ## 🗂️ Project Structure
 
 ```bash
-gacli/
-├── Brewfile             # List of formulae and casks to install
-├── config               # Auto-generated config with update frequency
-├── gacli.zsh            # Main launcher script
-├── modules              # All logic and features organized by scope
-│   ├── module_manager.zsh      # Loads and dispatches modules
-│   ├── .core                   # Required modules (style, brew, date)
-│   ├── .install                # Lifecycle modules (install, update, uninstall)
-│   └── user_modules                   # Optional user modules (1 folder = 1 module)
+gacli
+├── README.md
+├── gacli.zsh           # GACLI entry point
+├── Brewfile            # Declares custom formulae and casks
+├── modules.json        # Declares custom modules
+└── modules/
+    ├── module_manager.zsh  # Parse and orchestrate all modules
+    ├── .install/           # GACLI auto-installer
+    ├── .core/              # GACLI core modules (cross-platform compatibility)
+    ├── .launcher           # Lifecycle logic (config, update, uninstall)
+    ├── .tmp                # Runtime generated files (config, merged Brewfile, module index)
+    └── user_modules        # User custom modules (optional)
+        ├── module_example
+        │   ├── main.zsh      # ← module's entry point
+        │   ├── Brewfile      # ← required formulae and casks declared here
+        │   ├── modules.json  # ← nested modules declared here
+        │   └── ...
+        └── ...
 ```
 
 ---
 
 ## 📦 Brewfile
 
-Edit `Brewfile` to add or remove tools.
+You can declare custom dependencies in `gacli/Brewfile` and/or in your own `<custom_module>/Brewfile`:
 
 ```bash
-# Add a formula
-brew "formula_name"
-
-# Add a cask
-cask "cask_name"
+brew "pyenv"
+cask "ollama"
 ```
-
-⚠️ **DO NOT** remove `coreutils` from the `Brewfile` (**required dependencie** for `GACLI`'s cross-platform compatibility)
-
 
 Apply changes by restarting your terminal or running:
 ```bash
 gacli update
 ```
 
+🪄 `GACLI` automatically merges and deduplicates all `Brewfiles` and `modules.json` files into `gacli/modules/.tmp/`.
+
 ---
 
 ## 🧩 Modules
 
-`GACLI` is fully modular: each optional command is defined in a separate module.
+`GACLI` is fully modular:
+- Each `module` lives in its own folder in `user_modules/`
+- Each `module` can expose any number of `commands` via a `get_commands()` function
+- Each `module` can declare any number of `formulae`, `casks` in his `Brewfile`
+- Each `module` can declare any number of `nested modules` in his `modules.json`
 
-You can add new modules by:
+You can add new `modules` by:
 1. Creating a `.zsh` file in `modules/user_modules/<your_module>/`
-2. Exposing commands via a `get_commands` function as:
+2. [OPTIONAL] Declaring `formulae` and `casks` dependencies in `<your_module>/Brewfile` as:
+```bash
+brew "<formula>"
+cask "<cask>"
+```
+3. [OPTIONAL] Declaring `modules` dependencies in `<your_module>/modules.json` as:
+```json
+{
+  "modules": [
+    {
+      "name": "<module_name>",
+      "repo": "https://github.com/<user>/<module_repo>",
+      "enabled": true
+    }
+  ]
+}
+```
+4. [OPTIONAL] Exposing `commands` via a `get_commands` function as:
 ```zsh
 get_commands() {
   echo "command_name=function_name"
 }
 ```
 
-<details>
-<summary>Example</summary>
-
-Example implementation of `gacli hello` command:
-```zsh
-get_commands() {
-  echo "hello=hello_world"
-}
-
-hello_world() {
-  printStyled info "Hello, world!"
-}
-```
-
-</details>
+🪄 `GACLI` automatically merges and deduplicates all `Brewfiles` and `modules.json` files into `gacli/modules/.tmp/`.
 
 ---
 
 ## 🔄 Update
 
-`GACLI` performs 4 steps while updating:
-1. `brew update` → Updates `Homebrew` itself (core system and metadata)
-2. `brew bundle --file=Brewfile` → Installs all `formulae` and `casks` listed in the Brewfile
-3. `brew upgrade` → Upgrades all installed packages (if newer versions are available)
-4. `brew cleanup` → Removes old versions and cached files to free up disk space
-
-If auto-update is enabled and due, this is done automatically.
-
-You can also run it manually:
-
-```bash
+```zsh
 gacli update
 ```
+
+✅ Merges all `Brewfiles` and `modules.json` files
+✅ Installs & updates all tools
+✅ Cleans up old versions
 
 ---
 
 ## 🧹 Uninstall
 
-Run:
-
-```bash
+```zsh
 gacli uninstall
 ```
 
-This will:
-- Remove the `config` file
-- Clean `~/.zshrc` entries created by `GACLI`
+✅ Delete all `GACLI` files
+✅ Delete the `wrapper` and `symlink link`
+✅ Delete entries from `.zshrc`
+✅ Clean config
 
-It will **NOT**:
-- Uninstall `Homebrew`
-- Uninstall any `formula` or `cask`
-- Delete `gacli` folder
+👉 It will **NOT**:
+🚫 Uninstall `Homebrew`
+🚫 Uninstall any `formula` or `cask`
 
 Feel free to remove those manually if you want to fully clean your environment.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+See the [LICENSE](./LICENSE) file for details.
 
 ---
 

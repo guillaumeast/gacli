@@ -1,0 +1,15 @@
+{
+  "modules": [
+    {
+      "name": "module_example_1",
+      "repo": "https://github.com/guillaumeast/gacli_module_example_1",
+      "enabled": true
+    },
+    {
+      "name": "module_example_2",
+      "repo": "https://github.com/guillaumeast/gacli_module_example_2",
+      "enabled": false
+    }
+  ]
+}
+  
