@@ -14,6 +14,7 @@ IS_MACOS=false
 IS_LINUX=false
 
 # Root path
+GACLI_DIR_REL=".gacli"
 GACLI_DIR=""
 
 # Module manager path
@@ -70,9 +71,13 @@ _check_os() {
 
 # Resolve and store the absolute path to the gacli directory
 _gacli_resolve() {
-    # Root path
-    script_path="${(%):-%x}"
-    GACLI_DIR="$(cd "$(dirname "$script_path")" && pwd)"
+
+    # Root dir
+    if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
+        printStyled error "[GACLI] Error: \$HOME is not set or invalid"
+        return 1
+    fi
+    GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
 
     # Module manager
     MODULE_MANAGER="${GACLI_DIR}/${MODULE_MANAGER_REL}"

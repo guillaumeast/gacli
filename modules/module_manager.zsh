@@ -3,6 +3,7 @@
 ###############################
 
 #!/usr/bin/env zsh
+setopt extended_glob
 
 # Resolve path
 MODULES_DIR="${GACLI_DIR}/${MODULE_DIR_NAME}"

@@ -53,7 +53,7 @@ gacli_uninstall() {
     print ""
     printStyled info "Deleting GACLI files... ⏳"
     if [[ -d "${GACLI_DIR}" ]]; then
-        rm -rf "${GACLI_DIR}" || {
+        rm -r "${GACLI_DIR}" || {
             printStyled error "[gacli_uninstall] Failed to delete directory ${GACLI_DIR}"
             return 1
         }

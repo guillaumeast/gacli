@@ -77,7 +77,7 @@ main() {
     printStyled info "Installing GACLI into ${GACLI_DIR}... ${EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
-    create_symlink || exit 11       # Create a symlink to enable `gacli <command>` commands
+    create_wrapper || exit 11       # Create a wrapper to enable gacli commands (avoid symlink's shell env corruption)
     update_zshrc || exit 12         # Add GACLI to path and auto-source it
 
     # Done
@@ -147,23 +147,12 @@ parse_args() {
 
 # Resolve paths
 resolve_paths() {
-    # Resolve $HOME path
+    # Resolve destination path
     if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
         printStyled error "[GACLI] Error: \$HOME is not set or invalid"
         return 1
     fi
-
-    # Resolve destination path
-    if [ -z "$GACLI_DIR" ]; then
-        # Default path
-        GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
-    else
-        # Check custom path correctness
-        if [ -z "${GACLI_DIR}" ]; then
-            printStyled error "[GACLI] Error: invalid destination folder: ${GACLI_DIR}"
-            return 1
-        fi
-    fi
+    GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
 
     # Resolve relative paths
     GACLI_ENTRY_POINT="${GACLI_DIR}/${GACLI_ENTRY_REL}"
@@ -409,7 +398,7 @@ make_executable() {
     printStyled success "GACLI has been made executable"
 }
 
-# Create symlink
+# Create executable wrapper script for GACLI (instead of symlink for cross-shell compatibility)
 create_symlink() {
     # Create bin folder if needed
     if ! mkdir -p "${GACLI_SYM_DIR}"; then
@@ -424,14 +413,18 @@ create_symlink() {
         }
     fi
 
-    # Create new symlink
-    if ! ln -s "${GACLI_ENTRY_POINT}" "${GACLI_SYMLINK}"; then
-        printStyled error "[GACLI] Error: Failed to create symlink at ${GACLI_SYMLINK}"
+    # Create executable wrapper
+    if ! {
+        echo '#!/bin/sh' > "${GACLI_SYMLINK}" &&
+        echo "exec zsh \"${GACLI_ENTRY_POINT}\" \"\$@\"" >> "${GACLI_SYMLINK}" &&
+        chmod +x "${GACLI_SYMLINK}"
+    }; then
+        printStyled error "[GACLI] Error: Failed to create wrapper script at ${GACLI_SYMLINK}"
         return 1
     fi
 
     # Display success
-    printStyled success "Symlink created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
+    printStyled success "Wrapper created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
 }
 
 # Update ~/.zshrc to include GACLI in PATH and source gacli.zsh

@@ -19,6 +19,7 @@ config_init() {
             printStyled error "[_config_create] Error: Unable to init config file (${CONFIG_FILE})"
             return 1
         fi
+        set_config "gacli_path" "${GACLI_DIR}" || return 1
     fi
 }
 
