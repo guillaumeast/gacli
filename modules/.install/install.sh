@@ -1,8 +1,8 @@
 ###############################
-# FICHIER install.sh
+# FICHIER install.zsh
 ###############################
 
-#!/bin/sh
+#!/usr/bin/env zsh
 
 # Options
 FORCE_MODE="false"
