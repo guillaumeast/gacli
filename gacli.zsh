@@ -6,7 +6,7 @@
 
 # Easter egg display
 if [[ $1 == "" ]]; then
-    print "\033[90m🐥 Don't panic...\033[0m"
+    print "\033[90m✧ Don't panic... 🐥\033[0m"
 fi
 
 # Env
@@ -16,8 +16,12 @@ IS_LINUX=false
 # Root path
 GACLI_PATH=""
 
-# Module manager
-MODULE_MANAGER_REL_PATH="modules/module_manager.zsh"
+# Temporary files directory path
+TMP_DIR_REL="modules/.tmp"
+TMP_DIR=""
+
+# Module manager path
+MODULE_MANAGER_REL="modules/module_manager.zsh"
 MODULE_MANAGER=""
 
 # ────────────────────────────────────────────────────────────────
@@ -26,23 +30,20 @@ MODULE_MANAGER=""
 
 # Main function
 main() {
-    # Init
+    # Check env and source code
     _check_os || abort "1"
     _gacli_resolve || abort "2"
-
-    # Load required modules
     source "${MODULE_MANAGER}" || abort "3"
 
-    # Update
-    gacli_auto_update                   # Implemented in gacli/modules/.core/.launcher/update.zsh
-    load_modules                        # Implemented in gacli/modules/.core/module_manager.zsh
-    
-    # Display
-    print_formulae              # Implemented in `gacli/modules/.core/brew.zsh`
-    print_casks                 # Implemented in `gacli/modules/.core/brew.zsh`
+    # Init
+    modules_init || abort "4"   # Implemented in gacli/modules/module_manager.zsh
+    brew_init || abort "5"      # Implemented in gacli/modules/.launcher/brew.zsh
+    use_gls                     # Implemented in gacli/modules/.core/io.zsh
+    config_init || abort "6"    # Implemented in gacli/modules/.launcher/config.zsh
+    update_init || abort "7"    # Implemented in gacli/modules/.launcher/update.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || return 1
+    _gacli_dispatch "$@" || abort "8"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -70,14 +71,21 @@ _check_os() {
 _gacli_resolve() {
     # Root path
     if ! GACLI_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"; then
-        echo "[_gacli_resolve] Error: unable to resolve root path" >&2
+        echo "[_gacli_resolve] Error: Unable to resolve root path" >&2
         return 1
     fi
 
+    # Tmp directory
+    TMP_DIR="${GACLI_PATH}/${TMP_DIR_REL}"
+    mkdir -p "${TMP_DIR}" || {
+        echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
+        return 1
+    }
+
     # Module manager
-    MODULE_MANAGER="${GACLI_PATH}/${MODULE_MANAGER_REL_PATH}"
+    MODULE_MANAGER="${GACLI_PATH}/${MODULE_MANAGER_REL}"
     if [[ ! -f "${MODULE_MANAGER}" ]]; then
-        echo "[_gacli_resolve] Error: unable to find module manager" >&2
+        echo "[_gacli_resolve] Error: Unable to find module manager" >&2
         return 1
     fi
 
@@ -85,17 +93,11 @@ _gacli_resolve() {
     CONFIG_FILE="${GACLI_PATH}/${CONFIG_FILE_REL_PATH}"
 }
 
-_parse_config() {
-    # TODO: implement in gacli/modules/.launcher/config.zsh
-    # TODO: Check if config file exists
-    # TODO: Parse config + error handling
-}
-
 # Dispatch commands
 _gacli_dispatch() {
     case "$1" in
         "")
-            display_ascii_logo              # Implemented in gacli/modules/.core/style.zsh
+            style_ascii_logo              # Implemented in gacli/modules/.core/io.zsh
             print_tools
             ;;
         "help")
@@ -108,7 +110,7 @@ _gacli_dispatch() {
             gacli_uninstall                 # Implemented in gacli/modules/.core/.launcher/uninstall.zsh
             ;;
         *)
-            modules_dispatch "$@"  # Implemented in gacli/modules/.core/module_manager.zsh
+            modules_dispatch "$@"           # Implemented in gacli/modules/.core/module_manager.zsh
     esac
 }
 
@@ -123,7 +125,7 @@ print_tools() {
     print_casks                         # Implemented in gacli/modules/.core/brew.zsh
 
     # Display available commands
-    print_commands                      # Implemented in gacli/modules/module_manager.zsh
+    modules_print_commands              # Implemented in gacli/modules/module_manager.zsh
     print ""
 }
 
@@ -140,7 +142,7 @@ help() {
     print "${ICON_ON} ${RED}gacli update ${GREY}| ${ICON_ON} ${RED}gacli uninstall${NONE}"
     print ""
     printStyled highlight "Gacli modules commands: (more info: https://github.com/guillaumeast/gacli)"
-    print_commands                      # Implemented in gacli/modules/module_manager.zsh
+    modules_print_commands                      # Implemented in gacli/modules/module_manager.zsh
     print ""
 }
 
@@ -149,7 +151,7 @@ abort() {
     echo "[GACLI] E${1}: fatal error, exiting GACLI" >&2
     echo "[GACLI] Tip: If error persist, try deleting the config file to reinstall GACLI" >&2
     echo "[GACLI] Tip: If error still persist, download latest version at: https://github.com/guillaumeast/gacli" >&2
-    exit 1
+    exit "${1}"
 }
 
 # ────────────────────────────────────────────────────────────────

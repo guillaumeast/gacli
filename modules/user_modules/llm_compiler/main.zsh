@@ -24,11 +24,11 @@ TOTAL=0
 
 # Declare commands provided by this module
 get_commands() {
-    echo 'llmcompile=llmcompile'
+    echo 'compillm=llm_compile'
 }
 
 # Main
-llmcompile() {
+llm_compile() {
     printStyled info "Compiling codebase... ⏳"
 
     # Init

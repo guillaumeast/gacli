@@ -78,10 +78,10 @@ main() {
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_symlink || exit 11       # Create a symlink to enable `gacli <command>` commands
-    update_path || exit 12          # Add GACLI to path for global autonomous execution
+    update_zshrc || exit 12         # Add GACLI to path and auto-source it
 
     # Done
-    display_confirm                 # Prompt the user to reload terminal
+    auto_launch                     # Launch GACLI after install (only if shell is zsh)
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -441,17 +441,45 @@ create_symlink() {
     echo "${EMOJI_SUCCESS} Symlink created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
 }
 
-# Ensure ~/.local/bin is in PATH
-update_path() {
-    if ! grep -q "export PATH=\"${GACLI_SYM_DIR}:\$PATH\"" "${ZSHRC_FILE}"; then
-        if ! printf "\n# GACLI\nexport \"${GACLI_SYM_DIR}:\$PATH\"\n" >> "${ZSHRC_FILE}"; then
-            echo "${EMOJI_ERR} Failed to append PATH to ${ZSHRC_FILE}"
-            exit 1
-        fi
+# Update ~/.zshrc to include GACLI in PATH and source gacli.zsh
+update_zshrc() {
+
+    # Check if GACLI is already in zshrc
+    if grep -q '# GACLI' "${ZSHRC_FILE}"; then
+        echo "${EMOJI_SUCCESS} .zshrc already configured"
+        return 0
     fi
 
-    # Display success
-    echo "${EMOJI_SUCCESS} GACLI added to path"
+    # Append GACLI block
+    {
+        echo ""
+        echo "# GACLI"
+        echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
+        echo "source \"\$HOME/.gacli/gacli.zsh\""
+    } >> "${ZSHRC_FILE}" || {
+        echo "${EMOJI_ERR} Failed to update ${ZSHRC_FILE}"
+        return 1
+    }
+
+    echo "${EMOJI_SUCCESS} .zshrc updated"
+}
+
+
+# Launch GACLI after install (only if shell is zsh)
+auto_launch() {
+    echo ""
+    echo "${EMOJI_SUCCESS} GACLI installed !"
+    echo ""
+
+    # Launch only if shell is zsh
+    if [ -n "${ZSH_VERSION}" ]; then
+        echo "${EMOJI_INFO} Reloading shell environment... ${EMOJI_WAIT}"
+        echo ""
+        source "${ZSHRC_FILE}"
+    else
+        echo "${EMOJI_WARN} Open a new terminal window or run: source ~/.zshrc"
+        echo ""
+    fi
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -471,11 +499,7 @@ display_ascii_logo() {
 
 # Display installation confirm + prompt to reload shell
 display_confirm() {
-    echo ""
-    echo "${EMOJI_SUCCESS} GACLI installed !"
-    echo ""
-    echo "${EMOJI_WARN} Open a new terminal window or run: source ~/.zshrc"
-    echo ""
+
 }
 
 # ────────────────────────────────────────────────────────────────

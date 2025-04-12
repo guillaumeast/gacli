@@ -1,5 +1,5 @@
 ###############################
-# FICHIER style.zsh
+# FICHIER io.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -44,7 +44,7 @@ ICON_OFF="${RED}○${NONE}"
 # ────────────────────────────────────────────────────────────────
 
 # ASCII art logo
-display_ascii_logo() {
+style_ascii_logo() {
     print "${ORANGE}  _____          _____ _      _____ ${NONE}"
     print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
     print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
@@ -114,7 +114,6 @@ printStyled() {
 
 # Use gls for custom LS_COLORS compatibility (triggered by init_modules in module_manager.zsh)
 use_gls() {
-    # Use GNU ls if available (for LS_COLORS compatibility)
     if command -v gls >/dev/null 2>&1; then
         alias ls="gls --color=auto"
     else

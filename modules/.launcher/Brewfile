@@ -1,0 +1,11 @@
+# GACLI required dependencies (NEVER REMOVE THOSE!)
+
+# Cross-platform tools
+brew "coreutils"
+
+# Json processor
+brew "jq"
+
+# Versionning
+brew "git"
+

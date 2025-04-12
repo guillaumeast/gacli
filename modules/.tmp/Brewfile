@@ -1,3 +1,6 @@
+#############################################
+# From: /Users/gui/Repos/gacli/Brewfile
+#############################################
 # Organize your dependencies by creating your own custom modules
 # See: https://github.com/guillaumeast/gacli/blob/master/README.md (TODO: why 'blob' ???)
 
@@ -47,3 +50,29 @@ cask "stats"
 # Clipboard manager (macOS)
 cask "maccy"
 
+
+#############################################
+# From: /Users/gui/Repos/gacli/modules/.launcher/Brewfile
+#############################################
+# GACLI required dependencies (NEVER REMOVE THOSE!)
+
+# Cross-platform tools
+brew "coreutils"
+
+# Json processor
+brew "jq"
+
+# Versionning
+brew "git"
+
+
+#############################################
+# From: /Users/gui/Repos/gacli/modules/user_modules/llm_compiler/Brewfile
+#############################################
+# llm_compiler module dependencies
+
+# Directory structure visualizer
+brew "tree"
+
+# Universal document converter
+brew "pandoc"

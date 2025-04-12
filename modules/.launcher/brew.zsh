@@ -5,8 +5,7 @@
 #!/usr/bin/env zsh
 
 # Variables
-BREWFILE_REL_PATH="Brewfile"
-BREWFILE=""
+BREWFILE="${TMP_DIR}/Brewfile"
 FORMULAE=()
 CASKS=()
 
@@ -16,37 +15,18 @@ CASKS=()
 
 # Install Homebrew if needed and check if Brewfile exists
 brew_init() {
-    # Resolve Brewfile path
-    _brew_resolve || return 1
-
     # Install Homebrew if needed
     if ! command -v brew >/dev/null 2>&1; then
         brew_install || return 1
         brew_update || return 1
     fi
 
-    # Load Brewfile content
-    load_brewfile || return 1
+    # Concat and load Brewfiles content
+    brew_load || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PRIVATE
-# ────────────────────────────────────────────────────────────────
-
-# Resolve paths
-_brew_resolve() {
-    # Resolve Brewfile path
-    BREWFILE="${GACLI_PATH}/${BREWFILE_REL_PATH}"
-
-    # Check if Brewfile exists
-    if [[ ! -f "$BREWFILE" ]]; then
-        printStyled error "Brewfile not found at: ${BREWFILE}"
-        return 1
-    fi
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC (Logic)
+# Functions - PUBLIC (life cycle management)
 # ────────────────────────────────────────────────────────────────
 
 # Install Homebrew
@@ -86,11 +66,19 @@ brew_install() {
     fi
 }
 
+brew_load() {
+    _brew_concat || return 1
+    _brew_load_file || return 1
+}
+
 # Update Homebrew, formulae and casks
 brew_update() {
     # Loading mesage
     print ""
     printStyled "info" "Updating... (this may take a few minutes) ⏳"
+
+    # Concat Brewfiles
+    brew_load || return 1
 
     # Update Homebrew
     if ! brew update  > /dev/null 2>&1; then
@@ -115,18 +103,51 @@ brew_update() {
     fi
 }
 
-# Load formulae and casks lists from Brewfile
-load_brewfile() {
+# ────────────────────────────────────────────────────────────────
+# Functions - PRIVATE (Brewfiles management)
+# ────────────────────────────────────────────────────────────────
+
+# Create a temporary Brewfile by concatenating all Brewfiles (root + .core + user_modules)
+_brew_concat() {
+
+    # Create/reset the final concatenated Brewfile
+    : > "${BREWFILE}" || {
+        printStyled error "[_brew_concat] Failed to initialize ${BREWFILE}"
+        return 1
+    }
+
+    # Find all Brewfiles in the repo, excluding tmp dir
+    local brewfiles
+    brewfiles=("${(@f)$(find "${GACLI_PATH}" -type f -name "Brewfile" ! -path "${TMP_DIR}/*" 2>/dev/null)}")
+
+    # Append each Brewfile content into the final $BREWFILE
+    local file
+    for file in "${brewfiles[@]}"; do
+        if [[ -f "$file" ]]; then
+            echo "#############################################" >> "${BREWFILE}"
+            echo "# From: ${file}" >> "${BREWFILE}"
+            echo "#############################################" >> "${BREWFILE}"
+            cat "$file" >> "${BREWFILE}"
+            echo "" >> "${BREWFILE}"
+        fi
+    done
+}
+
+# Load formulae and casks lists from Brewfiles (in all directories)
+_brew_load_file() {
+
     # Load formulae
     if ! FORMULAE=($(grep '^brew "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)); then
-        printStyled warning "[load_brewfile] Failed to extract formulae from Brewfile"
+        printStyled error "[_brew_load_file] Failed to extract formulae from Brewfile"
         FORMULAE=()
+        return 1
     fi
 
     # Load casks
     if ! CASKS=($(grep '^cask "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)); then
-        printStyled warning "[load_brewfile] Failed to extract casks from Brewfile"
+        printStyled error "[_brew_load_file] Failed to extract casks from Brewfile"
         CASKS=()
+        return 1
     fi
 }
 
@@ -183,11 +204,4 @@ print_casks() {
     # Display (removing trailing " | ")
     print "${output_casks% ${GREY}|${NONE} }"
 }
-
-# ────────────────────────────────────────────────────────────────
-# RUN
-# ────────────────────────────────────────────────────────────────
-
-# Init
-brew_init || return 1
 
