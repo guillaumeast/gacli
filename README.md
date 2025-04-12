@@ -27,7 +27,7 @@ GACLI requires your default shell to be `zsh`:
 ### Quick command
 
 ```sh
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/install.sh)"
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/modules/install/install.sh)"
 ```
 
 This command:
@@ -68,7 +68,7 @@ When possible, dependencies are automatically installed using `curl` `Homebrew` 
 **Combined example**:
 
 ```sh
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/install.sh)" -- --custom ~/Repos/gacli --force
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/main/modules/install/install.sh)" -- --custom ~/Repos/gacli --force
 ```
 
 > ⚠️ Options must be passed **after `--`**, otherwise they will be interpreted by `curl` instead of the script.
@@ -198,3 +198,4 @@ Feel free to remove those manually if you want to fully clean your environment.
 ---
 
 Made with ❤️ by [guillaumeast](https://github.com/guillaumeast)
+
