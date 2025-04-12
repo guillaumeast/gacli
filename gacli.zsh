@@ -16,14 +16,14 @@ IS_LINUX=false
 # Root path
 GACLI_PATH=""
 
-# Temporary files directory path
-TMP_DIR_REL="modules/.tmp"
-TMP_DIR=""
-
 # Module manager path
 MODULE_DIR_NAME="modules"
 MODULE_MANAGER_REL="${MODULE_DIR_NAME}/module_manager.zsh"
 MODULE_MANAGER=""
+
+# Temporary files directory path
+TMP_DIR_REL="modules/.tmp"
+TMP_DIR=""
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -70,15 +70,31 @@ _check_os() {
 
 # Resolve and store the absolute path to the gacli directory
 _gacli_resolve() {
-    # Root path
-    if [[ -n "${BASH_SOURCE[0]}" ]]; then
-        GACLI_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    elif [[ -n "${(%):-%x}" && -f "${(%):-%x}" ]]; then
-        GACLI_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"
-    elif [[ -n "$0" && -f "$0" ]]; then
-        GACLI_PATH="$(cd "$(dirname "$0")" && pwd)"
-    else
-        GACLI_PATH="${HOME}/.gacli"  # fallback
+    # Root path (Follow symlink if necessary)
+    local entry="${0:A}"
+    if [[ -L "$entry" ]]; then
+        entry="$(readlink "$entry")"
+    fi
+    if ! GACLI_PATH="$(cd "$(dirname "$entry")" && pwd)"; then
+        echo "[_gacli_resolve] Error: Failed to resolve path" >&2
+        return 1
+    fi
+    # # Root path
+    # if [[ -n "${BASH_SOURCE[0]}" ]]; then
+    #     GACLI_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # elif [[ -n "${(%):-%x}" && -f "${(%):-%x}" ]]; then
+    #     GACLI_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+    # elif [[ -n "$0" && -f "$0" ]]; then
+    #     GACLI_PATH="$(cd "$(dirname "$0")" && pwd)"
+    # else
+    #     GACLI_PATH="${HOME}/.gacli"  # fallback
+    # fi
+
+    # Module manager
+    MODULE_MANAGER="${GACLI_PATH}/${MODULE_MANAGER_REL}"
+    if [[ ! -f "${MODULE_MANAGER}" ]]; then
+        echo "[_gacli_resolve] Error: Failed to find module manager at: ${MODULE_MANAGER}" >&2
+        return 1
     fi
 
     # Tmp directory
@@ -87,13 +103,6 @@ _gacli_resolve() {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
     }
-
-    # Module manager
-    MODULE_MANAGER="${GACLI_PATH}/${MODULE_MANAGER_REL}"
-    if [[ ! -f "${MODULE_MANAGER}" ]]; then
-        echo "[_gacli_resolve] Error: Unable to find module manager" >&2
-        return 1
-    fi
 
     # Config file
     CONFIG_FILE="${GACLI_PATH}/${CONFIG_FILE_REL_PATH}"
