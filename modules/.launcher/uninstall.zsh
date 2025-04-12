@@ -52,13 +52,13 @@ gacli_uninstall() {
     # Delete GACLI directory
     print ""
     printStyled info "Deleting GACLI files... ⏳"
-    if [[ -d "${GACLI_PATH}" ]]; then
-        rm -rf "${GACLI_PATH}" || {
-            printStyled error "[gacli_uninstall] Failed to delete directory ${GACLI_PATH}"
+    if [[ -d "${GACLI_DIR}" ]]; then
+        rm -rf "${GACLI_DIR}" || {
+            printStyled error "[gacli_uninstall] Failed to delete directory ${GACLI_DIR}"
             return 1
         }
     else
-        printStyled error "[gacli_uninstall] Unable to find GACLI directory: ${GACLI_PATH}"
+        printStyled error "[gacli_uninstall] Unable to find GACLI directory: ${GACLI_DIR}"
         return 1
     fi
     printStyled success "Deleted"

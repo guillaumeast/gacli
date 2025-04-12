@@ -14,7 +14,7 @@ IS_MACOS=false
 IS_LINUX=false
 
 # Root path
-GACLI_PATH=""
+GACLI_DIR=""
 
 # Module manager path
 MODULE_DIR_NAME="modules"
@@ -70,40 +70,26 @@ _check_os() {
 
 # Resolve and store the absolute path to the gacli directory
 _gacli_resolve() {
-    # CF STACKOVERFLOW
+    # Root path
     script_path="${(%):-%x}"
-    script_dir="$(cd "$(dirname "$script_path")" && pwd)"
-    echo "[_gacli_resolve] Debug: script_path = $script_path"
-    echo "[_gacli_resolve] Debug: script_dir = $script_dir"
-    echo "[_gacli_resolve] Debug: GACLI_PATH = $GACLI_PATH"
-    
-    # # Root path
-    # if [[ -n "${BASH_SOURCE[0]}" ]]; then
-    #     GACLI_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # elif [[ -n "${(%):-%x}" && -f "${(%):-%x}" ]]; then
-    #     GACLI_PATH="$(cd "$(dirname "${(%):-%x}")" && pwd)"
-    # elif [[ -n "$0" && -f "$0" ]]; then
-    #     GACLI_PATH="$(cd "$(dirname "$0")" && pwd)"
-    # else
-    #     GACLI_PATH="${HOME}/.gacli"  # fallback
-    # fi
+    GACLI_DIR="$(cd "$(dirname "$script_path")" && pwd)"
 
     # Module manager
-    MODULE_MANAGER="${GACLI_PATH}/${MODULE_MANAGER_REL}"
+    MODULE_MANAGER="${GACLI_DIR}/${MODULE_MANAGER_REL}"
     if [[ ! -f "${MODULE_MANAGER}" ]]; then
         echo "[_gacli_resolve] Error: Failed to find module manager at: ${MODULE_MANAGER}" >&2
         return 1
     fi
 
     # Tmp directory
-    TMP_DIR="${GACLI_PATH}/${TMP_DIR_REL}"
+    TMP_DIR="${GACLI_DIR}/${TMP_DIR_REL}"
     mkdir -p "${TMP_DIR}" || {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
     }
 
     # Config file
-    CONFIG_FILE="${GACLI_PATH}/${CONFIG_FILE_REL_PATH}"
+    CONFIG_FILE="${GACLI_DIR}/${CONFIG_FILE_REL_PATH}"
 }
 
 # Dispatch commands

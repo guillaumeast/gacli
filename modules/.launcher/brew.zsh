@@ -118,7 +118,7 @@ _brew_concat() {
 
     # Find all Brewfiles in the repo, excluding tmp dir
     local brewfiles
-    brewfiles=("${(@f)$(find "${GACLI_PATH}" -type f -name "Brewfile" ! -path "${TMP_DIR}/*" 2>/dev/null)}")
+    brewfiles=("${(@f)$(find "${GACLI_DIR}" -type f -name "Brewfile" ! -path "${TMP_DIR}/*" 2>/dev/null)}")
 
     # Append each Brewfile content into the final $BREWFILE
     local file

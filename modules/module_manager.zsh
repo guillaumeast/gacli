@@ -5,7 +5,7 @@
 #!/usr/bin/env zsh
 
 # Resolve path
-MODULES_DIR="${GACLI_PATH}/${MODULE_DIR_NAME}"
+MODULES_DIR="${GACLI_DIR}/${MODULE_DIR_NAME}"
 
 # Modules and commands
 CORE_DIR="${MODULES_DIR}/.core"
