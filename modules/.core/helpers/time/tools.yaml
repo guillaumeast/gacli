@@ -1,0 +1,4 @@
+formulae:
+  - coreutils   # Cross-platform tools
+modules:
+  - io          # I/O formatting tool

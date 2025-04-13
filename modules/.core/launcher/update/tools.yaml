@@ -1,0 +1,7 @@
+formulae:
+  - jq          # JSON processor
+modules:
+  - io          # I/O formatting tool
+  - date        # Cros-platform date processor
+  - config      # Persistent config manager
+  - brew        # Packagemanager manager

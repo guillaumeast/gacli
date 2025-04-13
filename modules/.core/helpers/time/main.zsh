@@ -58,7 +58,6 @@ date_from_human() {
     fi
 }
 
-
 # Add a number of days to a timestamp and return result as timestamp
 date_add() {
 
