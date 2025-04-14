@@ -1,0 +1,31 @@
+# ────────────────────────────────────────────────────────────────
+# Your custom tools
+# ────────────────────────────────────────────────────────────────
+
+# 1. Add or remove any formula, cask or module in this file
+# 2. Save the file
+# 3. Run "gacli update" command:
+  # → GACLI will automatically download and install missing formulae, casks and modules
+  # → GACLI will automatically update all installed formulae, casks and modules
+  # → You can immediatly use commands exposed by the newly added modules
+
+# formulae:
+  # List your custom HOMEBREW FORMULAE here or run `gacli add-form <formula_name>` / `gacli rm-form <formula_name>`
+# casks:
+  # List your custom HOMEBREW CASKS here or run `gacli add-cask <cask_name>` / `gacli rm-cask <cask_name>`
+# modules:
+  # List your custom GACLI MODULES here or run `gacli add-mod <module_name>` / `gacli rm-mod <module_name>`
+
+# ────────────────────────────────────────────────────────────────
+# TODO: create a module "tmp_ga_tools"
+# ────────────────────────────────────────────────────────────────
+formulae:
+  - "gh"
+  - "pyenv"
+
+casks:
+  - "visual-studio-code"
+  - "ollama"
+  - "stats"
+  - "maccy"
+

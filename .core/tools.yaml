@@ -1,0 +1,16 @@
+modules:
+##############################################################
+#      module     #   formulae   #      nested_modules       #
+##############################################################
+  - io            #   coreutils  #                           #
+  - time          #   coreutils  # io                        #
+  - brew          #   curl       # io                        #
+  - config        #   jq         # io                        #
+  - update        #   jq         # io + time + brew + config #
+  - uninstall     #              # io                        #
+##############################################################
+formulae:
+  - curl
+  - coreutils
+  - jq
+casks:

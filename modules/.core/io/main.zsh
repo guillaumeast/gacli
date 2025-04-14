@@ -1,5 +1,5 @@
 ###############################
-# FICHIER io.zsh
+# FICHIER gacli/modules/.core/io/main.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -38,6 +38,15 @@ NONE='\033[0m'
 # Icons (on / off)
 ICON_ON="${GREEN}⊙${NONE}"
 ICON_OFF="${RED}○${NONE}"
+
+# ────────────────────────────────────────────────────────────────
+# MAIN
+# ────────────────────────────────────────────────────────────────
+
+# Install Homebrew if needed and check if Brewfile exists
+io_init() {
+    use_gls
+}
 
 # ────────────────────────────────────────────────────────────────
 # Functions - PUBLIC
@@ -109,9 +118,15 @@ use_gls() {
     if command -v gls >/dev/null 2>&1; then
         alias ls="gls --color=auto"
     else
-        echo "[GACLI] Missing depedencie: gls (from coreutils)"
+        echo "[GACLI] Warning: Missing depedencie: gls (from coreutils)"
         echo "→ custom colors may not work"
         return 1
     fi
 }
+
+# ────────────────────────────────────────────────────────────────
+# INIT
+# ────────────────────────────────────────────────────────────────
+
+io_init || return 1
 

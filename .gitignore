@@ -1,3 +1,12 @@
+# Core
 .DS_Store
-modules/.core/tmp/
-**/tmp_*
+.tmp
+
+# Ignore optional modules
+modules/*
+!modules/.core/
+!modules/.core/**
+
+# Temp
+tmp_ga
+

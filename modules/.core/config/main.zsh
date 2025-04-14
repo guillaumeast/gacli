@@ -1,5 +1,5 @@
 ###############################
-# FICHIER config.zsh
+# FICHIER gacli/modules/.core/config/main.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -73,4 +73,10 @@ set_config() {
     jq --arg key "${key}" --arg value "$value" '.[$key] = ($value | fromjson? // $value)' "${CONFIG_FILE}" > "${tmp}"
     mv "${tmp}" "${CONFIG_FILE}"
 }
+
+# ────────────────────────────────────────────────────────────────
+# INIT
+# ────────────────────────────────────────────────────────────────
+
+config_init || return 1
 

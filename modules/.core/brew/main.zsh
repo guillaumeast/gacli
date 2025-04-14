@@ -1,5 +1,5 @@
 ###############################
-# FICHIER brew.zsh
+# FICHIER gacli/modules/.core/brew/main.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -204,4 +204,10 @@ print_casks() {
     # Display (removing trailing " | ")
     print "${output_casks% ${GREY}|${NONE} }"
 }
+
+# ────────────────────────────────────────────────────────────────
+# INIT
+# ────────────────────────────────────────────────────────────────
+
+brew_init || return 1
 

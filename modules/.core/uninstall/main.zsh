@@ -1,5 +1,5 @@
 ###############################
-# FICHIER uninstall.zsh
+# FICHIER gacli/modules/.core/uninstall/main.zsh
 ###############################
 
 #!/usr/bin/env zsh

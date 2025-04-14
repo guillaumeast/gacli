@@ -3,6 +3,7 @@
 ###############################
 
 #!/usr/bin/env zsh
+setopt extended_glob
 
 # Easter egg display
 if [[ $1 == "" ]]; then
@@ -16,6 +17,10 @@ IS_LINUX=false
 # Root path
 GACLI_DIR_REL=".gacli"
 GACLI_DIR=""
+
+# Parser
+PARSER_REL=""
+PARSER=""
 
 # Module manager path
 MODULE_DIR_NAME="modules"
@@ -32,20 +37,19 @@ TMP_DIR=""
 
 # Main function
 main() {
-    # Check env and source code
-    _check_os || abort "1"
+    # Check env
+    _gacli_check_os || abort "1"
     _gacli_resolve || abort "2"
-    source "${MODULE_MANAGER}" || abort "3"
 
-    # Init
-    modules_init || abort "4"   # Implemented in gacli/modules/module_manager.zsh
-    brew_init || abort "5"      # Implemented in gacli/modules/.launcher/brew.zsh
-    use_gls                     # Implemented in gacli/modules/.core/io.zsh
-    config_init || abort "6"    # Implemented in gacli/modules/.launcher/config.zsh
-    update_init || abort "7"    # Implemented in gacli/modules/.launcher/update.zsh
+    # Check dependencies
+    source "${PARSER}" || abort "3"
+    _gacli_check_dependencies || abort "4"
+
+    # Load modules
+    source "${MODULE_MANAGER}" || abort "4"
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "8"
+    _gacli_dispatch "$@" || abort "5"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -53,9 +57,9 @@ main() {
 # ────────────────────────────────────────────────────────────────
 
 # Detect the operating system and set the corresponding flags
-_check_os() {
+_gacli_check_os() {
     if [[ -z "$OSTYPE" ]]; then
-        echo "[_check_os] Error: \$OSTYPE is not set" >&2
+        echo "[_gacli_check_os] Error: \$OSTYPE is not set" >&2
         return 1
     fi
 
@@ -63,7 +67,7 @@ _check_os() {
         darwin*) IS_MACOS=true ;;
         linux*)  IS_LINUX=true ;;
         *)
-            echo "[_check_os] Error: Unknown OS type: $OSTYPE" >&2
+            echo "[_gacli_check_os] Error: Unknown OS type: $OSTYPE" >&2
             return 1
             ;;
     esac
@@ -74,7 +78,7 @@ _gacli_resolve() {
 
     # Root dir
     if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
-        printStyled error "[GACLI] Error: \$HOME is not set or invalid"
+        echo "[_gacli_resolve] Error: \$HOME is not set or invalid"
         return 1
     fi
     GACLI_DIR="${HOME}/${GACLI_DIR_REL}"

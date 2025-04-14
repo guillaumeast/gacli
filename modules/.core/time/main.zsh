@@ -1,5 +1,5 @@
 ###############################
-# FICHIER date.zsh
+# FICHIER gacli/modules/.core/time/main.zsh
 ###############################
 
 #!/usr/bin/env zsh
