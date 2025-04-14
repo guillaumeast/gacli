@@ -1,5 +1,5 @@
 ###############################
-# FICHIER gacli/modules/.core/io/main.zsh
+# FICHIER /.run/helpers/io.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -88,4 +88,10 @@ printStyled() {
     # Display
     print "${color}$final_message${NONE}"
 }
+
+# ────────────────────────────────────────────────────────────────
+# WIP: DEBUG
+# ────────────────────────────────────────────────────────────────
+
+printStyled debug "-> 1. io.zsh loaded"
 

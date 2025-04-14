@@ -1,5 +1,5 @@
 ###############################
-# FICHIER gacli/modules/.core/uninstall/main.zsh
+# FICHIER /.run/core/uninstall.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -69,4 +69,10 @@ gacli_uninstall() {
     printStyled highlight "Restart your terminal"
     print ""
 }
+
+# ────────────────────────────────────────────────────────────────
+# WIP: DEBUG
+# ────────────────────────────────────────────────────────────────
+
+printStyled debug "======> 6. uninstall.zsh loaded"
 

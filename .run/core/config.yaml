@@ -1,27 +1,12 @@
-# Manualy updated
-rel_paths:
-  - entry_point: "launcher/gacli.zsh"
-  - parser: "launcher/parser.zsh"
-  - modules_manager: "launcher/modules_manager.zsh"
-  - core_modules: "modules/.core"
-  - user_modules: "modules/user_modules"
+###############################
+# FICHIER /.run/core/config.yaml
+###############################
 
-# Initialized by installer
-abs_paths:
-  - gacli:
-  - entry_point:
-  - parser:
-  - modules_manager:
-  - core_modules:
-  - user_modules:
-
-# Managed by config module: /modules/.core/config
-config_settings:
-  - initialized: false
-
-# Managed by update module: /modules/.core/update
+# Managed by update module: /.run/core/update
 update_settings:
+  - initialized: false
   - auto_update: false
+  - last_update:
   - freq_days:
-  - last:
-  - next:
+  - next_update:
+

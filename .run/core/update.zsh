@@ -1,21 +1,15 @@
 ###############################
-# FICHIER gacli/modules/.core/update/main.zsh
+# FICHIER /.run/core/update.zsh
 ###############################
 
 #!/usr/bin/env zsh
 
 # Variables
-LAST_UPDATE_KEY="update_last"
-LAST_UPDATE=""
-
-FREQ_DAYS_KEY="update_frequency"
-FREQ_DAYS=""
-
-NEXT_UPDATE_KEY="update_next"
-NEXT_UPDATE=""
-
-AUTO_UPDATE_KEY="update_auto"
+INITIALIZED=""
 AUTO_UPDATE=""
+FREQ_DAYS=""
+LAST_UPDATE=""
+NEXT_UPDATE=""
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -23,30 +17,20 @@ AUTO_UPDATE=""
 
 update_init() {
 
-    # Initialize config if needed
-    local test="$(get_config "${AUTO_UPDATE_KEY}")"
-    if [[ $test = "null" ]]; then
-        # Enable auto updates (default)
-        AUTO_UPDATE=true
-        set_config "${AUTO_UPDATE_KEY}" "${AUTO_UPDATE}"
+    # Get data
+    _update_get_config || return 1
 
-        # Set last update to now (default)
-        LAST_UPDATE="$(get_current_ts)" || return 1
-        set_config "${LAST_UPDATE_KEY}" "${LAST_UPDATE}" || return 1
-
-        # 
-        update_config || return 1
-    else
-        # Load values from config
-        LAST_UPDATE="$(get_config "${LAST_UPDATE_KEY}")" || return 1
-        FREQ_DAYS="$(get_config "${FREQ_DAYS_KEY}")" || return 1
-        NEXT_UPDATE="$(get_config "${NEXT_UPDATE_KEY}")" || return 1
-        AUTO_UPDATE="$(get_config "${AUTO_UPDATE_KEY}")" || return 1
+    # Initialize config
+    if [[ "$INITIALIZED" == "false" ]]; then
+        update_edit_config || return 1
     fi
+
+    # Update if needed
+    update_auto
 
     # Display next update date
     if [[ $AUTO_UPDATE = true ]]; then
-        printStyled info "Next update on: $(date_to_human "${NEXT_UPDATE}")"
+        printStyled info "Next update on: $(time_to_human "${NEXT_UPDATE}")"
     else
         printStyled info "Auto updates disabled"
     fi
@@ -57,23 +41,27 @@ update_init() {
 # ────────────────────────────────────────────────────────────────
 
 # Edit auto-update config
-update_config() {
+update_edit_config() {
 
     # Ask for auto-update frequency
-    _ask_frequency || return 1 # TODO: create generic `ask` function inside `io.zsh` and rename `io.zsh` -> `io.zsh`
-    set_config "${FREQ_DAYS_KEY}" "${FREQ_DAYS}" || return 1
+    _update_ask_freq || return 1 # TODO: create generic `ask` function inside `io.zsh` and rename `io.zsh` -> `io.zsh`
 
+    # Setup auto-update
+    LAST_UPDATE="$(date)"
     if [[ $FREQ_DAYS = 0 || -z $FREQ_DAYS ]]; then
-        AUTO_UPDATE=false
+        AUTO_UPDATE="false"
         NEXT_UPDATE=""
     else
-        AUTO_UPDATE=true
-        NEXT_UPDATE="$(date_add "${LAST_UPDATE}" "${FREQ_DAYS}")" || return 1
+        AUTO_UPDATE="true"
+        NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")" || return 1
     fi
 
-    # Compute NEXT_UPDATE
-    set_config "${AUTO_UPDATE_KEY}" "${AUTO_UPDATE}" || return 1
-    set_config "${NEXT_UPDATE_KEY}" "${NEXT_UPDATE}" || return 1
+    # Perform initial update
+    update_manual || return 1
+
+    # Save
+    INITIALIZED="true"
+    _update_set_config || return 1
 }
 
 # Auto-update GACLI if needed (based on config.json and coreutils)
@@ -81,7 +69,7 @@ update_auto() {
     local today
 
     # Check if auto update is enabled
-    if [[ "${AUTO_UPDATE}" = false ]]; then
+    if [[ "${AUTO_UPDATE}" == "false" ]]; then
         printStyled info "[gacli_auto_update] Auto-update is disabled → skipping"
         return 0
     fi
@@ -90,16 +78,15 @@ update_auto() {
     if [[ -z "$NEXT_UPDATE" ]]; then
         printStyled warning "[gacli_auto_update] No next update date found"
         printStyled warning "Auto-update disabled"
-        AUTO_UPDATE=false
-        set_config "${AUTO_UPDATE_KEY}" "${AUTO_UPDATE}"
+        AUTO_UPDATE="false" && _update_set_config
         return 1
     fi
 
     # Get current timestamp
-    if ! today="$(get_current_ts)"; then
+    if ! today="$(time_get_current)"; then
+        printStyled warning "[gacli_auto_update] Unable to get current timestamp"
         printStyled warning "Auto-update disabled"
-        AUTO_UPDATE=false
-        set_config "${AUTO_UPDATE_KEY}" "${AUTO_UPDATE}"
+        AUTO_UPDATE="false" && _update_set_config
         return 1
     fi
 
@@ -115,9 +102,9 @@ update_manual() {
     brew_update || return 1
 
     # Update variables
-    LAST_UPDATE="$(get_current_ts)"
+    LAST_UPDATE="$(time_get_current)"
     if [[ $AUTO_UPDATE = true ]]; then
-        if ! NEXT_UPDATE="$(date_add "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
+        if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
             printStyled warning "[update_manual] Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
@@ -125,10 +112,8 @@ update_manual() {
         fi
     fi
 
-    # Update config file
-    set_config "${LAST_UPDATE_KEY}" "${LAST_UPDATE}"
-    set_config "${NEXT_UPDATE_KEY}" "${NEXT_UPDATE}"
-    set_config "${AUTO_UPDATE_KEY}" "${AUTO_UPDATE}"
+    # Save
+    _update_set_config
 
     # Display result
     printStyled success "Updated 🚀"
@@ -139,8 +124,37 @@ update_manual() {
 # Functions - PRIVATE
 # ────────────────────────────────────────────────────────────────
 
+_update_get_config() {
+    local section="update_settings"
+
+    read "$CONFIG" "${section}.initialized" || return 1
+    INITIALIZED="${BUFFER[1]}" || return 1
+
+    read "$CONFIG" "${section}.auto_update" || return 1
+    AUTO_UPDATE="${BUFFER[1]}" || return 1
+
+    read "$CONFIG" "${section}.last_update" || return 1
+    LAST_UPDATE="${BUFFER[1]}" || return 1
+
+    read "$CONFIG" "${section}.freq_days" || return 1
+    FREQ_DAYS="${BUFFER[1]}" || return 1
+
+    read "$CONFIG" "${section}.next_update" || return 1
+    NEXT_UPDATE="${BUFFER[1]}" || return 1
+}
+
+_update_set_config() {
+    local section="update_settings"
+
+    write "$CONFIG" "${section}.initialized" "${INITIALIZED}" || return 1
+    write "$CONFIG" "${section}.auto_update" "${AUTO_UPDATE}" || return 1
+    write "$CONFIG" "${section}.last_update" "${LAST_UPDATE}" || return 1
+    write "$CONFIG" "${section}.freq_days" "${FREQ_DAYS}" || return 1
+    write "$CONFIG" "${section}.next_update" "${NEXT_UPDATE}" || return 1
+}
+
 # Ask user for auto-update frequency (type safe)
-_ask_frequency() {
+_update_ask_freq() {
     # Welcome Message
     print ""
     print "👋 ${CYAN}Welcome to ${BOLD}${ORANGE}GACLI${NONE}${CYAN}, the CLI that makes your dev life easier!${NONE}"
@@ -165,8 +179,8 @@ _ask_frequency() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# INIT
+# WIP: DEBUG
 # ────────────────────────────────────────────────────────────────
 
-io_init || return 1
+printStyled debug "=====> 5. update.zsh loaded"
 

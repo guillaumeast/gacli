@@ -1,5 +1,5 @@
 ###############################
-# FICHIER gacli.zsh
+# FICHIER /.run/gacli.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -15,34 +15,27 @@ IS_MACOS=false
 IS_LINUX=false
 
 # Root path
-GACLI_DIR_REL=".gacli"
-GACLI_DIR=""
+GACLI_DIR=".gacli"
+
+# Config files
+CONFIG_DIR=".run/config"
+CONFIG=".run/config/config.yaml"
+CORE_BREWFILE=".run/config/Brewfile"
 
 # Helpers
-HELPERS_DIR_REL=".run/helpers"
+HELPERS_DIR=".run/helpers"
 HELPERS_FILES_REL=("io.zsh" "brew.zsh" "parser.zsh" "time.zsh")
 HELPERS=()
 
 # Core files
-CORE_DIR_REL=".run/core"
-CORE_FILES_REL=("config.zsh" "update.zsh" "uninstall.zsh" "modules.zsh")
+CORE_DIR=".run/core"
+CORE_FILES_REL=("update.zsh" "uninstall.zsh" "modules.zsh")
 CORE_FILES=()
-CORE_BREWFILE_REL="Brewfile"
-CORE_BREWFILE=""
-CONFIG_REL="config.yaml"
-CONFIG=""
-
-# Modules manager
-MODULES_MANAGER_REL=".run/modules.zsh"
-MODULES_MANAGER=""
 
 # Temporary files
-TMP_DIR_REL=".tmp"
-TMP_DIR=""
-INSTALLED_FILE_REL="installed.yaml"
-INSTALLED_FILE=""
-MERGED_BREWFILE_REL="Brewfile"
-MERGED_BREWFILE=""
+TMP_DIR=".tmp"
+INSTALLED_FILE=".tmp/installed.yaml"
+MERGED_BREWFILE=".tmp/Brewfile"
 
 # Buffer for cross-modules communication (kind of "stdinfo")
 BUFFER=()
@@ -75,19 +68,10 @@ main() {
             abort "5"
         fi
     done
-    config_init || abort "6"
     update_init || abort "7"
 
     # Load user modules
     modules_init || abort "8"
-
-    ############################
-    # TODO: déplacer dans modules.zsh `modules_load`
-    ############################
-    # modules_fetch || abort "9"
-    # brew_update "${MERGED_BREWFILE}" || abort "9"
-    # modules_load || abort "10"
-    ############################
 
     # Dispatch commands
     _gacli_dispatch "$@" || abort "9"
@@ -122,33 +106,37 @@ _gacli_resolve() {
         echo "[_gacli_resolve] Error: \$HOME is not set or invalid"
         return 1
     fi
-    GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
+    GACLI_DIR="${HOME}/${GACLI_DIR}"
+
+    # Directories paths
+    CONFIG_DIR="${GACLI_DIR}/${CONFIG_DIR}"
+    HELPERS_DIR="${GACLI_DIR}/${HELPERS_DIR}"
+    CORE_DIR="${GACLI_DIR}/${CORE_DIR}"
+    TMP_DIR="${GACLI_DIR}/${TMP_DIR}"
+    mkdir -p "${TMP_DIR}" || {
+        echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
+        return 1
+    }
+
+    # Config files
+    CONFIG="${GACLI_DIR}/${CONFIG_REL}"
+    CORE_BREWFILE="${GACLI_DIR}/${CORE_BREWFILE_REL}"
 
     # Helpers
     local helper
     for helper in $HELPERS_FILES_REL; do
-        HELPERS+=("${GACLI_DIR}/${HELPERS_DIR_REL}/${helper}")
+        HELPERS+=("${HELPERS_DIR}/${helper}")
     done
 
     # Core files
     local file
     for file in $CORE_FILES_REL; do
-        CORE_FILES+=("${GACLI_DIR}/${CORE_DIR_REL}/${file}")
+        CORE_FILES+=("${CORE_DIR}/${file}")
     done
-    CORE_BREWFILE="${GACLI_DIR}/${CORE_DIR_REL}/${CORE_BREWFILE_REL}"
-    CONFIG="${GACLI_DIR}/${CORE_DIR_REL}/${CONFIG_REL}"
 
-    # Module manager
-    MODULES_MANAGER="${GACLI_DIR}/${MODULES_MANAGER_REL}"
-
-    # Tmp directory
-    TMP_DIR="${GACLI_DIR}/${TMP_DIR_REL}"
-    mkdir -p "${TMP_DIR}" || {
-        echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
-        return 1
-    }
-    INSTALLED_FILE="${GACLI_DIR}/${CORE_DIR_REL}/${INSTALLED_FILE_REL}"
-    MERGED_BREWFILE="${GACLI_DIR}/${CORE_DIR_REL}/${MERGED_BREWFILE_REL}"
+    # Tmp files
+    INSTALLED_FILE="${TMP_DIR}/${INSTALLED_FILE_REL}"
+    MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE_REL}"
 }
 
 # Dispatch commands
@@ -230,4 +218,12 @@ abort() {
 
 # Call main with all command args
 main "$@"
+
+# ────────────────────────────────────────────────────────────────
+# WIP: DEBUG
+# ────────────────────────────────────────────────────────────────
+
+print ""
+printStyled debug "[GACLI ENDED]"
+print ""
 

@@ -1,5 +1,5 @@
 ###############################
-# FICHIER gacli/modules/module_manager.zsh
+# FICHIER /.run/core/module_manager.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -45,6 +45,14 @@ modules_init() {
     # Load optional modules
     _module_dir "${OPTIONAL_MODULES}" "load" false
 }
+
+############################
+# TODO: from gacli.zsh
+############################
+# modules_fetch || abort "9"
+# brew_update "${MERGED_BREWFILE}" || abort "9"
+# modules_load || abort "10"
+############################
 
 # ────────────────────────────────────────────────────────────────
 # Functions - PRIVATE
@@ -252,8 +260,8 @@ modules_print_commands() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# INIT
+# WIP: DEBUG
 # ────────────────────────────────────────────────────────────────
 
-modules_init || return 1
+printStyled debug "=======> 7. modules.zsh loaded"
 

@@ -1,5 +1,5 @@
 ###############################
-# FICHIER gacli/modules/.core/brew/main.zsh
+# FICHIER /.run/helpers/brew.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -206,4 +206,10 @@ print_casks() {
     # Display (removing trailing " | ")
     print "${output% ${GREY}|${NONE} }"
 }
+
+# ────────────────────────────────────────────────────────────────
+# WIP: DEBUG
+# ────────────────────────────────────────────────────────────────
+
+printStyled debug "--> 2. brew.zsh loaded"
 
