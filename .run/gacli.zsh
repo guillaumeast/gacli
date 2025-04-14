@@ -3,7 +3,6 @@
 ###############################
 
 #!/usr/bin/env zsh
-setopt extended_glob
 
 # Easter egg display
 if [[ $1 == "" ]]; then
@@ -11,6 +10,7 @@ if [[ $1 == "" ]]; then
 fi
 
 # Env
+setopt extended_glob
 IS_MACOS=false
 IS_LINUX=false
 
@@ -18,18 +18,26 @@ IS_LINUX=false
 GACLI_DIR_REL=".gacli"
 GACLI_DIR=""
 
-# Parser
-PARSER_REL=""
-PARSER=""
+# Helpers
+HELPERS_DIR_REL=".run/helpers"
+HELPERS_FILES_REL=("io.zsh" "brew.zsh" "parser.zsh" "time.zsh")
+HELPERS=()
 
-# Module manager path
-MODULE_DIR_NAME="modules"
-MODULE_MANAGER_REL="${MODULE_DIR_NAME}/module_manager.zsh"
-MODULE_MANAGER=""
+# Core files
+CORE_DIR_REL=".run/helpers"
+CORE_FILES_REL=("config.zsh" "update.zsh" "uninstall.zsh")
+CORE_FILES=()
 
-# Temporary files directory path
-TMP_DIR_REL="modules/.tmp"
+# Modules manager
+MODULES_MANAGER_REL=".run/modules.zsh"
+MODULES_MANAGER=""
+
+# Temporary directory
+TMP_DIR_REL=".tmp"
 TMP_DIR=""
+
+# Buffer for cross-modules communication (kind of "stdinfo")
+BUFFER=()
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -41,15 +49,35 @@ main() {
     _gacli_check_os || abort "1"
     _gacli_resolve || abort "2"
 
-    # Check dependencies
-    source "${PARSER}" || abort "3"
-    _gacli_check_dependencies || abort "4"
+    # Load helpers
+    for helper in $HELPERS; do
+        if ! source "${helper}"; then
+            echo "[gacli.zsh] Unable to find required helper: ${helper}"
+            abort "3"
+        fi
+    done
+
+    # Check core dependencies
+    # TODO: check instead of make a blind update (maybe it's not needed !)
+    # TODO: create `_gacli_check_dependencies` function
+    brew_bundle "/.run/core/Brewfile"
+
+    # Load core files
+    for core_file in $CORE_FILES; do
+        if ! source "${core_file}"; then
+            echo "[gacli.zsh] Unable to find required file: ${core_file}"
+            abort "4"
+        fi
+    done
+    config_init || abort "5"
+    update_init || abort "6"
 
     # Load modules
-    source "${MODULE_MANAGER}" || abort "4"
+    source "${MODULE_MANAGER}" || abort "7"
+    modules_load || abort "8"
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "5"
+    _gacli_dispatch "$@" || abort "9"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -83,12 +111,20 @@ _gacli_resolve() {
     fi
     GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
 
+    # Helpers
+    local helper
+    for helper in $HELPERS_FILES_REL; do
+        HELPERS+=("${GACLI_DIR}/${HELPERS_DIR_REL}/${helper}")
+    done
+
+    # Core files
+    local file
+    for file in $CORE_FILES_REL; do
+        CORE_FILES+=("${GACLI_DIR}/${CORE_DIR_REL}/${file}")
+    done
+
     # Module manager
-    MODULE_MANAGER="${GACLI_DIR}/${MODULE_MANAGER_REL}"
-    if [[ ! -f "${MODULE_MANAGER}" ]]; then
-        echo "[_gacli_resolve] Error: Failed to find module manager at: ${MODULE_MANAGER}" >&2
-        return 1
-    fi
+    MODULES_MANAGER="${GACLI_DIR}/${MODULES_MANAGER_REL}"
 
     # Tmp directory
     TMP_DIR="${GACLI_DIR}/${TMP_DIR_REL}"
@@ -96,9 +132,6 @@ _gacli_resolve() {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
     }
-
-    # Config file
-    CONFIG_FILE="${GACLI_DIR}/${CONFIG_FILE_REL_PATH}"
 }
 
 # Dispatch commands

@@ -1,0 +1,14 @@
+# TODO: comment
+brew "curl"
+
+# TODO: comment
+brew "git"
+
+# TODO: cross-platform tools
+brew "coreutils"
+
+# Yaml processor
+brew "yq"
+
+# Json processor
+brew "jq"

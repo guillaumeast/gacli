@@ -1,4 +1,0 @@
-formulae:
-  - curl        # HTTP downloading tool
-modules:
-  - io          # I/O formatting tool

@@ -1,4 +1,0 @@
-formulae:
-  - jq          # JSON processor
-modules:
-  - io          # I/O formatting tool
