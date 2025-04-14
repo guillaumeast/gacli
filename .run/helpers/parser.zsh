@@ -111,10 +111,10 @@ _read_brew() {
 
     case "${key}" in
         formulae)
-            BUFFER=("${(@f)$(grep -Eo '^brew .+?\".+?\"' "${file}" | sed -E 's/^brew[[:space:]]+//')}") && return 0
+            BUFFER=($(grep '^brew "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)) && return 0
             ;;
         casks)
-            BUFFER=("${(@f)$(grep -Eo '^cask .+?\".+?\"' "${file}" | sed -E 's/^cask[[:space:]]+//')}") && return 0
+            BUFFER=($(grep '^cask "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)) && return 0
             ;;
         *)
             printStyled error "[read] Unknown key for brewfile: ${key}"

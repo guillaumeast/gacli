@@ -8,11 +8,8 @@
 MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/main/modules"
 
 # Resolve path
+MODULES_DIR_NAME="modules"
 MODULES_DIR="${GACLI_DIR}/${MODULE_DIR_NAME}"
-
-# Core and optional modules directories
-REQUIRED_MODULES=("${MODULES_DIR}/.core/helpers" "${MODULES_DIR}/.core/launcher")
-OPTIONAL_MODULES="${MODULES_DIR}/user_modules"
 
 # Modules signature
 ENTRY_POINT="main.zsh"
@@ -23,9 +20,6 @@ MODULES=()
 FORMULAE=()
 CASKS=()
 COMMANDS=()
-
-# Tools status (used to install missing dependencies)
-NEW_TOOLS=false
 
 # ────────────────────────────────────────────────────────────────
 # MAIN

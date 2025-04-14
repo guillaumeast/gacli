@@ -1,14 +1,12 @@
-# TODO: comment
+# HTTP client (used to fetch Homebrew, module descriptors and module archives)
 brew "curl"
 
-# TODO: comment
-brew "git"
-
-# TODO: cross-platform tools
+# Cross-platform GNU utilities (required for Linux compatibility)
 brew "coreutils"
 
-# Yaml processor
+# Yaml processor (used to parse tools.yaml files, module descriptors and config.yaml file)
 brew "yq"
 
-# Json processor
+# JSON processor (required for "yq")
 brew "jq"
+

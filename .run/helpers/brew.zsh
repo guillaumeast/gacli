@@ -4,35 +4,45 @@
 
 #!/usr/bin/env zsh
 
-# Variables
-BREWFILE="${TMP_DIR}/Brewfile"
-FORMULAE=()
-CASKS=()
-
 # ────────────────────────────────────────────────────────────────
 # MAIN
 # ────────────────────────────────────────────────────────────────
 
-# Install Homebrew if needed and check if Brewfile exists
-brew_init() {
-    # Install Homebrew if needed
-    if ! command -v brew >/dev/null 2>&1; then
-        brew_install || return 1
-        brew_update || return 1
+# Update Homebrew, formulae and casks
+brew_update() {
+    local brewfile="${1}"
+
+    # Check arguments
+    if [[ ! -f "${brewfile}" ]]; then
+        printStyled error "[brew_update] Unable to find Brewfile: ${brewfile}"
+        return 1
     fi
 
-    # Concat and load Brewfiles content
-    brew_load || return 1
+    # Check Homebrew install
+    _brew_install || return 1
+
+    # Check dependencies have changed
+    local update_is_due
+    update_is_due="$(_brew_is_update_due "${brewfile}")" || return 1
+
+    # Update
+    [[ "$update_is_due" == true ]] && _brew_bundle "${brewfile}"
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC (life cycle management)
+# Functions - PRIVATE
 # ────────────────────────────────────────────────────────────────
 
 # Install Homebrew
-brew_install() {
+_brew_install() {
+
+    # Check if Homebrew is already installed
+    if command -v brew >/dev/null 2>&1; then
+        return 0
+    fi
     printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
 
+    # Resolve install command
     local install_cmd
     if $IS_MACOS || $IS_LINUX; then
         if $IS_LINUX; then
@@ -44,6 +54,7 @@ brew_install() {
         return 1
     fi
 
+    # Execute install command
     if ! eval "$install_cmd"; then
         printStyled error "[brew_install] Homebrew installation failed"
         return 1
@@ -56,29 +67,24 @@ brew_install() {
         return 1
     fi
 
+    # Check if install is successful
     if ! eval "$("$brew_exec_path" shellenv)"; then
         printStyled error "[brew_install] Failed to set Homebrew environment"
         return 1
     fi
 
+    # Refresh command hash table
     if ! hash -r; then
         printStyled warning "[brew_install] Failed to refresh shell hash table"
     fi
 }
 
-brew_load() {
-    _brew_concat || return 1
-    _brew_load_file || return 1
-}
+_brew_bundle() {
+    local brewfile="${1}"
 
-# Update Homebrew, formulae and casks
-brew_update() {
     # Loading mesage
     print ""
     printStyled "info" "Updating... (this may take a few minutes) ⏳"
-
-    # Concat Brewfiles
-    brew_load || return 1
 
     # Update Homebrew
     if ! brew update  > /dev/null 2>&1; then
@@ -86,7 +92,7 @@ brew_update() {
     fi
 
     # Install/uninstall formulae & casks referring to the Brewfile
-    if ! brew bundle --file="${BREWFILE}" 1>/dev/null; then
+    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
         printStyled error "[brew_update] Failed to run bundle Homebrew"
         return 1
     fi
@@ -103,111 +109,101 @@ brew_update() {
     fi
 }
 
-# ────────────────────────────────────────────────────────────────
-# Functions - PRIVATE (Brewfiles management)
-# ────────────────────────────────────────────────────────────────
+# Checks if update is due
+_brew_is_update_due() {
+    local brewfile="${1}"
+    local update_is_due=false
 
-# Create a temporary Brewfile by concatenating all Brewfiles (root + .core + user_modules)
-_brew_concat() {
-
-    # Create/reset the final concatenated Brewfile
-    : > "${BREWFILE}" || {
-        printStyled error "[_brew_concat] Failed to initialize ${BREWFILE}"
-        return 1
-    }
-
-    # Find all Brewfiles in the repo, excluding tmp dir
-    local brewfiles
-    brewfiles=("${(@f)$(find "${GACLI_DIR}" -type f -name "Brewfile" ! -path "${TMP_DIR}/*" 2>/dev/null)}")
-
-    # Append each Brewfile content into the final $BREWFILE
-    local file
-    for file in "${brewfiles[@]}"; do
-        if [[ -f "$file" ]]; then
-            echo "#############################################" >> "${BREWFILE}"
-            echo "# From: ${file}" >> "${BREWFILE}"
-            echo "#############################################" >> "${BREWFILE}"
-            cat "$file" >> "${BREWFILE}"
-            echo "" >> "${BREWFILE}"
+    # Check if formulae need update
+    read "${INSTALLED_FILE}" formulae || return 1
+    local installed_f=("${BUFFER[@]}")
+    read "${brewfile}" formulae || return 1
+    local required_f=("${BUFFER[@]}")
+    for formula in $required_f; do
+        if ! [[ " ${installed_f[*]} " == *" ${formula} "* ]]; then
+            update_is_due=true
         fi
     done
-}
 
-# Load formulae and casks lists from Brewfiles (in all directories)
-_brew_load_file() {
+    # Check casks need update
+    read "${INSTALLED_FILE}" casks || return 1
+    local installed_c=("${BUFFER[@]}")
+    read "${brewfile}" casks || return 1
+    local required_c=("${BUFFER[@]}")
+    for cask in $required_c; do
+        if ! [[ " ${installed_c[*]} " == *" ${cask} "* ]]; then
+            update_is_due=true
+        fi
+    done
 
-    # Load formulae
-    if ! FORMULAE=($(grep '^brew "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)); then
-        printStyled error "[_brew_load_file] Failed to extract formulae from Brewfile"
-        FORMULAE=()
-        return 1
-    fi
-
-    # Load casks
-    if ! CASKS=($(grep '^cask "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)); then
-        printStyled error "[_brew_load_file] Failed to extract casks from Brewfile"
-        CASKS=()
-        return 1
-    fi
+    echo $update_is_due
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC (I/O)
+# Functions - PUBLIC
 # ────────────────────────────────────────────────────────────────
+
+brew_is_f_installed() {
+    local formula="${1}"
+    [[ "$formula" = "coreutils" ]] && formula="gdate"
+
+    if command -v $formula >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+brew_is_c_installed() {
+    local cask="${1}"
+
+    # "my-cask-name" → "My Cask Name.app"
+    local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
+
+    # Check .app folders first for speed, fallback to brew if missing
+    if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
+        return 0
+    elif brew list --cask "$cask" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
 
 # Print formulae status
 print_formulae() {
-    local output_formulae=""
+    local output=""
 
     # Compute
-    for formula in $FORMULAE; do
-        if [[ "$formula" = "coreutils" ]]; then
-            if command -v gdate >/dev/null 2>&1; then
-                output_formulae+="${ICON_ON}"
-            else
-                output_formulae+="${ICON_OFF}"
-            fi
-        else
-            if command -v $formula >/dev/null 2>&1; then
-                output_formulae+="${ICON_ON}"
-            else
-                output_formulae+="${ICON_OFF}"
-            fi
-        fi
-        output_formulae+=" ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
+    read "${INSTALLED_FILE}" formulae || return 1
+    local installed=("${BUFFER[@]}")
+
+    for formula in $installed; do
+        local icon="${ICON_OFF}"
+        _brew_is_f_installed "${formula}" && icon="${ICON_ON}"
+        output+="${icon} ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
-    print "${output_formulae% ${GREY}|${NONE} }"
+    print "${output% ${GREY}|${NONE} }"
 }
 
 # Print casks status
 print_casks() {
-    local output_casks=""
+    local output=""
 
     # Compute
-    for cask in $CASKS; do
-        # "my-cask-name" → "My Cask Name.app"
-        local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
+    read "${INSTALLED_FILE}" casks || return 1
+    local installed=("${BUFFER[@]}")
 
-        # Check .app folders first for speed, fallback to brew if missing
-        if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
-            output_casks+="${ICON_ON}"
-        elif brew list --cask "$cask" >/dev/null 2>&1; then
-            output_casks+="${ICON_ON}"
-        else
-            output_casks+="${ICON_OFF}"
-        fi
-        output_casks+=" ${CYAN}$cask${NONE} ${GREY}|${NONE} "
+    # Compute
+    for cask in $installed; do
+        local icon="${ICON_OFF}"
+        brew_is_c_installed "${cask}" && icon="${ICON_ON}"
+        output+="${icon} ${CYAN}$cask${NONE} ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
-    print "${output_casks% ${GREY}|${NONE} }"
+    print "${output% ${GREY}|${NONE} }"
 }
-
-# ────────────────────────────────────────────────────────────────
-# INIT
-# ────────────────────────────────────────────────────────────────
-
-brew_init || return 1
 

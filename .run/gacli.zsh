@@ -24,17 +24,25 @@ HELPERS_FILES_REL=("io.zsh" "brew.zsh" "parser.zsh" "time.zsh")
 HELPERS=()
 
 # Core files
-CORE_DIR_REL=".run/helpers"
-CORE_FILES_REL=("config.zsh" "update.zsh" "uninstall.zsh")
+CORE_DIR_REL=".run/core"
+CORE_FILES_REL=("config.zsh" "update.zsh" "uninstall.zsh" "modules.zsh")
 CORE_FILES=()
+CORE_BREWFILE_REL="Brewfile"
+CORE_BREWFILE=""
+CONFIG_REL="config.yaml"
+CONFIG=""
 
 # Modules manager
 MODULES_MANAGER_REL=".run/modules.zsh"
 MODULES_MANAGER=""
 
-# Temporary directory
+# Temporary files
 TMP_DIR_REL=".tmp"
 TMP_DIR=""
+INSTALLED_FILE_REL="installed.yaml"
+INSTALLED_FILE=""
+MERGED_BREWFILE_REL="Brewfile"
+MERGED_BREWFILE=""
 
 # Buffer for cross-modules communication (kind of "stdinfo")
 BUFFER=()
@@ -57,24 +65,29 @@ main() {
         fi
     done
 
-    # Check core dependencies
-    # TODO: check instead of make a blind update (maybe it's not needed !)
-    # TODO: create `_gacli_check_dependencies` function
-    brew_bundle "/.run/core/Brewfile"
+    # Install core dependencies
+    brew_update "${CORE_BREWFILE}" || abort "4"
 
     # Load core files
     for core_file in $CORE_FILES; do
         if ! source "${core_file}"; then
             echo "[gacli.zsh] Unable to find required file: ${core_file}"
-            abort "4"
+            abort "5"
         fi
     done
-    config_init || abort "5"
-    update_init || abort "6"
+    config_init || abort "6"
+    update_init || abort "7"
 
-    # Load modules
-    source "${MODULE_MANAGER}" || abort "7"
-    modules_load || abort "8"
+    # Load user modules
+    modules_init || abort "8"
+
+    ############################
+    # TODO: déplacer dans modules.zsh `modules_load`
+    ############################
+    # modules_fetch || abort "9"
+    # brew_update "${MERGED_BREWFILE}" || abort "9"
+    # modules_load || abort "10"
+    ############################
 
     # Dispatch commands
     _gacli_dispatch "$@" || abort "9"
@@ -122,6 +135,8 @@ _gacli_resolve() {
     for file in $CORE_FILES_REL; do
         CORE_FILES+=("${GACLI_DIR}/${CORE_DIR_REL}/${file}")
     done
+    CORE_BREWFILE="${GACLI_DIR}/${CORE_DIR_REL}/${CORE_BREWFILE_REL}"
+    CONFIG="${GACLI_DIR}/${CORE_DIR_REL}/${CONFIG_REL}"
 
     # Module manager
     MODULES_MANAGER="${GACLI_DIR}/${MODULES_MANAGER_REL}"
@@ -132,6 +147,8 @@ _gacli_resolve() {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
     }
+    INSTALLED_FILE="${GACLI_DIR}/${CORE_DIR_REL}/${INSTALLED_FILE_REL}"
+    MERGED_BREWFILE="${GACLI_DIR}/${CORE_DIR_REL}/${MERGED_BREWFILE_REL}"
 }
 
 # Dispatch commands
@@ -164,6 +181,17 @@ _gacli_dispatch() {
 
 # Display tools status
 print_tools() {
+    local formulae=()
+    local casks=()
+    local modules=()
+    local commands=()
+
+    # Get data
+    formulae="$(read "${INSTALLED_FILE}" formulae)"
+    casks="$(read "${INSTALLED_FILE}" casks)"
+    modules="$(read "${INSTALLED_FILE}" modules)"
+    commands="$(modules_get_commands)"
+
     # Display Hombrew packages
     print_formulae                      # Implemented in gacli/modules/.core/brew.zsh
     print_casks                         # Implemented in gacli/modules/.core/brew.zsh
