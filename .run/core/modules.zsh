@@ -28,15 +28,24 @@ BREW_UPDATE_IS_DUE="false"
 modules_init() {
     
     # Load installed tools lists
-    _modules_get_installed    
+    _modules_get_installed
+
+    # Create modules dir if it doesn't exist
+    # TODO: `mkdir -p` in install.zsh instead !
+    mkdir -p "${MODULES_DIR}" || {
+        echo "[_gacli_resolve] Error: Failed to create modules dir: ${MODULES_DIR}"
+        return 1
+    }
 
     # Check new modules
     _modules_check_new
 
     # Install new modules
-    for module in $MODULES_TO_INSTALL; do
-        _module_install "${module}"
-    done
+    if [[ ${#MODULES_TO_INSTALL[@]} -gt 0 ]]; then
+        for module in $MODULES_TO_INSTALL; do
+            _module_install "${module}"
+        done
+    fi
 
     # Update dependencies if needed
     if [[ "$BREW_UPDATE_IS_DUE" = "true" ]]; then
@@ -48,26 +57,28 @@ modules_init() {
     
 
     # Source module and get commands
-    for module in $MODULES; do
-        if ! source "${MODULES_DIR}/${module}/${ENTRY_POINT}"; then
-            printStyled warning "[modules_init] Unable to load module: ${module}"
-        else
-            COMMANDS+=("$(get_commands)") || {
-                printStyled warning "[modules_init] Unable to get module commands: ${module}"
-            }
-            parser_write "${INSTALLED_TOOLS}" modules "${module}" || {
-                printStyled warning "[modules_init] Unable to add module: ${module} → ${INSTALLED_TOOLS}"
-            }
-            unfunction get_commands
-        fi
-    done
+    if [[ ${#MODULES[@]} -gt 0 ]]; then
+        for module in $MODULES; do
+            if ! source "${MODULES_DIR}/${module}/${ENTRY_POINT}"; then
+                printStyled warning "[modules_init] Unable to load module: ${module}"
+            else
+                COMMANDS+=("$(get_commands)") || {
+                    printStyled warning "[modules_init] Unable to get module commands: ${module}"
+                }
+                parser_write "${INSTALLED_TOOLS}" modules "${module}" || {
+                    printStyled warning "[modules_init] Unable to add module: ${module} → ${INSTALLED_TOOLS}"
+                }
+                unfunction get_commands
+            fi
+        done
+    fi
 
     # Save current state
     for formula in $FORMULAE; do
-        parser_write "${INSTALLED_TOOLS}" formula "${formula}"
+        parser_write "${INSTALLED_TOOLS}" formulae "${formula}"
     done
     for cask in $CASKS; do
-        parser_write "${INSTALLED_TOOLS}" cask "${cask}"
+        parser_write "${INSTALLED_TOOLS}" casks "${cask}"
     done
 }
 
@@ -94,10 +105,15 @@ _modules_check_new() {
     MODULES_TO_INSTALL=()
 
     # Check new modules in $MODULES_DIR
-    for module_path in "${MODULES_DIR}"/*(/); do
-        local module="${module_path##*/}"
-        _module_is_installed "${module}" || MODULES_TO_INSTALL+=("${module}")
-    done
+    # Nullglob to avoid errors when MODULES_DIR is empty
+    setopt local_options nullglob
+    local modules=("${MODULES_DIR}"/*(/))
+    if [[ ${#modules[@]} -gt 0 ]]; then
+        for module_path in "${modules[@]}"; do
+            local module_name="${module_path##*/}"
+            _module_is_installed "${module_name}" || MODULES_TO_INSTALL+=("${module_name}")
+        done
+    fi
 
     # Check new modules in $USER_TOOLS
     parser_read "${USER_TOOLS}" modules || return 1
@@ -222,10 +238,4 @@ modules_print_commands() {
     # Display (removing trailing " | ")
     print "${output_commands% ${GREY}|${NONE} }"
 }
-
-# ────────────────────────────────────────────────────────────────
-# WIP: DEBUG
-# ────────────────────────────────────────────────────────────────
-
-printStyled debug "=======> 7. modules.zsh loaded"
 

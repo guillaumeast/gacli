@@ -4,9 +4,9 @@
 
 # Managed by update module: /.run/core/update
 update_settings:
-  - initialized: false
-  - auto_update: false
-  - last_update:
-  - freq_days:
-  - next_update:
+  initialized: false
+  auto_update: false
+  last_update:
+  freq_days:
+  next_update:
 

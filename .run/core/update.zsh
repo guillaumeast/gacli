@@ -109,7 +109,7 @@ update_auto() {
 # Update homebrew & formulae & casks
 update_manual() {
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
-    brew_update || return 1
+    brew_update "${CORE_BREWFILE}" || return 1
 
     # Update variables
     LAST_UPDATE="$(time_get_current)"
@@ -187,10 +187,4 @@ _update_ask_freq() {
         fi
     done
 }
-
-# ────────────────────────────────────────────────────────────────
-# WIP: DEBUG
-# ────────────────────────────────────────────────────────────────
-
-printStyled debug "=====> 5. update.zsh loaded"
 

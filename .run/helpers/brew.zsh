@@ -126,9 +126,9 @@ _brew_is_update_due() {
     # Create INSTALLED_TOOLS file if needed
     if [[ ! -f "${INSTALLED_TOOLS}" ]]; then
         {
-            echo "formulae: []"
-            echo "casks: []"
-            echo "modules: []"
+            echo "formulae:"
+            echo "casks:"
+            echo "modules:"
         } >> "${INSTALLED_TOOLS}" || {
             printStyled error "Unable to create INSTALLED_TOOLS file: ${INSTALLED_TOOLS}"
             return 1
@@ -228,10 +228,4 @@ print_casks() {
     # Display (removing trailing " | ")
     print "${output% ${GREY}|${NONE} }"
 }
-
-# ────────────────────────────────────────────────────────────────
-# WIP: DEBUG
-# ────────────────────────────────────────────────────────────────
-
-printStyled debug "--> 2. brew.zsh loaded"
 

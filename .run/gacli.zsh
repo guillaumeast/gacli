@@ -108,17 +108,13 @@ _gacli_resolve() {
         return 1
     fi
     GACLI_DIR="${HOME}/${GACLI_DIR}"
-    echo "🔦  => GACLI_DIR = \"${GACLI_DIR}\""
 
     # Directories paths
     CONFIG_DIR="${GACLI_DIR}/${CONFIG_DIR}"
-    echo "🔦  => CONFIG_DIR = \"${CONFIG_DIR}\""
     HELPERS_DIR="${GACLI_DIR}/${HELPERS_DIR}"
-    echo "🔦  => HELPERS_DIR = \"${HELPERS_DIR}\""
     CORE_DIR="${GACLI_DIR}/${CORE_DIR}"
-    echo "🔦  => CORE_DIR = \"${CORE_DIR}\""
     TMP_DIR="${GACLI_DIR}/${TMP_DIR}"
-    echo "🔦  => TMP_DIR = \"${TMP_DIR}\""
+    # TODO: `mkdir -p` in install.zsh instead !
     mkdir -p "${TMP_DIR}" || {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
@@ -126,11 +122,8 @@ _gacli_resolve() {
 
     # Config files
     USER_TOOLS="${GACLI_DIR}/${USER_TOOLS}"
-    echo "🔦  => USER_TOOLS = \"${USER_TOOLS}\""
     CONFIG="${CONFIG_DIR}/${CONFIG}"
-    echo "🔦  => CONFIG = \"${CONFIG}\""
     CORE_BREWFILE="${CONFIG_DIR}/${CORE_BREWFILE}"
-    echo "🔦  => CORE_BREWFILE = \"${CORE_BREWFILE}\""
 
     # Helpers
     local helper
@@ -150,9 +143,7 @@ _gacli_resolve() {
 
     # Tmp files
     INSTALLED_TOOLS="${TMP_DIR}/${INSTALLED_TOOLS}"
-    echo "🔦  => INSTALLED_TOOLS = \"${INSTALLED_TOOLS}\""
     MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE}"
-    echo "🔦  => MERGED_BREWFILE = \"${MERGED_BREWFILE}\""
 }
 
 # Dispatch commands
@@ -243,7 +234,9 @@ main "$@"
 # WIP: DEBUG
 # ────────────────────────────────────────────────────────────────
 
-print ""
-echo "🔦 [GACLI ENDED]"
-print ""
+echo ""
+echo "-------------------------"
+echo "🔦    [GACLI ENDED]"    🎉
+echo "-------------------------"
+echo ""
 

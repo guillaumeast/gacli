@@ -26,11 +26,13 @@ SYM_DIR=".local/bin"
 SYMLINK="gacli"
 
 # Colors
-GREEN="$(printf '\033[32m')"
-ORANGE="$(printf '\033[38;5;208m')"
 RED="$(printf '\033[31m')"
+GREEN="$(printf '\033[32m')"
+YELLOW='\033[33m'
+ORANGE="$(printf '\033[38;5;208m')"
 GREY="$(printf '\033[90m')"
 NONE="$(printf '\033[0m')"
+BOLD="$(printf '\033[1m')"
 
 # Emojis (used only if system supports unicode emojis)
 EMOJI_SUCCESS="✦"
@@ -38,6 +40,7 @@ EMOJI_WARN="⚠️"
 EMOJI_ERR="❌"
 EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
+EMOJI_DEBUG="🔎"
 EMOJI_WAIT="⏳"
 
 # ────────────────────────────────────────────────────────────────
@@ -60,8 +63,7 @@ main() {
     # Install dependencies
     echo ""
     printStyled info "Installing dependencies... ${EMOJI_WAIT}"
-    curl_install || exit 05         # Needed to install Homebrew
-    git_install || exit 06          # Needed to install Homebrew
+    curl_install || wget_install || git_install || exit 05
     brew_install || exit 07         # Needed to install coreutils
     coreutils_install || exit 08    # Needed for cross-platform compatibility
 
@@ -113,6 +115,7 @@ check_unicode() {
         EMOJI_ERR="[X]"
         EMOJI_INFO="[i]"
         EMOJI_HIGHLIGHT="=>"
+        EMOJI_DEBUG="[???]"
         EMOJI_WAIT="..."
         printStyled warning "[check_unicode] Unicode unsupported, emojis disabled for compatibility"
     else
@@ -191,34 +194,46 @@ check_zsh() {
 
 # Install curl
 curl_install() {
+    printStyled debug "-------------------"
+    printStyled debug "[CURL] Checking..."
 
     # Check
     if ! command -v curl >/dev/null 2>&1; then
+        printStyled debug "[CURL] ---> Not installed"
 
         printStyled highlight "Installing curl (your password may be asked)... ${EMOJI_WAIT}"
 
         # Try auto-install
+        printStyled debug "[CURL] Trying to install..."
         if [ "$IS_MACOS" = true ]; then
+            printStyled debug "[CURL] Running 'brew install curl'..."
             if brew install curl; then
                 printStyled success "Curl installed"
                 return 0
             fi
+            printStyled debug "[CURL] ---> Failed"
         elif [ "$IS_LINUX" = true ]; then
             if command -v apt >/dev/null 2>&1; then
+                printStyled debug "[CURL] Running 'sudo apt install curl'..."
                 if sudo apt install curl; then
                     printStyled success "Curl installed"
                     return 0
                 fi
+                printStyled debug "[CURL] ---> Failed"
             elif command -v dnf >/dev/null 2>&1; then
+                printStyled debug "[CURL] Running 'sudo dnf install curl'..."
                 if sudo dnf install curl; then
                     printStyled success "Curl installed"
                     return 0
                 fi
+                printStyled debug "[CURL] ---> Failed"
             elif command -v pacman >/dev/null 2>&1; then
+                printStyled debug "[CURL] Running 'sudo pacman -S curl'..."
                 if sudo pacman -S curl; then
                     printStyled success "Curl installed"
                     return 0
                 fi
+                printStyled debug "[CURL] ---> Failed"
             fi
         fi
 
@@ -234,6 +249,60 @@ curl_install() {
 
     # Display success
     printStyled success "Curl detected"
+}
+
+# Install wget
+wget_install() {
+    printStyled debug "-------------------"
+    printStyled debug "[WGET] Checking..."
+
+    # Check
+    if ! command -v wget >/dev/null 2>&1; then
+        printStyled debug "[WGET] ---> Not installed"
+
+        printStyled highlight "Installing wget (your password may be asked)... ${EMOJI_WAIT}"
+
+        # Try auto-install
+        printStyled debug "[WGET] Trying to install..."
+        if [ "$IS_MACOS" = true ]; then
+            printStyled debug "[WGET] Running 'brew install wget'..."
+            if brew install wget; then
+                printStyled success "wget installed"
+                return 0
+            fi
+            printStyled debug "[WGET] ---> Failed"
+        elif [ "$IS_LINUX" = true ]; then
+            if command -v apt >/dev/null 2>&1; then
+                printStyled debug "[WGET] Running 'sudo apt install wget'..."
+                if sudo apt install wget; then
+                    printStyled success "wget installed"
+                    return 0
+                fi
+                printStyled debug "[WGET] ---> Failed"
+            elif command -v dnf >/dev/null 2>&1; then
+                printStyled debug "[WGET] Running 'sudo dnf install wget'..."
+                if sudo dnf install wget; then
+                    printStyled success "wget installed"
+                    return 0
+                fi
+                printStyled debug "[WGET] ---> Failed"
+            elif command -v pacman >/dev/null 2>&1; then
+                printStyled debug "[CURL] Running 'sudo pacman -S wget'..."
+                if sudo pacman -S wget; then
+                    printStyled success "wget installed"
+                    return 0
+                fi
+                printStyled debug "[WGET] ---> Failed"
+            fi
+        fi
+
+        # Manual fallback
+        printStyled warning "[GACLI] Unable to install wget"
+        return 1
+    fi
+
+    # Display success
+    printStyled success "wget detected"
 }
 
 # Install git
@@ -475,9 +544,9 @@ auto_launch() {
     if [ -n "${ZSH_VERSION}" ]; then
         printStyled info "Reloading shell environment... ${EMOJI_WAIT}"
         echo ""
-        source "${ZSHRC}"
+        exec zsh
     else
-        printStyled warning "Open a new terminal window or run: source ~/.zshrc"
+        printStyled warning "Open a new terminal window or run: exec zsh"
         echo ""
     fi
 }
@@ -531,7 +600,11 @@ printStyled() {
             ;;
         highlight)
             color=$NONE
-            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
+            final_message="${EMOJI_DEBUG} ${raw_message}"
+            ;;        
+        debug)
+            color=$YELLOW
+            final_message="🔦 ===> ${BOLD}${raw_message}${NONE}"
             ;;
         *)
             color=$NONE
