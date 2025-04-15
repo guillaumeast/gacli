@@ -45,6 +45,7 @@ modules_init() {
     
     # Reset INSTALLED_TOOLS values
     parser_reset "${INSTALLED_TOOLS}" modules
+    
 
     # Source module and get commands
     for module in $MODULES; do

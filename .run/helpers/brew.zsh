@@ -123,27 +123,40 @@ _brew_is_update_due() {
     local brewfile="${1}"
     local update_is_due=false
 
-    # Check if formulae need update
-    parser_read "${INSTALLED_TOOLS}" formulae || return 1
-    local installed_f=("${BUFFER[@]}")
-    parser_read "${brewfile}" formulae || return 1
-    local required_f=("${BUFFER[@]}")
-    for formula in $required_f; do
-        if ! [[ " ${installed_f[*]} " == *" ${formula} "* ]]; then
-            update_is_due=true
-        fi
-    done
+    # Create INSTALLED_TOOLS file if needed
+    if [[ ! -f "${INSTALLED_TOOLS}" ]]; then
+        {
+            echo "formulae: []"
+            echo "casks: []"
+            echo "modules: []"
+        } >> "${INSTALLED_TOOLS}" || {
+            printStyled error "Unable to create INSTALLED_TOOLS file: ${INSTALLED_TOOLS}"
+            return 1
+        }
+        update_is_due=true
+    else
+        # Check if formulae need update
+        parser_read "${INSTALLED_TOOLS}" formulae || return 1
+        local installed_f=("${BUFFER[@]}")
+        parser_read "${brewfile}" formulae || return 1
+        local required_f=("${BUFFER[@]}")
+        for formula in $required_f; do
+            if ! [[ " ${installed_f[*]} " == *" ${formula} "* ]]; then
+                update_is_due=true
+            fi
+        done
 
-    # Check casks need update
-    parser_read "${INSTALLED_TOOLS}" casks || return 1
-    local installed_c=("${BUFFER[@]}")
-    parser_read "${brewfile}" casks || return 1
-    local required_c=("${BUFFER[@]}")
-    for cask in $required_c; do
-        if ! [[ " ${installed_c[*]} " == *" ${cask} "* ]]; then
-            update_is_due=true
-        fi
-    done
+        # Check casks need update
+        parser_read "${INSTALLED_TOOLS}" casks || return 1
+        local installed_c=("${BUFFER[@]}")
+        parser_read "${brewfile}" casks || return 1
+        local required_c=("${BUFFER[@]}")
+        for cask in $required_c; do
+            if ! [[ " ${installed_c[*]} " == *" ${cask} "* ]]; then
+                update_is_due=true
+            fi
+        done
+    fi
 
     echo $update_is_due
 }

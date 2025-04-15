@@ -20,8 +20,8 @@ GACLI_DIR=".gacli"
 # Config files
 USER_TOOLS="tools.yaml"
 CONFIG_DIR=".run/config"
-CONFIG="${CONFIG_DIR}/config.yaml"
-CORE_BREWFILE="${CONFIG_DIR}/Brewfile"
+CONFIG="config.yaml"
+CORE_BREWFILE="Brewfile"
 
 # Helpers
 HELPERS_DIR=".run/helpers"
@@ -31,12 +31,12 @@ HELPERS=()
 # Core files
 CORE_DIR=".run/core"
 CORE_FILES=("update.zsh" "uninstall.zsh" "modules.zsh")
-CORE_FILES=()
+CORE=()
 
 # Temporary files
 TMP_DIR=".tmp"
-INSTALLED_TOOLS=".tmp/installed_tools.yaml"
-MERGED_BREWFILE=".tmp/Brewfile"
+INSTALLED_TOOLS="installed_tools.yaml"
+MERGED_BREWFILE="Brewfile"
 
 # Buffer for cross-modules communication (kind of "stdinfo")
 BUFFER=()
@@ -63,19 +63,19 @@ main() {
     brew_update "${CORE_BREWFILE}" || abort "4"
 
     # Load core files
-    for core_file in $CORE_FILES; do
+    for core_file in $CORE; do
         if ! source "${core_file}"; then
             echo "[gacli.zsh] Unable to find required file: ${core_file}"
             abort "5"
         fi
     done
-    update_init || abort "7"
+    update_init || abort "6"
 
     # Load user modules
-    modules_init || abort "8"
+    modules_init || abort "7"
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "9"
+    _gacli_dispatch "$@" || abort "8"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -108,12 +108,17 @@ _gacli_resolve() {
         return 1
     fi
     GACLI_DIR="${HOME}/${GACLI_DIR}"
+    echo "🔦  => GACLI_DIR = \"${GACLI_DIR}\""
 
     # Directories paths
     CONFIG_DIR="${GACLI_DIR}/${CONFIG_DIR}"
+    echo "🔦  => CONFIG_DIR = \"${CONFIG_DIR}\""
     HELPERS_DIR="${GACLI_DIR}/${HELPERS_DIR}"
+    echo "🔦  => HELPERS_DIR = \"${HELPERS_DIR}\""
     CORE_DIR="${GACLI_DIR}/${CORE_DIR}"
+    echo "🔦  => CORE_DIR = \"${CORE_DIR}\""
     TMP_DIR="${GACLI_DIR}/${TMP_DIR}"
+    echo "🔦  => TMP_DIR = \"${TMP_DIR}\""
     mkdir -p "${TMP_DIR}" || {
         echo "[_gacli_resolve] Error: Failed to create tmp dir: ${TMP_DIR}"
         return 1
@@ -121,24 +126,33 @@ _gacli_resolve() {
 
     # Config files
     USER_TOOLS="${GACLI_DIR}/${USER_TOOLS}"
-    CONFIG="${GACLI_DIR}/${CONFIG}"
-    CORE_BREWFILE="${GACLI_DIR}/${CORE_BREWFILE}"
+    echo "🔦  => USER_TOOLS = \"${USER_TOOLS}\""
+    CONFIG="${CONFIG_DIR}/${CONFIG}"
+    echo "🔦  => CONFIG = \"${CONFIG}\""
+    CORE_BREWFILE="${CONFIG_DIR}/${CORE_BREWFILE}"
+    echo "🔦  => CORE_BREWFILE = \"${CORE_BREWFILE}\""
 
     # Helpers
     local helper
     for helper in $HELPERS_FILES; do
-        HELPERS+=("${HELPERS_DIR}/${helper}")
+        local helper_path="${HELPERS_DIR}/${helper}"
+        HELPERS+=("${helper_path}")
+        echo "🔦  ======> helper = \"${helper_path}\""
     done
 
     # Core files
     local file
     for file in $CORE_FILES; do
-        CORE_FILES+=("${CORE_DIR}/${file}")
+        local file_path="${CORE_DIR}/${file}"
+        CORE+=("${file_path}")
+        echo "🔦  ===========> core file = \"${file_path}\""
     done
 
     # Tmp files
     INSTALLED_TOOLS="${TMP_DIR}/${INSTALLED_TOOLS}"
+    echo "🔦  => INSTALLED_TOOLS = \"${INSTALLED_TOOLS}\""
     MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE}"
+    echo "🔦  => MERGED_BREWFILE = \"${MERGED_BREWFILE}\""
 }
 
 # Dispatch commands
@@ -210,7 +224,11 @@ help() {
 
 # Display a fatal error message and exit the script
 abort() {
-    echo "[GACLI] E${1}: fatal error, exiting GACLI" >&2
+    echo ""
+    echo "-------------------------------------------------------"
+    echo " ---> [GACLI] E${1}: fatal error, exiting GACLI XXX <---" >&2
+    echo "-------------------------------------------------------"
+    echo ""
     exit "${1}"
 }
 
@@ -226,6 +244,6 @@ main "$@"
 # ────────────────────────────────────────────────────────────────
 
 print ""
-printStyled debug "[GACLI ENDED]"
+echo "🔦 [GACLI ENDED]"
 print ""
 

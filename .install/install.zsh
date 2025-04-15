@@ -13,13 +13,17 @@ IS_LINUX=false
 
 # GACLI urls
 REPO="https://github.com/guillaumeast/gacli"
-ARCHIVE="${REPO}/archive/refs/heads/main.tar.gz"
+# ARCHIVE="${REPO}/archive/refs/heads/main.tar.gz"
+ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
 
 # GACLI paths
 DIR=".gacli"
-ENTRY_POINT="${DIR}/gacli.zsh"
-SYMLINK=".local/bin/gacli"
+ENTRY_POINT=".run/gacli.zsh"
 ZSHRC=".zshrc"
+
+# SYMLINK
+SYM_DIR=".local/bin"
+SYMLINK="gacli"
 
 # Colors
 GREEN="$(printf '\033[32m')"
@@ -63,7 +67,7 @@ main() {
 
     # Configure GACLI
     echo ""
-    printStyled info "Installing GACLI into ${DIR}... ${EMOJI_WAIT}"
+    printStyled info "Installing GACLI into \"${DIR}\"... ${EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_wrapper || exit 11       # Create a wrapper to enable gacli commands (avoid symlink's shell env corruption)
@@ -147,8 +151,9 @@ resolve_paths() {
     # Resolve paths
     DIR="${HOME}/${DIR}"
     ENTRY_POINT="${DIR}/${ENTRY_POINT}"
-    SYMLINK="${HOME}/${SYMLINK}"
     ZSHRC="${HOME}/${ZSHRC}"
+    SYM_DIR="${HOME}/${SYM_DIR}"
+    SYMLINK="${SYM_DIR}/${SYMLINK}"
 
     # Check .zshrc path
     while [ -z "${ZSHRC}" ] || [ ! -f "${ZSHRC}" ]; do
@@ -363,7 +368,6 @@ gacli_download() {
     fi
 
     # Try download archive
-    echo "${EMOJI_INFO} Downloading GACLI archive... ${EMOJI_WAIT}"
     local tmp_archive="$(mktemp)"
     if curl -fsSL "${ARCHIVE}" -o "${tmp_archive}"; then
         mkdir -p "${DIR}" || {
@@ -374,7 +378,7 @@ gacli_download() {
 
         if tar -xzf "${tmp_archive}" --strip-components=1 -C "${DIR}"; then
             rm -f "${tmp_archive}"
-            echo "${EMOJI_SUCCESS} GACLI downloaded (via archive)"
+            echo "${GREEN}${EMOJI_SUCCESS} GACLI downloaded (via archive)${NONE}"
             return 0
         else
             echo "${EMOJI_WARN} [GACLI] Failed to extract archive"
@@ -387,7 +391,7 @@ gacli_download() {
     # Fallback to git clone
     echo "${EMOJI_INFO} Trying fallback: git clone... ${EMOJI_WAIT}"
     if git clone "${REPO}" "${DIR}" > /dev/null 2>&1; then
-        echo "${EMOJI_SUCCESS} GACLI downloaded (via git)"
+        echo "${GREEN}${EMOJI_SUCCESS} GACLI downloaded (via git)${NONE}"
         return 0
     fi
 
@@ -451,8 +455,8 @@ update_zshrc() {
         echo ""
         echo ""
         echo "# GACLI"
-        echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
-        echo "source \"\$HOME/.gacli/gacli.zsh\""
+        echo "export PATH=\"${SYM_DIR}:\$PATH\""
+        echo "source \"${ENTRY_POINT}\""
     } >> "${ZSHRC}" || {
         printStyled error "Failed to update ${ZSHRC}"
         return 1
