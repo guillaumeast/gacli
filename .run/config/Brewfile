@@ -1,5 +1,5 @@
 ###############################
-# FICHIER /.run/core/Brewfile
+# FICHIER /.run/config/Brewfile
 ###############################
 
 # HTTP client (used to fetch Homebrew, module descriptors and module archives)

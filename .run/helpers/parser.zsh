@@ -9,7 +9,7 @@
 # ────────────────────────────────────────────────────────────────
 
 # Universal reader: parser_read <file> <key>
-read() {
+parser_read() {
     local file="${1}"
     local key="${2}"
 
@@ -50,7 +50,7 @@ read() {
 }
 
 # Universal writer: parser_write <file> <key> <value>
-write() {
+parser_write() {
     local file="${1}"
     local key="${2}"
     local value="${3}"
@@ -92,7 +92,7 @@ write() {
 }
 
 # Universal reset: parser_reset <file> <key>
-reset() {
+parser_reset() {
     local file="${1}"
     local key="${2}"
 

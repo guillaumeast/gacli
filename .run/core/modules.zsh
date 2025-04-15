@@ -1,5 +1,5 @@
 ###############################
-# FICHIER /.run/core/module_manager.zsh
+# FICHIER /.run/core/modules.zsh
 ###############################
 
 #!/usr/bin/env zsh
@@ -44,23 +44,29 @@ modules_init() {
     fi
     
     # Reset INSTALLED_TOOLS values
-    reset "${INSTALLED_TOOLS}" modules
+    parser_reset "${INSTALLED_TOOLS}" modules
 
-    # Load modules
+    # Source module and get commands
     for module in $MODULES; do
         if ! source "${MODULES_DIR}/${module}/${ENTRY_POINT}"; then
             printStyled warning "[modules_init] Unable to load module: ${module}"
         else
-            write "${INSTALLED_TOOLS}" modules "${module}"
+            COMMANDS+=("$(get_commands)") || {
+                printStyled warning "[modules_init] Unable to get module commands: ${module}"
+            }
+            parser_write "${INSTALLED_TOOLS}" modules "${module}" || {
+                printStyled warning "[modules_init] Unable to add module: ${module} → ${INSTALLED_TOOLS}"
+            }
+            unfunction get_commands
         fi
     done
 
     # Save current state
-    for formula in $FORMULAS; do
-        write "${INSTALLED_TOOLS}" formula "${formula}"
+    for formula in $FORMULAE; do
+        parser_write "${INSTALLED_TOOLS}" formula "${formula}"
     done
     for cask in $CASKS; do
-        write "${INSTALLED_TOOLS}" cask "${cask}"
+        parser_write "${INSTALLED_TOOLS}" cask "${cask}"
     done
 }
 
@@ -71,15 +77,15 @@ modules_init() {
 _modules_get_installed() {
 
     # Formulae
-    read "${INSTALLED_TOOLS}" formulae || return 1
+    parser_read "${INSTALLED_TOOLS}" formulae || return 1
     FORMULAE=("${BUFFER[@]}")
 
     # Casks
-    read "${INSTALLED_TOOLS}" casks || return 1
+    parser_read "${INSTALLED_TOOLS}" casks || return 1
     CASKS=("${BUFFER[@]}")
 
     # Modules
-    read "${INSTALLED_TOOLS}" modules || return 1
+    parser_read "${INSTALLED_TOOLS}" modules || return 1
     MODULES=("${BUFFER[@]}")
 }
 
@@ -87,12 +93,13 @@ _modules_check_new() {
     MODULES_TO_INSTALL=()
 
     # Check new modules in $MODULES_DIR
-    for module in "${MODULES_DIR}"; do
+    for module_path in "${MODULES_DIR}"/*(/); do
+        local module="${module_path##*/}"
         _module_is_installed "${module}" || MODULES_TO_INSTALL+=("${module}")
     done
 
     # Check new modules in $USER_TOOLS
-    read "${USER_TOOLS}" modules || return 1
+    parser_read "${USER_TOOLS}" modules || return 1
     for module in "${BUFFER[@]}"; do
         _module_is_installed "${module}" || MODULES_TO_INSTALL+=("${module}")
     done
@@ -111,16 +118,16 @@ _module_install() {
     _module_download "${module}" || return 1
 
     # Install nested modules (recursive)
-    read "${MODULES_DIR}/${module}/${CONFIG_FILE}" modules || return 1
+    parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" modules || return 1
     local nested_module
-    for nested_module in $"${BUFFER[@]}"; do
+    for nested_module in "${BUFFER[@]}"; do
         if ! [[ " ${MODULES[*]} " == *" ${nested_module} "* ]]; then
             _module_install "${nested_module}"
         fi
     done
 
     # Add formulae and casks dependencies
-    _module_add_dependencies || return 1
+    _module_add_dependencies "${module}" || return 1
 
     # Add this module to MODULES
     MODULES+=("${module}")
@@ -143,7 +150,7 @@ _module_download() {
     curl "${descriptor_url}" > "${descriptor_path}" || return 1
 
     # Get archive url
-    read "${descriptor_path}" module_url || return 1
+    parser_read "${descriptor_path}" module_url || return 1
     local module_url="${BUFFER[1]}"
 
     # Download archive
@@ -174,9 +181,10 @@ _module_download() {
 }
 
 _module_add_dependencies() {
+    local module="${1}"
 
     # Check formulae
-    read "${MODULES_DIR}/${module}/${CONFIG_FILE}" formulae || return 1
+    parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" formulae || return 1
     local formula
     for formula in "${BUFFER[@]}"; do
         if ! [[ " ${FORMULAE[*]} " == *" ${formula} "* ]]; then
@@ -186,7 +194,7 @@ _module_add_dependencies() {
     done
 
     # Check casks
-    read "${MODULES_DIR}/${module}/${CONFIG_FILE}" casks || return 1
+    parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" casks || return 1
     local cask
     for cask in "${BUFFER[@]}"; do
         if ! [[ " ${CASKS[*]} " == *" ${cask} "* ]]; then
@@ -194,6 +202,24 @@ _module_add_dependencies() {
             BREW_UPDATE_IS_DUE=true
         fi
     done
+}
+
+# ────────────────────────────────────────────────────────────────
+# Functions - PUBLIC
+# ────────────────────────────────────────────────────────────────
+
+# Print available commands
+modules_print_commands() {
+    local output_commands=""
+
+    # Compute
+    for cmd in "${COMMANDS[@]}"; do
+        local command_name="${cmd%%=*}"
+        output_commands+="${ICON_ON} ${GREEN}${command_name}${NONE} ${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output_commands% ${GREY}|${NONE} }"
 }
 
 # ────────────────────────────────────────────────────────────────

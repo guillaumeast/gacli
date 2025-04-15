@@ -18,19 +18,19 @@ IS_LINUX=false
 GACLI_DIR=".gacli"
 
 # Config files
-CONFIG_DIR=".run/config"
-CONFIG=".run/config/config.yaml"
-CORE_BREWFILE=".run/config/Brewfile"
 USER_TOOLS="tools.yaml"
+CONFIG_DIR=".run/config"
+CONFIG="${CONFIG_DIR}/config.yaml"
+CORE_BREWFILE="${CONFIG_DIR}/Brewfile"
 
 # Helpers
 HELPERS_DIR=".run/helpers"
-HELPERS_FILES_REL=("io.zsh" "brew.zsh" "parser.zsh" "time.zsh")
+HELPERS_FILES=("io.zsh" "brew.zsh" "parser.zsh" "time.zsh")
 HELPERS=()
 
 # Core files
 CORE_DIR=".run/core"
-CORE_FILES_REL=("update.zsh" "uninstall.zsh" "modules.zsh")
+CORE_FILES=("update.zsh" "uninstall.zsh" "modules.zsh")
 CORE_FILES=()
 
 # Temporary files
@@ -120,47 +120,48 @@ _gacli_resolve() {
     }
 
     # Config files
-    CONFIG="${GACLI_DIR}/${CONFIG_REL}"
-    CORE_BREWFILE="${GACLI_DIR}/${CORE_BREWFILE_REL}"
+    USER_TOOLS="${GACLI_DIR}/${USER_TOOLS}"
+    CONFIG="${GACLI_DIR}/${CONFIG}"
+    CORE_BREWFILE="${GACLI_DIR}/${CORE_BREWFILE}"
 
     # Helpers
     local helper
-    for helper in $HELPERS_FILES_REL; do
+    for helper in $HELPERS_FILES; do
         HELPERS+=("${HELPERS_DIR}/${helper}")
     done
 
     # Core files
     local file
-    for file in $CORE_FILES_REL; do
+    for file in $CORE_FILES; do
         CORE_FILES+=("${CORE_DIR}/${file}")
     done
 
     # Tmp files
-    INSTALLED_TOOLS="${TMP_DIR}/${INSTALLED_TOOLS_REL}"
-    MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE_REL}"
+    INSTALLED_TOOLS="${TMP_DIR}/${INSTALLED_TOOLS}"
+    MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE}"
 }
 
 # Dispatch commands
 _gacli_dispatch() {
     case "$1" in
         "")
-            style_ascii_logo                # Implemented in gacli/modules/.core/io.zsh
+            style_ascii_logo                # Implemented in gacli/.run/helpers/io.zsh
             print_tools
             ;;
         "help")
             help
             ;;
         "config")
-            update_config                   # Implemented in gacli/modules/.core/.launcher/update.zsh
+            update_edit_config              # Implemented in gacli/.run/core/update.zsh
             ;;
         "update")
-            update_manual                   # Implemented in gacli/modules/.core/.launcher/update.zsh
+            update_manual                   # Implemented in gacli/.run/core/update.zsh
             ;;
         "uninstall")
-            gacli_uninstall                 # Implemented in gacli/modules/.core/.launcher/uninstall.zsh
+            gacli_uninstall                 # Implemented in gacli/.run/core/uninstall.zsh
             ;;
         *)
-            modules_dispatch "$@"           # Implemented in gacli/modules/.core/module_manager.zsh
+            modules_dispatch "$@"           # Implemented in gacli/.run/core/modules.zsh
     esac
 }
 
@@ -182,11 +183,11 @@ print_tools() {
     commands="$(modules_get_commands)"
 
     # Display Hombrew packages
-    print_formulae                      # Implemented in gacli/modules/.core/brew.zsh
-    print_casks                         # Implemented in gacli/modules/.core/brew.zsh
+    print_formulae                      # Implemented in .run/helpers/brew.zsh
+    print_casks                         # Implemented in .run/helpers/brew.zsh
 
     # Display available commands
-    modules_print_commands              # Implemented in gacli/modules/module_manager.zsh
+    modules_print_commands              # Implemented in gacli/.run/core/modules.zsh
     print ""
 }
 
@@ -194,16 +195,16 @@ print_tools() {
 help() {
     print ""
     printStyled highlight "Formulaes: (more info: https://formulae.brew.sh/formula)"
-    print_formulae                      # Implemented in gacli/modules/.core/brew.zsh
+    print_formulae                      # Implemented in gacli/.run/helpers/brew.zsh
     print ""
     printStyled highlight "Casks: (more info: https://formulae.brew.sh/cask/)"
-    print_casks                         # Implemented in gacli/modules/.core/brew.zsh
+    print_casks                         # Implemented in gacli/.run/helpers/brew.zsh
     print ""
     printStyled highlight "Gacli core commands: (more info: https://github.com/guillaumeast/gacli)"
     print "${ICON_ON} ${RED}gacli update ${GREY}| ${ICON_ON} ${RED}gacli uninstall${NONE}"
     print ""
     printStyled highlight "Gacli modules commands: (more info: https://github.com/guillaumeast/gacli)"
-    modules_print_commands                      # Implemented in gacli/modules/module_manager.zsh
+    modules_print_commands              # Implemented in gacli/.run/core/modules.zsh
     print ""
 }
 

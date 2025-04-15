@@ -10,7 +10,7 @@ gacli_uninstall() {
 
     # Variables
     local zshrc_file="$HOME/.zshrc"
-    local config_file="${CONFIG_FILE}"
+    local config_file="${CONFIG}"
 
     # Remove GACLI lines from .zshrc
     print ""

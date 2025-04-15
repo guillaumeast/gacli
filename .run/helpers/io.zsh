@@ -49,7 +49,7 @@ printStyled() {
 
     # Argument check
     if [[ -z "$style" || -z "$raw_message" ]]; then
-        printStyled error "Veuillez fournir un ${YELLOW}style${RED} et un ${YELLOW}message${RED} pour afficher du texte"
+        echo "❌ [printStyled] Expected: <style> <message>"
         return 1
     fi
 

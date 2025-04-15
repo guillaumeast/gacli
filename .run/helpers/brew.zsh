@@ -43,12 +43,11 @@ _brew_install() {
     printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
 
     # Resolve install command
-    local install_cmd
+    local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
     if $IS_MACOS || $IS_LINUX; then
         if $IS_LINUX; then
-            install_cmd="NONINTERACTIVE=1 "
+            install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
-        install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
     else
         printStyled error "[brew_install] Unsupported OS: ${OSTYPE}"
         return 1
@@ -109,13 +108,13 @@ _brew_bundle() {
     fi
 
     # Save
-    read "${brewfile}" formulae
+    parser_read "${brewfile}" formulae
     for formula in "${BUFFER[@]}"; do
-        write "${}" formulae "${formula}"
+        parser_write "${INSTALLED_TOOLS}" formulae "${formula}"
     done
-    read "${brewfile}" casks
+    parser_read "${brewfile}" casks
     for cask in "${BUFFER[@]}"; do
-        write "${}" casks "${cask}"
+        parser_write "${INSTALLED_TOOLS}" casks "${cask}"
     done
 }
 
@@ -125,9 +124,9 @@ _brew_is_update_due() {
     local update_is_due=false
 
     # Check if formulae need update
-    read "${INSTALLED_TOOLS}" formulae || return 1
+    parser_read "${INSTALLED_TOOLS}" formulae || return 1
     local installed_f=("${BUFFER[@]}")
-    read "${brewfile}" formulae || return 1
+    parser_read "${brewfile}" formulae || return 1
     local required_f=("${BUFFER[@]}")
     for formula in $required_f; do
         if ! [[ " ${installed_f[*]} " == *" ${formula} "* ]]; then
@@ -136,9 +135,9 @@ _brew_is_update_due() {
     done
 
     # Check casks need update
-    read "${INSTALLED_TOOLS}" casks || return 1
+    parser_read "${INSTALLED_TOOLS}" casks || return 1
     local installed_c=("${BUFFER[@]}")
-    read "${brewfile}" casks || return 1
+    parser_read "${brewfile}" casks || return 1
     local required_c=("${BUFFER[@]}")
     for cask in $required_c; do
         if ! [[ " ${installed_c[*]} " == *" ${cask} "* ]]; then
@@ -185,7 +184,7 @@ print_formulae() {
     local output=""
 
     # Compute
-    read "${INSTALLED_TOOLS}" formulae || return 1
+    parser_read "${INSTALLED_TOOLS}" formulae || return 1
     local installed=("${BUFFER[@]}")
 
     for formula in $installed; do
@@ -203,7 +202,7 @@ print_casks() {
     local output=""
 
     # Compute
-    read "${INSTALLED_TOOLS}" casks || return 1
+    parser_read "${INSTALLED_TOOLS}" casks || return 1
     local installed=("${BUFFER[@]}")
 
     # Compute

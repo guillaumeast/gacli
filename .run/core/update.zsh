@@ -47,13 +47,22 @@ update_edit_config() {
     _update_ask_freq || return 1 # TODO: create generic `ask` function inside `io.zsh` and rename `io.zsh` -> `io.zsh`
 
     # Setup auto-update
-    LAST_UPDATE="$(date)"
+    LAST_UPDATE="$(time_get_current)" || {
+        printStyled error "[update_edit_config] Failed to initialize LAST_UPDATE"
+        return 1
+    }
     if [[ $FREQ_DAYS = 0 || -z $FREQ_DAYS ]]; then
         AUTO_UPDATE="false"
         NEXT_UPDATE=""
     else
-        AUTO_UPDATE="true"
-        NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")" || return 1
+        if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
+            printStyled warning "[update_manual] Failed to compute next update date"
+            printStyled warning "Auto-update disabled"
+            AUTO_UPDATE=false
+            NEXT_UPDATE=""
+        else
+            AUTO_UPDATE="true"
+        fi
     fi
 
     # Perform initial update
@@ -75,10 +84,11 @@ update_auto() {
     fi
 
     # Check if next_update is defined
-    if [[ -z "$NEXT_UPDATE" ]]; then
-        printStyled warning "[gacli_auto_update] No next update date found"
+    if [[ -z "$NEXT_UPDATE" ]] || ! [[ "$NEXT_UPDATE" =~ ^[0-9]+$ ]]; then
+        printStyled warning "[update_auto] Invalid NEXT_UPDATE timestamp"
         printStyled warning "Auto-update disabled"
         AUTO_UPDATE="false" && _update_set_config
+        NEXT_UPDATE=""
         return 1
     fi
 
@@ -127,30 +137,30 @@ update_manual() {
 _update_get_config() {
     local section="update_settings"
 
-    read "$CONFIG" "${section}.initialized" || return 1
+    parser_read "$CONFIG" "${section}.initialized" || return 1
     INITIALIZED="${BUFFER[1]}" || return 1
 
-    read "$CONFIG" "${section}.auto_update" || return 1
+    parser_read "$CONFIG" "${section}.auto_update" || return 1
     AUTO_UPDATE="${BUFFER[1]}" || return 1
 
-    read "$CONFIG" "${section}.last_update" || return 1
+    parser_read "$CONFIG" "${section}.last_update" || return 1
     LAST_UPDATE="${BUFFER[1]}" || return 1
 
-    read "$CONFIG" "${section}.freq_days" || return 1
+    parser_read "$CONFIG" "${section}.freq_days" || return 1
     FREQ_DAYS="${BUFFER[1]}" || return 1
 
-    read "$CONFIG" "${section}.next_update" || return 1
+    parser_read "$CONFIG" "${section}.next_update" || return 1
     NEXT_UPDATE="${BUFFER[1]}" || return 1
 }
 
 _update_set_config() {
     local section="update_settings"
 
-    write "$CONFIG" "${section}.initialized" "${INITIALIZED}" || return 1
-    write "$CONFIG" "${section}.auto_update" "${AUTO_UPDATE}" || return 1
-    write "$CONFIG" "${section}.last_update" "${LAST_UPDATE}" || return 1
-    write "$CONFIG" "${section}.freq_days" "${FREQ_DAYS}" || return 1
-    write "$CONFIG" "${section}.next_update" "${NEXT_UPDATE}" || return 1
+    parser_write "$CONFIG" "${section}.initialized" "${INITIALIZED}" || return 1
+    parser_write "$CONFIG" "${section}.auto_update" "${AUTO_UPDATE}" || return 1
+    parser_write "$CONFIG" "${section}.last_update" "${LAST_UPDATE}" || return 1
+    parser_write "$CONFIG" "${section}.freq_days" "${FREQ_DAYS}" || return 1
+    parser_write "$CONFIG" "${section}.next_update" "${NEXT_UPDATE}" || return 1
 }
 
 # Ask user for auto-update frequency (type safe)

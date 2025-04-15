@@ -11,26 +11,15 @@ FORCE_MODE="false"
 IS_MACOS=false
 IS_LINUX=false
 
-# GACLI directory
-GACLI_REPO_URL="https://github.com/guillaumeast/gacli"
-GACLI_DIR_REL=".gacli"
-GACLI_DIR=""
+# GACLI urls
+REPO="https://github.com/guillaumeast/gacli"
+ARCHIVE="${REPO}/archive/refs/heads/main.tar.gz"
 
-# GACLI entry point
-GACLI_ENTRY_REL="gacli.zsh"
-GACLI_ENTRY_POINT=""
-
-# GACLI symlink directory
-GACLI_SYM_DIR_REL=".local/bin"
-GACLI_SYM_DIR=""
-
-# GACLI symlink
-GACLI_SYM_REL="gacli"
-GACLI_SYMLINK=""
-
-# ZSH config file
-ZSHRC_REL=".zshrc"
-ZSHRC_FILE=""
+# GACLI paths
+DIR=".gacli"
+ENTRY_POINT="${DIR}/gacli.zsh"
+SYMLINK=".local/bin/gacli"
+ZSHRC=".zshrc"
 
 # Colors
 GREEN="$(printf '\033[32m')"
@@ -74,7 +63,7 @@ main() {
 
     # Configure GACLI
     echo ""
-    printStyled info "Installing GACLI into ${GACLI_DIR}... ${EMOJI_WAIT}"
+    printStyled info "Installing GACLI into ${DIR}... ${EMOJI_WAIT}"
     gacli_download || exit 09       # Clone GACLI repo
     make_executable || exit 10      # Make GACLI entry point executable
     create_wrapper || exit 11       # Create a wrapper to enable gacli commands (avoid symlink's shell env corruption)
@@ -113,14 +102,15 @@ check_os() {
 
 # Check if system supports unicode emojis
 check_unicode() {
-    if ! printf "🧪" | grep -q "🧪"; then
+    # Check if locale supports unicode
+    if ! locale charmap | grep -iq "utf"; then
         EMOJI_SUCCESS="[OK]"
         EMOJI_WARN="[!]"
         EMOJI_ERR="[X]"
         EMOJI_INFO="[i]"
         EMOJI_HIGHLIGHT="=>"
         EMOJI_WAIT="..."
-        printStyled warning "Emojis disabled for compatibilty"
+        printStyled warning "[check_unicode] Unicode unsupported, emojis disabled for compatibility"
     else
         printStyled success "Emojis enabled"
     fi
@@ -147,29 +137,25 @@ parse_args() {
 
 # Resolve paths
 resolve_paths() {
-    # Resolve destination path
+
+    # Check if $HOME is set
     if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
         printStyled error "[GACLI] Error: \$HOME is not set or invalid"
         return 1
     fi
-    GACLI_DIR="${HOME}/${GACLI_DIR_REL}"
 
-    # Resolve relative paths
-    GACLI_ENTRY_POINT="${GACLI_DIR}/${GACLI_ENTRY_REL}"
-    GACLI_SYM_DIR="${HOME}/${GACLI_SYM_DIR_REL}"
-    GACLI_SYMLINK="${GACLI_SYM_DIR_REL}/${GACLI_SYM_REL}"
-    ZSHRC_FILE="${HOME}/${ZSHRC_REL}"
+    # Resolve paths
+    DIR="${HOME}/${DIR}"
+    ENTRY_POINT="${DIR}/${ENTRY_POINT}"
+    SYMLINK="${HOME}/${SYMLINK}"
+    ZSHRC="${HOME}/${ZSHRC}"
 
     # Check .zshrc path
-    while [ -z "${ZSHRC_FILE}" ] || [ ! -f "${ZSHRC_FILE}" ]; do
-        printStyled warning ".zshrc not found at ${ZSHRC_FILE}"
+    while [ -z "${ZSHRC}" ] || [ ! -f "${ZSHRC}" ]; do
+        printStyled warning ".zshrc not found at ${ZSHRC}"
         printStyled highlight "Please provide the correct path to your .zshrc file:"
         printf "> "
-        read ZSHRC_FILE
-        if [ -z "${ZSHRC_FILE}" ]; then
-            printStyled error "Path cannot be empty"
-            exit 1
-        fi
+        read ZSHRC
     done
 
     # Display success
@@ -302,38 +288,37 @@ brew_install() {
     fi
 
     # Compute Homebrew install command
-    local install_cmd
+    local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
     if $IS_MACOS || $IS_LINUX; then
         if $IS_LINUX; then
-            install_cmd="NONINTERACTIVE=1 "
+            install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
-        install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
     else
-        echo "${EMOJI_ERROR} [brew_install] Unsupported OS: ${OSTYPE}"
+        echo "${EMOJI_ERR} [brew_install] Unsupported OS: ${OSTYPE}"
         return 1
     fi
 
     # Install Homebrew
     if ! eval "$install_cmd"; then
-        echo "${EMOJI_ERROR} [brew_install] Homebrew installation failed"
+        echo "${EMOJI_ERR} [brew_install] Homebrew installation failed"
         return 1
     fi
 
     # Add Homebrew to PATH
     local brew_exec_path
     if ! brew_exec_path="$(command -v brew)"; then
-        echo "${EMOJI_ERROR} [brew_install] Failed to detect brew after installation"
+        echo "${EMOJI_ERR} [brew_install] Failed to detect brew after installation"
         return 1
     fi
 
     if ! eval "$("$brew_exec_path" shellenv)"; then
-        echo "${EMOJI_ERROR} [brew_install] Failed to set Homebrew environment"
+        echo "${EMOJI_ERR} [brew_install] Failed to set Homebrew environment"
         return 1
     fi
 
     # Refresh hashmap command table
     if ! hash -r; then
-        echo "${EMOJI_ERROR} [brew_install] Failed to refresh shell hash table"
+        echo "${EMOJI_ERR} [brew_install] Failed to refresh shell hash table"
     fi
 
     # Display success
@@ -363,34 +348,57 @@ coreutils_install() {
 # Functions - GACLI INSTALL
 # ────────────────────────────────────────────────────────────────
 
-# Clone GACLI repo
+# Download GACLI (curl + fallback git)
 gacli_download() {
 
     # Check if GACLI is already installed
-    if [ -d "${GACLI_DIR}" ]; then
+    if [ -d "${DIR}" ]; then
         if [ "$FORCE_MODE" = "true" ]; then
-            rm -rf "${GACLI_DIR}"
+            rm -rf "${DIR}"
         else
-            printStyled error "[GACLI] Error: already installed at ${GACLI_DIR}"
+            printStyled error "[GACLI] Error: already installed at ${DIR}"
             printStyled highlight "Use --force to overwrite"
             return 1
         fi
     fi
 
-    # Clone repo
-    if ! git clone "${GACLI_REPO_URL}" "${GACLI_DIR}" > /dev/null 2>&1; then
-        printStyled error "[GACLI] Error: Failed to clone repository"
-        return 1
+    # Try download archive
+    echo "${EMOJI_INFO} Downloading GACLI archive... ${EMOJI_WAIT}"
+    local tmp_archive="$(mktemp)"
+    if curl -fsSL "${ARCHIVE}" -o "${tmp_archive}"; then
+        mkdir -p "${DIR}" || {
+            echo "${EMOJI_ERR} [GACLI] Failed to create directory: ${DIR}"
+            rm -f "${tmp_archive}"
+            return 1
+        }
+
+        if tar -xzf "${tmp_archive}" --strip-components=1 -C "${DIR}"; then
+            rm -f "${tmp_archive}"
+            echo "${EMOJI_SUCCESS} GACLI downloaded (via archive)"
+            return 0
+        else
+            echo "${EMOJI_WARN} [GACLI] Failed to extract archive"
+            rm -f "${tmp_archive}"
+        fi
+    else
+        echo "${EMOJI_WARN} [GACLI] Failed to download archive"
     fi
 
-    # Display success
-    printStyled success "GACLI downloaded"
+    # Fallback to git clone
+    echo "${EMOJI_INFO} Trying fallback: git clone... ${EMOJI_WAIT}"
+    if git clone "${REPO}" "${DIR}" > /dev/null 2>&1; then
+        echo "${EMOJI_SUCCESS} GACLI downloaded (via git)"
+        return 0
+    fi
+
+    echo "${EMOJI_ERR} [GACLI] Error: Failed to download GACLI (both archive and git failed)"
+    return 1
 }
 
 # Make main script executable
 make_executable() {
-    if ! chmod +x "${GACLI_ENTRY_POINT}"; then
-        printStyled error "[GACLI] Error: Failed to make ${GACLI_ENTRY_REL} executable"
+    if ! chmod +x "${ENTRY_POINT}"; then
+        printStyled error "[GACLI] Error: Failed to make ${ENTRY_POINT} executable"
         return 1
     fi
 
@@ -400,38 +408,40 @@ make_executable() {
 
 # Create executable wrapper script for GACLI (instead of symlink for cross-shell compatibility)
 create_wrapper() {
+
     # Create bin folder if needed
-    if ! mkdir -p "${GACLI_SYM_DIR}"; then
-        printStyled error "[GACLI] Error: Failed to create ${GACLI_SYM_DIR}"
+    local sym_dir="$(dirname "${SYMLINK}")"
+    if ! mkdir -p "${sym_dir}"; then
+        printStyled error "[GACLI] Error: Failed to create ${sym_dir}"
         return 1
     fi
 
     # Remove previous symlink or file if exists
-    if [[ -e "${GACLI_SYMLINK}" || -L "${GACLI_SYMLINK}" ]]; then
-        rm -f "${GACLI_SYMLINK}" || {
-            printStyled warning "[GACLI] Failed to delete existing symlink or file at ${GACLI_SYMLINK}"
+    if [[ -e "${SYMLINK}" || -L "${SYMLINK}" ]]; then
+        rm -f "${SYMLINK}" || {
+            printStyled warning "[GACLI] Failed to delete existing symlink or file at ${SYMLINK}"
         }
     fi
 
     # Create executable wrapper
     if ! {
-        echo '#!/bin/sh' > "${GACLI_SYMLINK}" &&
-        echo "exec zsh \"${GACLI_ENTRY_POINT}\" \"\$@\"" >> "${GACLI_SYMLINK}" &&
-        chmod +x "${GACLI_SYMLINK}"
+        echo '#!/bin/sh' > "${SYMLINK}" &&
+        echo "exec zsh \"${ENTRY_POINT}\" \"\$@\"" >> "${SYMLINK}" &&
+        chmod +x "${SYMLINK}"
     }; then
-        printStyled error "[GACLI] Error: Failed to create wrapper script at ${GACLI_SYMLINK}"
+        printStyled error "[GACLI] Error: Failed to create wrapper script at ${SYMLINK}"
         return 1
     fi
 
     # Display success
-    printStyled success "Wrapper created: ${GACLI_SYMLINK} → ${GACLI_ENTRY_POINT}"
+    printStyled success "Wrapper created: ${SYMLINK} → ${ENTRY_POINT}"
 }
 
 # Update ~/.zshrc to include GACLI in PATH and source gacli.zsh
 update_zshrc() {
 
     # Check if GACLI is already in zshrc
-    if grep -q '# GACLI' "${ZSHRC_FILE}"; then
+    if grep -q '# GACLI' "${ZSHRC}"; then
         printStyled success ".zshrc already configured"
         return 0
     fi
@@ -443,8 +453,8 @@ update_zshrc() {
         echo "# GACLI"
         echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
         echo "source \"\$HOME/.gacli/gacli.zsh\""
-    } >> "${ZSHRC_FILE}" || {
-        printStyled error "Failed to update ${ZSHRC_FILE}"
+    } >> "${ZSHRC}" || {
+        printStyled error "Failed to update ${ZSHRC}"
         return 1
     }
 
@@ -461,7 +471,7 @@ auto_launch() {
     if [ -n "${ZSH_VERSION}" ]; then
         printStyled info "Reloading shell environment... ${EMOJI_WAIT}"
         echo ""
-        source "${ZSHRC_FILE}"
+        source "${ZSHRC}"
     else
         printStyled warning "Open a new terminal window or run: source ~/.zshrc"
         echo ""
@@ -500,7 +510,7 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            print "${RED}${BOLD}${EMOJI_ERROR} ${raw_message}${NONE}" >&2
+            print "${RED}${BOLD}${EMOJI_ERR} ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
