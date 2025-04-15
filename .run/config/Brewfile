@@ -1,3 +1,7 @@
+###############################
+# FICHIER /.run/core/Brewfile
+###############################
+
 # HTTP client (used to fetch Homebrew, module descriptors and module archives)
 brew "curl"
 

@@ -13,6 +13,9 @@ read() {
     local file="${1}"
     local key="${2}"
 
+    # Reset buffer value
+    BUFFER=()
+
     # Check arguments
     if [[ -z "${file}" || -z "${key}" ]]; then
         printStyled error "[read] Expected: <file> <key> (received: \"${file}\" \"${key}\")"
@@ -88,6 +91,48 @@ write() {
     printStyled error "[write] Failed to write key '${key}' = ${value} in ${file}"
 }
 
+# Universal reset: parser_reset <file> <key>
+reset() {
+    local file="${1}"
+    local key="${2}"
+
+    # Check arguments
+    if [[ -z "${file}" || -z "${key}" ]]; then
+        printStyled error "[reset] Expected: <file> <key> (received: \"${1}\" \"${2}\")"
+        return 1
+    fi
+    if [[ ! -f "${file}" ]]; then
+        printStyled error "[reset] File not found: ${file}"
+        return 1
+    fi
+
+    # Resolve extension
+    local extension="$(_get_extension "${file}")" || return 1
+
+    # Dispatch per type
+    case "${extension}" in
+        yml|yaml)
+            yq e "del(.${key})" -i "${file}" 2>/dev/null || {
+                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                return 1
+            }
+            ;;
+        json)
+            jq "del(.${key})" "${file}" > "${file}.tmp" && mv "${file}.tmp" "${file}" || {
+                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                return 1
+            }
+            ;;
+        brewfile)
+            _reset_brew "${file}" "${key}"
+            ;;
+        *)
+            printStyled error "[reset] Unsupported file format: .${extension}"
+            return 1
+            ;;
+    esac
+}
+
 # ────────────────────────────────────────────────────────────────
 # Functions - PUBLIC
 # ────────────────────────────────────────────────────────────────
@@ -107,14 +152,13 @@ _get_extension() {
 _read_brew() {
     local file="${1}"
     local key="${2}"
-    local value="${3}"
 
     case "${key}" in
         formulae)
-            BUFFER=($(grep '^brew "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)) && return 0
+            BUFFER=($(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null)) && return 0
             ;;
         casks)
-            BUFFER=($(grep '^cask "' "$BREWFILE" | cut -d'"' -f2 2>/dev/null)) && return 0
+            BUFFER=($(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)) && return 0
             ;;
         *)
             printStyled error "[read] Unknown key for brewfile: ${key}"
@@ -148,6 +192,40 @@ _write_brew() {
             return 1
         }
     fi
+}
+
+_reset_brew() {
+    local file="${1}"
+    local key="${2}"
+    local tmp_file="$(mktemp)"
+
+    case "${key}" in
+        formulae)
+            grep -v '^brew "' "${file}" > "${tmp_file}" || {
+                printStyled error "[reset] Failed to clean formulae from ${file}"
+                rm -f "$tmp_file"
+                return 1
+            }
+            ;;
+        casks)
+            grep -v '^cask "' "${file}" > "${tmp_file}" || {
+                printStyled error "[reset] Failed to clean casks from ${file}"
+                rm -f "$tmp_file"
+                return 1
+            }
+            ;;
+        *)
+            printStyled error "[reset] Unknown key for Brewfile: ${key}"
+            rm -f "$tmp_file"
+            return 1
+            ;;
+    esac
+
+    mv "${tmp_file}" "${file}" || {
+        printStyled error "[reset] Failed to overwrite ${file}"
+        rm -f "$tmp_file"
+        return 1
+    }
 }
 
 # ────────────────────────────────────────────────────────────────

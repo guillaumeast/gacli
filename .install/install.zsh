@@ -1,5 +1,5 @@
 ###############################
-# FICHIER install.zsh
+# FICHIER /.install/install.zsh
 ###############################
 
 #!/usr/bin/env zsh

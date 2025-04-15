@@ -21,6 +21,7 @@ GACLI_DIR=".gacli"
 CONFIG_DIR=".run/config"
 CONFIG=".run/config/config.yaml"
 CORE_BREWFILE=".run/config/Brewfile"
+USER_TOOLS="tools.yaml"
 
 # Helpers
 HELPERS_DIR=".run/helpers"
@@ -34,7 +35,7 @@ CORE_FILES=()
 
 # Temporary files
 TMP_DIR=".tmp"
-INSTALLED_FILE=".tmp/installed.yaml"
+INSTALLED_TOOLS=".tmp/installed_tools.yaml"
 MERGED_BREWFILE=".tmp/Brewfile"
 
 # Buffer for cross-modules communication (kind of "stdinfo")
@@ -135,7 +136,7 @@ _gacli_resolve() {
     done
 
     # Tmp files
-    INSTALLED_FILE="${TMP_DIR}/${INSTALLED_FILE_REL}"
+    INSTALLED_TOOLS="${TMP_DIR}/${INSTALLED_TOOLS_REL}"
     MERGED_BREWFILE="${TMP_DIR}/${MERGED_BREWFILE_REL}"
 }
 
@@ -175,9 +176,9 @@ print_tools() {
     local commands=()
 
     # Get data
-    formulae="$(read "${INSTALLED_FILE}" formulae)"
-    casks="$(read "${INSTALLED_FILE}" casks)"
-    modules="$(read "${INSTALLED_FILE}" modules)"
+    formulae="$(read "${INSTALLED_TOOLS}" formulae)"
+    casks="$(read "${INSTALLED_TOOLS}" casks)"
+    modules="$(read "${INSTALLED_TOOLS}" modules)"
     commands="$(modules_get_commands)"
 
     # Display Hombrew packages

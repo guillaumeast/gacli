@@ -107,6 +107,16 @@ _brew_bundle() {
     if ! brew cleanup 1>/dev/null; then
         printStyled warning "[brew_update] Failed to cleanup Homebrew packages"
     fi
+
+    # Save
+    read "${brewfile}" formulae
+    for formula in "${BUFFER[@]}"; do
+        write "${}" formulae "${formula}"
+    done
+    read "${brewfile}" casks
+    for cask in "${BUFFER[@]}"; do
+        write "${}" casks "${cask}"
+    done
 }
 
 # Checks if update is due
@@ -115,7 +125,7 @@ _brew_is_update_due() {
     local update_is_due=false
 
     # Check if formulae need update
-    read "${INSTALLED_FILE}" formulae || return 1
+    read "${INSTALLED_TOOLS}" formulae || return 1
     local installed_f=("${BUFFER[@]}")
     read "${brewfile}" formulae || return 1
     local required_f=("${BUFFER[@]}")
@@ -126,7 +136,7 @@ _brew_is_update_due() {
     done
 
     # Check casks need update
-    read "${INSTALLED_FILE}" casks || return 1
+    read "${INSTALLED_TOOLS}" casks || return 1
     local installed_c=("${BUFFER[@]}")
     read "${brewfile}" casks || return 1
     local required_c=("${BUFFER[@]}")
@@ -175,7 +185,7 @@ print_formulae() {
     local output=""
 
     # Compute
-    read "${INSTALLED_FILE}" formulae || return 1
+    read "${INSTALLED_TOOLS}" formulae || return 1
     local installed=("${BUFFER[@]}")
 
     for formula in $installed; do
@@ -193,7 +203,7 @@ print_casks() {
     local output=""
 
     # Compute
-    read "${INSTALLED_FILE}" casks || return 1
+    read "${INSTALLED_TOOLS}" casks || return 1
     local installed=("${BUFFER[@]}")
 
     # Compute
