@@ -34,7 +34,7 @@ _update_resolve() {
 # AUTO-UPDATE
 # ────────────────────────────────────────────────────────────────
 
-# PUBLIC - TODO: comment
+# PUBLIC - Initialize config process and trigger auto-update if needed
 update_init() {
     local tmp_brewfile=$(mktemp)
 
@@ -64,7 +64,7 @@ update_init() {
     _update_display_next
 }
 
-# PRIVATE - TODO: comment
+# PRIVATE - Check if the scheduled auto-update date is reached
 _update_is_reached() {
 
     # Check if auto update is enabled
@@ -84,7 +84,7 @@ _update_is_reached() {
     fi
 }
 
-# PRIVATE - TODO: comment
+# PRIVATE - Check if any required dependency is missing in the system
 _update_is_required() {
     local brewfile="${1}"
     local dependencie
@@ -105,10 +105,10 @@ _update_is_required() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# MANUAL UPDATE (TODO)
+# MANUAL UPDATE
 # ────────────────────────────────────────────────────────────────
 
-# Merge dependencies and call _update_run
+# PRIVATE - Run manual update by merging and applying all dependencies
 _update_manual() {
     local tmp_brewfile=$(mktemp)
 
@@ -126,8 +126,8 @@ _update_manual() {
     }
 }
 
-# PRIVATE - Generate temporary merged Brewfile with all dependencies (core + modules + user)
-_update_merge_into() {
+# PUBLIC - Generate temporary merged Brewfile with all dependencies (core + modules + user)
+update_merge_into() {
     local output_brewfile="${1}"
 
     # Download missing modules and merge modules dependencies
@@ -144,7 +144,7 @@ _update_merge_into() {
     done
 }
 
-# PRIVATE - TODO: comment
+# PRIVATE - Execute the update process and save new status in config file
 _update_run() {
     local brewfile="${1}"
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
@@ -164,6 +164,8 @@ _update_run() {
     # Save
     _update_set_config
 
+    # Update 
+
     # Display result
     printStyled success "Updated 🚀"
     _update_display_next
@@ -173,7 +175,7 @@ _update_run() {
 # CONFIG MANAGEMENT
 # ────────────────────────────────────────────────────────────────
 
-# PRIVATE - TODO: comment
+# PRIVATE - Load auto-update config from config file or trigger config file initialization
 _update_get_config() {
 
     # Read values from config file
@@ -199,11 +201,11 @@ _update_get_config() {
     [[ $AUTO_UPDATE = "true" ]] && TODAY="$(time_get_current)" || return 1
 }
 
-# Edit auto-update config
+# PUBLIC - Configure auto-update settings based on user input
 update_edit_config() {
 
     # Ask for auto-update frequency
-    _update_ask_freq || return 1 # TODO: create generic `ask` function inside `io.zsh` and rename `io.zsh` -> `io.zsh`
+    _update_ask_freq || return 1
 
     # Setup auto-update
     if [[ $FREQ_DAYS = 0 || -z $FREQ_DAYS ]]; then
@@ -225,7 +227,7 @@ update_edit_config() {
     _update_set_config || return 1
 }
 
-# PRIVATE - TODO: comment
+# PRIVATE - Save current update config values to config file
 _update_set_config() {
 
     parser_write "${CONFIG}" "initialized" "${INITIALIZED}" || return 1
@@ -263,6 +265,7 @@ _update_ask_freq() {
     done
 }
 
+# PRIVATE - Display the next scheduled auto-update date or status
 _update_display_next() {
     # Display next update date
     if [[ $AUTO_UPDATE = true ]]; then

@@ -34,15 +34,14 @@ GREY="$(printf '\033[90m')"
 NONE="$(printf '\033[0m')"
 BOLD="$(printf '\033[1m')"
 
-# Emojis (used only if system supports unicode emojis)
-# TODO: reverse "text → emoji" instead of "emoji → text"
-EMOJI_SUCCESS="✦"
-EMOJI_WARN="⚠️"
-EMOJI_ERR="❌"
-EMOJI_INFO="✧"
-EMOJI_HIGHLIGHT="👉"
-EMOJI_DEBUG="🔎"
-EMOJI_WAIT="⏳"
+# Emojis (swicthed to emojis if system supports unicode)
+EMOJI_SUCCESS="[OK]"
+EMOJI_WARN="[!]"
+EMOJI_ERR="[X]"
+EMOJI_INFO="[i]"
+EMOJI_HIGHLIGHT="=>"
+EMOJI_DEBUG="[???]"
+EMOJI_WAIT="..."
 
 # ────────────────────────────────────────────────────────────────
 # TODOs
@@ -58,7 +57,7 @@ EMOJI_WAIT="⏳"
 # main()
 # |→ check_env                  → Checks env
 # |     |→ check_os                 → Checks if OS is supported
-# |     |→ check_unicode            → Checks if emojis are supported
+# |     |→ enable_emojis            → Checks if emojis are supported
 # |     |→ parse_args               → Inits global variables referring to given args
 # |     |→ resolve_paths            → Resolves absolute paths
 # |→ display_start              → Displays welcome message
@@ -84,7 +83,7 @@ main() {
     
     # Check env compatibility
     check_os || exit 01             # Linux and macOS are supported (Windows is NOT supported)
-    check_unicode                   # Enable emojis if system can handle it
+    enable_emojis                   # Enable emojis if system can handle it
     
     # Init
     display_ascii_logo
@@ -139,21 +138,20 @@ check_os() {
     printStyled success "OS supported: ${OSTYPE}"
 }
 
-# Check if system supports unicode emojis
-# TODO: reverse "text → emoji" instead of "emoji → text"
-check_unicode() {
+# TODO
+enable_emojis() {
     # Check if locale supports unicode
-    if ! locale charmap | grep -iq "utf"; then
-        EMOJI_SUCCESS="[OK]"
-        EMOJI_WARN="[!]"
-        EMOJI_ERR="[X]"
-        EMOJI_INFO="[i]"
-        EMOJI_HIGHLIGHT="=>"
-        EMOJI_DEBUG="[???]"
-        EMOJI_WAIT="..."
-        printStyled warning "[check_unicode] Unicode unsupported, emojis disabled for compatibility"
-    else
+    if locale charmap | grep -iq "utf"; then
+        EMOJI_SUCCESS="✦"
+        EMOJI_WARN="⚠️"
+        EMOJI_ERR="❌"
+        EMOJI_INFO="✧"
+        EMOJI_HIGHLIGHT="👉"
+        EMOJI_DEBUG="🔎"
+        EMOJI_WAIT="⏳"
         printStyled success "Emojis enabled"
+    else
+        printStyled info "[enable_emojis] Unicode unsupported, emojis disabled for compatibility"
     fi
 }
 

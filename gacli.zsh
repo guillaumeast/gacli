@@ -56,6 +56,10 @@ SCRIPTS=( \
     "${ROOT_DIR}.auto-install/uninstall.zsh" \
 )
 
+# Available commands
+COMMANDS_CORE=("help=help" "config=update_edit_config" "update=update_manual" "uninstall=gacli_uninstall")
+COMMANDS_MODS=()
+
 # Buffer for cross-modules communication (kind of "stdinfo")
 BUFFER=()
 
@@ -74,8 +78,17 @@ GREY='\033[90m'
 NONE='\033[0m'
 
 # Icons (on / off)
-ICON_ON="${GREEN}⊙${NONE}"
-ICON_OFF="${RED}○${NONE}"
+ICON_ON="${GREEN}[ON]${NONE}"
+ICON_OFF="${RED}[OFF]${NONE}"
+
+# Emojis (swicthed to emojis if system supports unicode)
+EMOJI_SUCCESS="[OK]"
+EMOJI_WARN="[!]"
+EMOJI_ERR="[X]"
+EMOJI_INFO="[i]"
+EMOJI_HIGHLIGHT="=>"
+EMOJI_DEBUG="[???]"
+EMOJI_WAIT="..."
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -85,6 +98,7 @@ ICON_OFF="${RED}○${NONE}"
 main() {
     # Check env compatibility and files integrity
     _gacli_check_system || abort "1"
+    _gacli_enable_emojis
     _gacli_check_files || abort "2"
 
     # Load core scripts
@@ -123,8 +137,6 @@ _gacli_check_system() {
             return 1
             ;;
     esac
-
-    # TODO: add emoji auto enable mode as in install.zsh (btw, reverse "text → emoji" instead of "emoji → text")
 }
 
 # PRIVATE - Resolve absolute paths, check files integrity and source scripts
@@ -153,26 +165,31 @@ _gacli_check_files() {
 _gacli_dispatch() {
     case "$1" in
         "")
-            style_ascii_logo                # Implemented in gacli/.run/helpers/io.zsh
-            print_tools
-            ;;
-        "help")
-            help
-            ;;
-        "config")
-            update_edit_config              # Implemented in gacli/.run/core/update.zsh
-            ;;
-        "update")
-            update_manual                   # Implemented in gacli/.run/core/update.zsh
-            ;;
-        "uninstall")
-            printstyled highlight "Uninstalling GACLI... ⏳"
-            source "${UNINSTALLER}" && gacli_uninstall && return 0
-            printstyled error "[_gacli_dispatch] Uninstall failed"
-            return 1
+            style_ascii_logo
+            print_formulae
+            print_casks
+            print_modules
+            print_core_commands
+            print_mods_commands
+            print ""
             ;;
         *)
-            modules_dispatch "$@"           # Implemented in gacli/.run/core/modules.zsh
+            # Dynamic commands (declared via get_commands in modules)
+            for cmd in "${COMMANDS_MODS[@]}"; do
+                local command_name="${cmd%%=*}"
+                local function_name="${cmd#*=}"
+
+                if [[ "$1" == "$command_name" ]]; then
+                    # Call matched function with remaining args
+                    "${function_name}" "${@:2}"
+                    return "$?"
+                fi
+            done
+
+            # No command matched
+            printStyled error "[GACLI] Error: unknown command '$1'" >&2
+            modules_print_commands
+            return 1
     esac
 }
 
@@ -189,6 +206,25 @@ abort() {
 # ────────────────────────────────────────────────────────────────
 # OUTPUTS
 # ────────────────────────────────────────────────────────────────
+
+# PRIVATE - Enable emoji support if terminal supports UTF characters
+_gacli_enable_emojis() {
+    # Check if locale supports unicode
+    if locale charmap | grep -iq "utf"; then
+        EMOJI_SUCCESS="✦"
+        EMOJI_WARN="⚠️"
+        EMOJI_ERR="❌"
+        EMOJI_INFO="✧"
+        EMOJI_HIGHLIGHT="👉"
+        EMOJI_DEBUG="🔎"
+        EMOJI_WAIT="⏳"
+        ICON_ON="${GREEN}⊙${NONE}"
+        ICON_OFF="${RED}○${NONE}"
+        printStyled success "Emojis enabled"
+    else
+        printStyled info "[_gacli_enable_emojis] Unicode unsupported, emojis disabled for compatibility"
+    fi
+}
 
 # PUBLIC - ASCII art logo
 style_ascii_logo() {
@@ -251,37 +287,121 @@ printStyled() {
     print "${color}$final_message${NONE}"
 }
 
-# PUBLIC - Display tools status
-print_tools() {
-    local formulae=()
-    local casks=()
-    local modules=()
-    local commands=()
-
-    # Display Hombrew packages
-    print_formulae                      # Implemented in .run/helpers/brew.zsh
-    print_casks                         # Implemented in .run/helpers/brew.zsh
-
-    # Display available commands
-    modules_print_commands              # Implemented in gacli/.run/core/modules.zsh
-    print ""
-}
-
 # PUBLIC - Diplay tips
 help() {
     print ""
     printStyled highlight "Formulaes: (more info: https://formulae.brew.sh/formula)"
-    print_formulae                      # Implemented in gacli/.run/helpers/brew.zsh
+    print_formulae
+
     print ""
     printStyled highlight "Casks: (more info: https://formulae.brew.sh/cask/)"
-    print_casks                         # Implemented in gacli/.run/helpers/brew.zsh
+    print_casks
+
     print ""
-    printStyled highlight "Gacli core commands: (more info: https://github.com/guillaumeast/gacli)"
-    print "${ICON_ON} ${RED}gacli update ${GREY}| ${ICON_ON} ${RED}gacli uninstall${NONE}"
+    printStyled highlight "Modules: (more info: https://github.com/guillaumeast/gacli)"
+    print_modules
+
     print ""
-    printStyled highlight "Gacli modules commands: (more info: https://github.com/guillaumeast/gacli)"
-    modules_print_commands              # Implemented in gacli/.run/core/modules.zsh
+    printStyled highlight "Core commands: (more info: https://github.com/guillaumeast/gacli)"
+    print_core_commands
+
     print ""
+    printStyled highlight "Modules commands: (more info: https://github.com/guillaumeast/gacli)"
+    print_mods_commands
+    print ""
+}
+
+# PUBLIC - Print installed status for all formulae defined in tools descriptors
+print_formulae() {
+    local tmp_brewfile=$(mktemp)
+    local icon, formula, output
+
+    # Get merged casks
+    update_merge_into "${tmp_brewfile}" || {
+        rm -f "${tmp_brewfile}"
+        return 1
+    }
+    parser_read "${tmp_brewfile}" formulae || {
+        rm -f "${tmp_brewfile}"
+        return 1
+    }
+
+    # Compute
+    for formula in "${BUFFER[@]}"; do
+        icon="${ICON_OFF}"
+        brew_is_f_active "${formula}" && icon="${ICON_ON}"
+        output+="${icon} ${ORANGE}$formula${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output% ${GREY}|${NONE} }"
+
+    # Delete temporary Brewfile
+    rm -f "${tmp_brewfile}"
+}
+
+# PUBLIC - Print installed status for all casks defined in tools descriptors
+print_casks() {
+    local tmp_brewfile=$(mktemp)
+    local icon, cask, output
+
+    # Get merged casks
+    update_merge_into "${tmp_brewfile}" || {
+        rm -f "${tmp_brewfile}"
+        return 1
+    }
+    parser_read "${tmp_brewfile}" casks || {
+        rm -f "${tmp_brewfile}"
+        return 1
+    }
+
+    # Compute
+    for cask in "${BUFFER[@]}"; do
+        icon="${ICON_OFF}"
+        brew_is_c_active "${cask}" && icon="${ICON_ON}"
+        output+="${icon} ${CYAN}$cask${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output% ${GREY}|${NONE} }"
+
+    # Delete temporary Brewfile
+    rm -f "${tmp_brewfile}"
+}
+
+# PUBLIC - Print installed status for all installed modules
+print_modules() {
+    local output=""
+    local icon
+
+    for module in $MODULES_INSTALLED; do
+        icon="${ICON_OFF}"
+        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${ICON_ON}"
+        output+="${icon} ${GREEN}${module}${NONE} ${GREY}|${NONE} "
+    done
+    print "${output% ${GREY}|${NONE} }"
+}
+
+# PUBLIC - Print available built-in GACLI core commands
+print_core_commands() {
+    local output
+
+    for cmd in $COMMANDS_CORE; do
+        local command_name="${cmd%%=*}"
+        output+="${ICON_ON} ${RED}${command_name} ${GREY}|${NONE} "
+    done
+    print "${output% ${GREY}|${NONE} }"
+}
+
+# PUBLIC - Print available commands provided by loaded modules
+print_mods_commands() {
+    local output
+
+    for cmd in $COMMANDS_MODS; do
+        local command_name="${cmd%%=*}"
+        output+="${ICON_ON} ${GREEN}${command_name} ${GREY}|${NONE} "
+    done
+    print "${output% ${GREY}|${NONE} }"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -291,72 +411,3 @@ help() {
 # Call main with all command args
 main "$@"
 
-# ────────────────────────────────────────────────────────────────
-# TODO
-# ────────────────────────────────────────────────────────────────
-
-# From brew.zsh
-
-# Print formulae status (TODO: refacto in gacli.zsh)
-print_formulae() {
-    local output=""
-
-    # Compute
-    for formula in $FORMULAE; do
-        local icon="${ICON_OFF}"
-        brew_is_f_active "${formula}" && icon="${ICON_ON}"
-        output+="${icon} ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
-}
-
-# Print casks status (TODO: refato in gacli.zsh)
-print_casks() {
-    local output=""
-
-    # Compute
-    for cask in $CASKS; do
-        local icon="${ICON_OFF}"
-        brew_is_c_active "${cask}" && icon="${ICON_ON}"
-        output+="${icon} ${CYAN}$cask${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
-}
-
-# From modules.zsh
-
-modules_dispatch() {
-    # Dynamic commands (declared via get_commands in modules)
-    for cmd in "${COMMANDS[@]}"; do
-        local command_name="${cmd%%=*}"
-        local function_name="${cmd#*=}"
-
-        if [[ "$1" == "$command_name" ]]; then
-            # Call matched function with remaining args
-            "${function_name}" "${@:2}"
-            return
-        fi
-    done
-
-    # No command matched
-    printStyled error "[GACLI] Error: unknown command '$1'" >&2
-    modules_print_commands
-    return 1
-}
-
-modules_print_commands() {
-    local output_commands=""
-
-    # Compute
-    for cmd in "${COMMANDS[@]}"; do
-        local command_name="${cmd%%=*}"
-        output_commands+="${ICON_ON} ${GREEN}${command_name}${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output_commands% ${GREY}|${NONE} }"
-}

@@ -22,7 +22,6 @@ CONFIG_FILE="tools.yaml"
 # Active modules and commands
 MODULES_INSTALLED=()
 MODULES_ACTIV=()
-COMMANDS=()
 
 # ────────────────────────────────────────────────────────────────
 # DOWNLOAD FILES
@@ -222,7 +221,7 @@ _module_get_commands() {
             printStyled highlight "Expected : 'command=function'"
             continue
         fi
-        COMMANDS+=("$cmd")
+        COMMANDS_MODS+=("$cmd")
     done
 
     unfunction get_commands
