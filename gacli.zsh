@@ -46,13 +46,6 @@ CORE_DIR="${ROOT_DIR}/.run"
 MODULES_DIR="${ROOT_DIR}/modules"
 DIRS=("${ROOT_DIR}" "${HELPERS_DIR}" "${CORE_DIR}" "${MODULES_DIR}")
 
-# Config files
-UPDATE_CONFIG="${ROOT_DIR}/.data/config/update.config.yaml"
-CORE_TOOLS="${ROOT_DIR}/.data/tools/core.tools.yaml"
-MODULES_TOOLS="${ROOT_DIR}/.data/tools/modules.tools.yaml"
-USER_TOOLS="${ROOT_DIR}/tools.yaml"
-FILES=("${CONFIG}" "${CORE_TOOLS}" "${MODULES_TOOLS}" "${USER_TOOLS}")
-
 # Scripts files
 SCRIPTS=( \
     "${ROOT_DIR}/.helpers/time.zsh" \
@@ -104,12 +97,11 @@ main() {
     done
 
     # Load modules and check if update is due (date or new dependencies)
-    modules_init || abort "4"           # Implemented in modules.zsh
-    update_check || abort "5"           # Implemented in update.zsh
-    modules_load || abort "6"           # Implemented in modules.zsh
+    update_check || abort "4"           # Implemented in update.zsh
+    modules_load || abort "5"           # Implemented in modules.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "7"
+    _gacli_dispatch "$@" || abort "6"
 }
 
 # ────────────────────────────────────────────────────────────────
