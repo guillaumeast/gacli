@@ -1,0 +1,18 @@
+###############################
+# FICHIER /.data/tools/core.tools.yaml
+###############################
+
+# Use: Core dependencies descriptor
+
+# No read/write operations
+
+# Used by:
+#   - update.zsh    → merges this file with "modules.tools.yaml" into a temporary file before checking if update is due
+
+formulae:
+  - curl         # HTTP(S) tool (macOS)
+  - wget         # HTTP(S) tool (Linux)
+  - coreutils    # Cross-platform tools
+  - yq           # YAML processor
+  - jq           # JSON processor
+
