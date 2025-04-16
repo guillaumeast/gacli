@@ -18,7 +18,7 @@
 # Note: Only supports `YYYY-MM-DD` format for human-readable dates
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
+# PUBLIC
 # ────────────────────────────────────────────────────────────────
 
 # Returns current timestamp

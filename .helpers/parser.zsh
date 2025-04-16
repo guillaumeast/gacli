@@ -22,7 +22,7 @@
 # are internal helpers and must not be used outside this file.
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC - Universal read/write/reset
+# PUBLIC
 # ────────────────────────────────────────────────────────────────
 
 # Universal reader: parser_read <file> <key>
@@ -144,6 +144,7 @@ parser_reset() {
             _reset_brew "${file}" "${key}" || {
                 printStyled error "[reset] Failed to reset key '${key}' in ${file}"
                 return 1
+            }
             ;;
         *)
             printStyled error "[reset] Unsupported file format: .${extension}"
@@ -153,7 +154,7 @@ parser_reset() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC - Brewfile read/write/reset
+# PRIVATE
 # ────────────────────────────────────────────────────────────────
 
 # Return file extension in lowercase (special case for Brewfile)

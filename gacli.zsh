@@ -47,11 +47,11 @@ MODULES_DIR="${ROOT_DIR}/modules"
 DIRS=("${ROOT_DIR}" "${HELPERS_DIR}" "${CORE_DIR}" "${MODULES_DIR}")
 
 # Config files
-CONFIG="${ROOT_DIR}/.data/config/update.config.yaml"
+UPDATE_CONFIG="${ROOT_DIR}/.data/config/update.config.yaml"
 CORE_TOOLS="${ROOT_DIR}/.data/tools/core.tools.yaml"
+MODULES_TOOLS="${ROOT_DIR}/.data/tools/modules.tools.yaml"
 USER_TOOLS="${ROOT_DIR}/tools.yaml"
-INSTALLED_TOOLS="${ROOT_DIR}/.data/tools/installed.tools.yaml"
-FILES=("${CONFIG}" "${CORE_TOOLS}" "${USER_TOOLS}" "${INSTALLED_TOOLS}")
+FILES=("${CONFIG}" "${CORE_TOOLS}" "${MODULES_TOOLS}" "${USER_TOOLS}")
 
 # Scripts files
 SCRIPTS=( \
@@ -103,21 +103,20 @@ main() {
         fi
     done
 
-    # Check if update is due (if config has changed or next update date is reached)
-    update_check || abort "4"           # Implemented in update.zsh
-
-    # Source modules code
-    modules_load || abort "5"           # Implemented in modules.zsh
+    # Load modules and check if update is due (date or new dependencies)
+    modules_init || abort "4"           # Implemented in modules.zsh
+    update_check || abort "5"           # Implemented in update.zsh
+    modules_load || abort "6"           # Implemented in modules.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "6"
+    _gacli_dispatch "$@" || abort "7"
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PRIVATE
+# CORE LOGIC
 # ────────────────────────────────────────────────────────────────
 
-# Detect the operating system and set the corresponding flags
+# PRIVATE - Detect the operating system and set the corresponding flags
 _gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
         printstyled error "[_gacli_check_system] \$OSTYPE is not set" >&2
@@ -136,7 +135,7 @@ _gacli_check_system() {
     # TODO: add emoji auto enable mode as in install.zsh (btw, reverse "text → emoji" instead of "emoji → text")
 }
 
-# Resolve absolute paths, check files integrity and source scripts
+# PRIVATE - Resolve absolute paths, check files integrity and source scripts
 _gacli_check_files() {
 
     # Check directories integrity
@@ -158,26 +157,20 @@ _gacli_check_files() {
     done
 }
 
-# Dispatch commands
+# PRIVATE - Dispatch commands
 _gacli_dispatch() {
     case "$1" in
         "")
-            printStyled debug "case \"\": ${1}"
             style_ascii_logo                # Implemented in gacli/.run/helpers/io.zsh
-            printStyled debug "---> after style_ascii_logo"
             print_tools
-            printStyled debug "---> after print_tools"
             ;;
         "help")
-            printStyled debug "case \"help\": ${1}"
             help
             ;;
         "config")
-            printStyled debug "case \"config\": ${1}"
             update_edit_config              # Implemented in gacli/.run/core/update.zsh
             ;;
         "update")
-            printStyled debug "case \"update\": ${1}"
             update_manual                   # Implemented in gacli/.run/core/update.zsh
             ;;
         "uninstall")
@@ -187,18 +180,25 @@ _gacli_dispatch() {
             return 1
             ;;
         *)
-            printStyled debug "case \"*\": ${1}"
             modules_dispatch "$@"           # Implemented in gacli/.run/core/modules.zsh
     esac
-    printStyled debug "DISPATCH ended"
-    printStyled debug "---------------------"
+}
+
+# PUBLIC - Display a fatal error message and exit the script
+abort() {
+    echo ""
+    echo "-------------------------------------------------------"
+    echo " ---> [GACLI] E${1}: fatal error, exiting GACLI <---" >&2
+    echo "-------------------------------------------------------"
+    echo ""
+    exit "${1}"
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
+# OUTPUTS
 # ────────────────────────────────────────────────────────────────
 
-# ASCII art logo
+# PUBLIC - ASCII art logo
 style_ascii_logo() {
     print "${ORANGE}  _____          _____ _      _____ ${NONE}"
     print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
@@ -209,7 +209,7 @@ style_ascii_logo() {
     print ""
 }
 
-# Display formatted message
+# PUBLIC - Display formatted message
 printStyled() {
     # Variables
     local style=$1
@@ -259,9 +259,8 @@ printStyled() {
     print "${color}$final_message${NONE}"
 }
 
-# Display tools status
+# PUBLIC - Display tools status
 print_tools() {
-    printStyled debug "[print_tools] Starting..."
     local formulae=()
     local casks=()
     local modules=()
@@ -276,7 +275,7 @@ print_tools() {
     print ""
 }
 
-# Diplay tips
+# PUBLIC - Diplay tips
 help() {
     print ""
     printStyled highlight "Formulaes: (more info: https://formulae.brew.sh/formula)"
@@ -293,16 +292,6 @@ help() {
     print ""
 }
 
-# Display a fatal error message and exit the script
-abort() {
-    echo ""
-    echo "-------------------------------------------------------"
-    echo " ---> [GACLI] E${1}: fatal error, exiting GACLI <---" >&2
-    echo "-------------------------------------------------------"
-    echo ""
-    exit "${1}"
-}
-
 # ────────────────────────────────────────────────────────────────
 # RUN
 # ────────────────────────────────────────────────────────────────
@@ -311,18 +300,10 @@ abort() {
 main "$@"
 
 # ────────────────────────────────────────────────────────────────
-# WIP: DEBUG
+# TODO
 # ────────────────────────────────────────────────────────────────
 
-echo ""
-echo "-------------------------"
-echo "🔦   [GACLI ENDED]"     🎉
-echo "-------------------------"
-echo ""
-
-# ────────────────────────────────────────────────────────────────
-# Functions - from brew.zsh
-# ────────────────────────────────────────────────────────────────
+# From brew.zsh
 
 # Print formulae status (TODO: refacto in gacli.zsh)
 print_formulae() {
@@ -354,10 +335,7 @@ print_casks() {
     print "${output% ${GREY}|${NONE} }"
 }
 
-
-# ────────────────────────────────────────────────────────────────
-# TODO - From modules.zsh
-# ────────────────────────────────────────────────────────────────
+# From modules.zsh
 
 modules_dispatch() {
     # Dynamic commands (declared via get_commands in modules)

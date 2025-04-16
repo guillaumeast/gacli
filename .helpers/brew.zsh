@@ -18,7 +18,73 @@
 # Note: Update is only triggered if at least one formula or cask is not already active.
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PRIVATE
+# PUBLIC
+# ────────────────────────────────────────────────────────────────
+
+# Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
+brew_bundle() {
+    local brewfile="${1}"
+
+    _brew_is_update_due || return 0
+
+    # Loading mesage
+    print ""
+    printStyled "info" "Updating... (this may take a few minutes) ⏳"
+
+    # Update Homebrew
+    if ! brew update  > /dev/null 2>&1; then
+        printStyled warning "[brew_update] Failed to update Homebrew"
+    fi
+
+    # Install/uninstall formulae & casks referring to the Brewfile
+    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
+        printStyled error "[brew_update] Failed to run bundle Homebrew"
+        return 1
+    fi
+
+    # Upgrade
+    if ! brew upgrade 1>/dev/null; then
+        printStyled error "[brew_update] Failed to upgrade Homebrew packages"
+        return 1
+    fi
+
+    # Cleanup
+    if ! brew cleanup 1>/dev/null; then
+        printStyled warning "[brew_update] Failed to cleanup Homebrew packages"
+    fi
+}
+
+# Check if given formula is active
+brew_is_f_active() {
+    local formula="${1}"
+    [[ "$formula" = "coreutils" ]] && formula="gdate"
+
+    if command -v $formula >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Check if given cask is active
+brew_is_c_active() {
+    local cask="${1}"
+
+    # "my-cask-name" → "My Cask Name.app"
+    local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
+
+    # Check .app folders first for speed, fallback to brew if missing
+    if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
+        return 0
+    elif brew list --cask "$cask" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# ────────────────────────────────────────────────────────────────
+# PRIVATE
 # ────────────────────────────────────────────────────────────────
 
 # Install Homebrew
@@ -101,71 +167,5 @@ _brew_is_update_due() {
     for cask in $casks; do
         brew_is_c_active "${cask}" || return 0
     done
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
-# ────────────────────────────────────────────────────────────────
-
-# Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
-brew_bundle() {
-    local brewfile="${1}"
-
-    _brew_is_update_due || return 0
-
-    # Loading mesage
-    print ""
-    printStyled "info" "Updating... (this may take a few minutes) ⏳"
-
-    # Update Homebrew
-    if ! brew update  > /dev/null 2>&1; then
-        printStyled warning "[brew_update] Failed to update Homebrew"
-    fi
-
-    # Install/uninstall formulae & casks referring to the Brewfile
-    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
-        printStyled error "[brew_update] Failed to run bundle Homebrew"
-        return 1
-    fi
-
-    # Upgrade
-    if ! brew upgrade 1>/dev/null; then
-        printStyled error "[brew_update] Failed to upgrade Homebrew packages"
-        return 1
-    fi
-
-    # Cleanup
-    if ! brew cleanup 1>/dev/null; then
-        printStyled warning "[brew_update] Failed to cleanup Homebrew packages"
-    fi
-}
-
-# Check if given formula is active
-brew_is_f_active() {
-    local formula="${1}"
-    [[ "$formula" = "coreutils" ]] && formula="gdate"
-
-    if command -v $formula >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Check if given cask is active
-brew_is_c_active() {
-    local cask="${1}"
-
-    # "my-cask-name" → "My Cask Name.app"
-    local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
-
-    # Check .app folders first for speed, fallback to brew if missing
-    if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
-        return 0
-    elif brew list --cask "$cask" >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
 }
 
