@@ -1,29 +1,21 @@
 ###############################
 # FICHIER /.helpers/brew.zsh
 ###############################
-
 #!/usr/bin/env zsh
 
-# ────────────────────────────────────────────────────────────────
-# MAIN
-# ────────────────────────────────────────────────────────────────
+# Homebrew installer and updater
+#   - Install Homebrew if missing
+#   - Run `brew bundle` based on a Brewfile (if formulae/casks not yet active)
+#   - Expose status checking methods for formulae and casks
 
-# Update Homebrew, formulae and casks
-brew_update() {
+# Depends on:
+#   - parser.zsh        → to read formulae/casks from Brewfile
+#   - gacli.zsh         → to display formatted messages
 
-    # Arguments
-    local brewfile="${1}"
-    if [[ ! -f "${brewfile}" ]]; then
-        printStyled error "[brew_update] Unable to find Brewfile: ${brewfile}"
-        return 1
-    fi
+# Used by:
+#   - update.zsh        → to trigger bundle updates via `brew_bundle`
 
-    # Install if needed
-    _brew_install || return 1
-
-    # Update
-    _brew_bundle "${brewfile}"
-}
+# Note: Update is only triggered if at least one formula or cask is not already active.
 
 # ────────────────────────────────────────────────────────────────
 # Functions - PRIVATE
@@ -74,8 +66,52 @@ _brew_install() {
     fi
 }
 
-_brew_bundle() {
+# Check if at least one formula or cask from given Brewfile is not active
+_brew_is_update_due() {
     local brewfile="${1}"
+    local formulae=()
+    local casks=()
+
+    # Arg check
+    [[ -f "${brewfile}" ]] || {
+        printstyled error "[_brew_is_update_due] Expected: <brewfile> (received: ${brewfile})"
+        return 1
+    }
+
+    # Get formulae from $brewfile
+    parser_read "${brewfile}" "formulae" || {
+        printstyled error "[_brew_is_update_due] Unable to read Brewfile: ${brewfile}"
+        return 1
+    }
+    formulae+=("${BUFFER[@]}")
+
+    # Check each formula status
+    for formula in $formulae; do
+        brew_is_f_active "${formula}" || return 0
+    done
+
+    # Get casks from $brewfile
+    parser_read "${brewfile}" "casks" || {
+        printstyled error "[_brew_is_update_due] Unable to read Brewfile: ${brewfile}"
+        return 1
+    }
+    formulae+=("${BUFFER[@]}")
+
+    # Check each cask status
+    for cask in $casks; do
+        brew_is_c_active "${cask}" || return 0
+    done
+}
+
+# ────────────────────────────────────────────────────────────────
+# Functions - PUBLIC
+# ────────────────────────────────────────────────────────────────
+
+# Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
+brew_bundle() {
+    local brewfile="${1}"
+
+    _brew_is_update_due || return 0
 
     # Loading mesage
     print ""
@@ -104,12 +140,8 @@ _brew_bundle() {
     fi
 }
 
-# ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
-# ────────────────────────────────────────────────────────────────
-
-# Check if given formula is installed
-brew_is_f_installed() {
+# Check if given formula is active
+brew_is_f_active() {
     local formula="${1}"
     [[ "$formula" = "coreutils" ]] && formula="gdate"
 
@@ -120,8 +152,8 @@ brew_is_f_installed() {
     fi
 }
 
-# Check if given cask is installed
-brew_is_c_installed() {
+# Check if given cask is active
+brew_is_c_active() {
     local cask="${1}"
 
     # "my-cask-name" → "My Cask Name.app"
@@ -136,81 +168,4 @@ brew_is_c_installed() {
         return 1
     fi
 }
-
-# Print formulae status
-print_formulae() {
-    local output=""
-
-    # Compute
-    for formula in $FORMULAE; do
-        local icon="${ICON_OFF}"
-        brew_is_f_installed "${formula}" && icon="${ICON_ON}"
-        output+="${icon} ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
-}
-
-# Print casks status
-print_casks() {
-    local output=""
-
-    # Compute
-    for cask in $CASKS; do
-        local icon="${ICON_OFF}"
-        brew_is_c_installed "${cask}" && icon="${ICON_ON}"
-        output+="${icon} ${CYAN}$cask${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
-}
-
-# ────────────────────────────────────────────────────────────────
-# TODO - delete
-# ────────────────────────────────────────────────────────────────
-
-# # Checks if update is due
-# _brew_is_update_due() {
-#     local brewfile="${1}"
-#     local update_is_due=false
-
-#     # Create INSTALLED_TOOLS file if needed
-#     if [[ ! -f "${INSTALLED_TOOLS}" ]]; then
-#         {
-#             echo "formulae:"
-#             echo "casks:"
-#             echo "modules:"
-#         } >> "${INSTALLED_TOOLS}" || {
-#             printStyled error "Unable to create INSTALLED_TOOLS file: ${INSTALLED_TOOLS}"
-#             return 1
-#         }
-#         update_is_due=true
-#     else
-#         # Check if formulae need update
-#         parser_read "${INSTALLED_TOOLS}" formulae || return 1
-#         local installed_f=("${BUFFER[@]}")
-#         parser_read "${brewfile}" formulae || return 1
-#         local required_f=("${BUFFER[@]}")
-#         for formula in $required_f; do
-#             if ! [[ " ${installed_f[*]} " == *" ${formula} "* ]]; then
-#                 update_is_due=true
-#             fi
-#         done
-
-#         # Check casks need update
-#         parser_read "${INSTALLED_TOOLS}" casks || return 1
-#         local installed_c=("${BUFFER[@]}")
-#         parser_read "${brewfile}" casks || return 1
-#         local required_c=("${BUFFER[@]}")
-#         for cask in $required_c; do
-#             if ! [[ " ${installed_c[*]} " == *" ${cask} "* ]]; then
-#                 update_is_due=true
-#             fi
-#         done
-#     fi
-
-#     echo $update_is_due
-# }
 

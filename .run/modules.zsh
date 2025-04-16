@@ -19,12 +19,9 @@ MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads
 ENTRY_POINT="main.zsh"
 CONFIG_FILE="tools.yaml"
 
-# Modules, commands and dependencies
-FORMULAE=()
-CASKS=()
+# Active modules and commands
 MODULES=()
 COMMANDS=()
-BREW_UPDATE_IS_DUE="false"
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -272,41 +269,5 @@ _module_load_commands() {
     done
 
     unfunction get_commands
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
-# ────────────────────────────────────────────────────────────────
-
-modules_dispatch() {
-    # Dynamic commands (declared via get_commands in modules)
-    for cmd in "${COMMANDS[@]}"; do
-        local command_name="${cmd%%=*}"
-        local function_name="${cmd#*=}"
-
-        if [[ "$1" == "$command_name" ]]; then
-            # Call matched function with remaining args
-            "${function_name}" "${@:2}"
-            return
-        fi
-    done
-
-    # No command matched
-    printStyled error "[GACLI] Error: unknown command '$1'" >&2
-    modules_print_commands
-    return 1
-}
-
-modules_print_commands() {
-    local output_commands=""
-
-    # Compute
-    for cmd in "${COMMANDS[@]}"; do
-        local command_name="${cmd%%=*}"
-        output_commands+="${ICON_ON} ${GREEN}${command_name}${NONE} ${GREY}|${NONE} "
-    done
-
-    # Display (removing trailing " | ")
-    print "${output_commands% ${GREY}|${NONE} }"
 }
 

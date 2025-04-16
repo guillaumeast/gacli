@@ -3,6 +3,26 @@
 ###############################
 #!/usr/bin/env zsh
 
+# FILE DESCRIPTION:
+    # GACLI main entry point
+    #   - Entry script called by user via `gacli` wrapper
+    #   - Detects OS, resolves paths, loads core scripts and modules
+    #   - Dispatches CLI commands and displays global status/help
+
+    # Depends on:
+    #   - update.zsh        → for auto-update procedure
+    #   - modules.zsh       → for modules management
+    #   - brew.zsh          → for getting formulae and caks status
+    #   - uninstall.zsh     → for gacli uninstall procedure
+
+    # Used by:
+    #   - gacli wrapper     → executes this file directly
+    #   - install.zsh       → makes this file executable and sources it in `.zshrc`
+
+    # Note: Relies on `BUFFER`, `FORMULAE`, `CASKS`, and other globals for runtime state.
+    #       Also embeds IO helpers like `printStyled` and `style_ascii_logo` directly.
+#
+
 # Easter egg display
 if [[ $1 == "" ]]; then
     print "\033[90m✧ Don't panic... 🐥\033[0m"
@@ -13,25 +33,35 @@ setopt extended_glob
 IS_MACOS=false
 IS_LINUX=false
 
-# Root
-ROOT_DIR=".gacli"
+# Check $HOME is set
+if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
+    echo " ---> [GACLI] E1: fatal error, exiting GACLI <---" >&2
+    exit "1"
+fi
 
-# Scripts
-FILE_HELPER=".run/helpers/files.zsh"
-SCRIPTS=("files.zsh" "parser.zsh" "time.zsh" "brew.zsh" "update.zsh" "modules.zsh")
-UNINSTALLER=".auto-install/uninstall.zsh"
-# [OÙ ?] → files.zsh → Je peux manipuler l'"espace" !
-# [QUAND ?] → time.zsh → Je peux manipuler le "temps" !
-# [COMMENT ?] → parser.zsh → Je peux "lire" et "écrire" !
-# [A QUEL SUJET ?] → brew.zsh → Je peux "apprendre" !
-#   ---
-# [DANS QUEL ETAT ?] → update.zsh → Je peux me "soigner" !
-# [QUOI FAIRE ?] → modules.zsh → Je peux tout "faire" !
+# Directories
+ROOT_DIR="${HOME}/.gacli"
+HELPERS_DIR="${ROOT_DIR}/.helpers"
+CORE_DIR="${ROOT_DIR}/.run"
+MODULES_DIR="${ROOT_DIR}/modules"
+DIRS=("${ROOT_DIR}" "${HELPERS_DIR}" "${CORE_DIR}" "${MODULES_DIR}")
 
-# Dependencies
-MODULES=()
-CASKS=()
-FORMULAE=()
+# Config files
+CONFIG="${ROOT_DIR}/.data/config/update.config.yaml"
+CORE_TOOLS="${ROOT_DIR}/.data/tools/core.tools.yaml"
+USER_TOOLS="${ROOT_DIR}/tools.yaml"
+INSTALLED_TOOLS="${ROOT_DIR}/.data/tools/installed.tools.yaml"
+FILES=("${CONFIG}" "${CORE_TOOLS}" "${USER_TOOLS}" "${INSTALLED_TOOLS}")
+
+# Scripts files
+SCRIPTS=( \
+    "${ROOT_DIR}/.helpers/time.zsh" \
+    "${ROOT_DIR}/.helpers/parser.zsh" \
+    "${ROOT_DIR}/.helpers/brew.zsh" \
+    "${ROOT_DIR}/.run/modules.zsh" \
+    "${ROOT_DIR}/.run/update.zsh" \
+    "${ROOT_DIR}.auto-install/uninstall.zsh" \
+)
 
 # Buffer for cross-modules communication (kind of "stdinfo")
 BUFFER=()
@@ -39,8 +69,6 @@ BUFFER=()
 # Formatting
 BOLD="\033[1m"
 UNDERLINE="\033[4m"
-
-# Colors
 BLACK='\033[30m'
 RED='\033[31m'
 GREEN='\033[32m'
@@ -60,31 +88,29 @@ ICON_OFF="${RED}○${NONE}"
 # MAIN
 # ────────────────────────────────────────────────────────────────
 
-# TODO: add emoji auto enable mode as in install.zsh (btw, reverse "text → emoji" instead of "emoji → text")
-
 # Main function
 main() {
-    # Check env
-    _gacli_check_os || abort "1"
-    _gacli_resolve || abort "2"
+    # Check env compatibility and files integrity
+    _gacli_check_system || abort "1"
+    _gacli_check_files || abort "2"
 
-    # Load core files
+    # Load core scripts
     local script
     for script in $SCRIPTS; do
         if ! source "${script}"; then
-            echo "[gacli.zsh] Error: Unable to find required file: ${script}"
+            printstyled error "[gacli.zsh] Unable to load required script: ${script}"
             abort "3"
         fi
     done
 
-    # Load modules
-    # TODO: implement modules_init and modules_load in modules.zsh
-    modules_init || abort "4"           # Implemented in modules.zsh
-    update_init || abort "5"            # Implemented in update.zsh
-    modules_load || abort "6"           # Implemented in modules.zsh
+    # Check if update is due (if config has changed or next update date is reached)
+    update_check || abort "4"           # Implemented in update.zsh
+
+    # Source modules code
+    modules_load || abort "5"           # Implemented in modules.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "8"
+    _gacli_dispatch "$@" || abort "6"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -92,9 +118,9 @@ main() {
 # ────────────────────────────────────────────────────────────────
 
 # Detect the operating system and set the corresponding flags
-_gacli_check_os() {
+_gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
-        echo "[_gacli_check_os] Error: \$OSTYPE is not set" >&2
+        printstyled error "[_gacli_check_system] \$OSTYPE is not set" >&2
         return 1
     fi
 
@@ -102,44 +128,34 @@ _gacli_check_os() {
         darwin*) IS_MACOS=true ;;
         linux*)  IS_LINUX=true ;;
         *)
-            echo "[_gacli_check_os] Error: Unknown OS type: $OSTYPE" >&2
+            printstyled error "[_gacli_check_system] Unknown OS type: $OSTYPE" >&2
             return 1
             ;;
     esac
+
+    # TODO: add emoji auto enable mode as in install.zsh (btw, reverse "text → emoji" instead of "emoji → text")
 }
 
-# Resolve absolute path to the gacli directory
-_gacli_resolve() {
+# Resolve absolute paths, check files integrity and source scripts
+_gacli_check_files() {
 
-    # Root dir
-    if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
-        echo "[_gacli_resolve] Error: \$HOME is not set or invalid"
-        return 1
-    fi
-    ROOT_DIR="${HOME}/${ROOT_DIR}" || {
-        echo "[_gacli_resolve] Error: Unable to solve root dir path: '${HOME}/${ROOT_DIR}'"
-        return 1
-    }
+    # Check directories integrity
+    local dir
+    for dir in $DIRS; do
+        mkdir -p "${MODULES_DIR}" || {
+            printstyled error "[_gacli_check_files] Unable to resolve dir: ${dir}"
+            return 1
+        }
+    done
 
-    # Core scripts
-    FILE_HELPER="${ROOT_DIR}/${FILE_HELPER}" || {
-        echo "[_gacli_resolve] Error: Unable to solve required dependencie: '${HOME}/${FILE_HELPER}'"
-        return 1
-    }
-    source "${FILE_HELPER}" || {
-        echo "[_gacli_resolve] Error: Unable to load required dependencie: '${FILE_HELPER}'"
-        return 1
-    }
-
-    # Uninstaller
-    UNINSTALLER="${ROOT_DIR}/${UNINSTALLER}" || {
-        echo "[_gacli_resolve] Error: Unable to solve required dependencie: '${HOME}/${UNINSTALLER}'"
-        return 1
-    }
-    source "${UNINSTALLER}" || {
-        echo "[_gacli_resolve] Error: Unable to load required dependencie: '${UNINSTALLER}'"
-        return 1
-    }
+    # Check config files integrity
+    local file
+    for file in $FILES; do
+        [[ -f "${file}" ]] || {
+            printstyled error "[_gacli_check_files] Unable to resolve file: ${dir}"
+            return 1
+        }
+    done
 }
 
 # Dispatch commands
@@ -210,7 +226,7 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            print "${RED}${BOLD}❌ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}❌ ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
@@ -281,7 +297,7 @@ help() {
 abort() {
     echo ""
     echo "-------------------------------------------------------"
-    echo " ---> [GACLI] E${1}: fatal error, exiting GACLI XXX <---" >&2
+    echo " ---> [GACLI] E${1}: fatal error, exiting GACLI <---" >&2
     echo "-------------------------------------------------------"
     echo ""
     exit "${1}"
@@ -304,3 +320,73 @@ echo "🔦   [GACLI ENDED]"     🎉
 echo "-------------------------"
 echo ""
 
+# ────────────────────────────────────────────────────────────────
+# Functions - from brew.zsh
+# ────────────────────────────────────────────────────────────────
+
+# Print formulae status (TODO: refacto in gacli.zsh)
+print_formulae() {
+    local output=""
+
+    # Compute
+    for formula in $FORMULAE; do
+        local icon="${ICON_OFF}"
+        brew_is_f_active "${formula}" && icon="${ICON_ON}"
+        output+="${icon} ${ORANGE}$formula${NONE} ${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output% ${GREY}|${NONE} }"
+}
+
+# Print casks status (TODO: refato in gacli.zsh)
+print_casks() {
+    local output=""
+
+    # Compute
+    for cask in $CASKS; do
+        local icon="${ICON_OFF}"
+        brew_is_c_active "${cask}" && icon="${ICON_ON}"
+        output+="${icon} ${CYAN}$cask${NONE} ${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output% ${GREY}|${NONE} }"
+}
+
+
+# ────────────────────────────────────────────────────────────────
+# TODO - From modules.zsh
+# ────────────────────────────────────────────────────────────────
+
+modules_dispatch() {
+    # Dynamic commands (declared via get_commands in modules)
+    for cmd in "${COMMANDS[@]}"; do
+        local command_name="${cmd%%=*}"
+        local function_name="${cmd#*=}"
+
+        if [[ "$1" == "$command_name" ]]; then
+            # Call matched function with remaining args
+            "${function_name}" "${@:2}"
+            return
+        fi
+    done
+
+    # No command matched
+    printStyled error "[GACLI] Error: unknown command '$1'" >&2
+    modules_print_commands
+    return 1
+}
+
+modules_print_commands() {
+    local output_commands=""
+
+    # Compute
+    for cmd in "${COMMANDS[@]}"; do
+        local command_name="${cmd%%=*}"
+        output_commands+="${ICON_ON} ${GREEN}${command_name}${NONE} ${GREY}|${NONE} "
+    done
+
+    # Display (removing trailing " | ")
+    print "${output_commands% ${GREY}|${NONE} }"
+}
