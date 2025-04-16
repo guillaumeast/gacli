@@ -1,5 +1,5 @@
 ###############################
-# FICHIER /.run/helpers/parser.zsh
+# FICHIER /.helpers/parser.zsh
 ###############################
 
 #!/usr/bin/env zsh

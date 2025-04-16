@@ -35,6 +35,7 @@ NONE="$(printf '\033[0m')"
 BOLD="$(printf '\033[1m')"
 
 # Emojis (used only if system supports unicode emojis)
+# TODO: reverse "text → emoji" instead of "emoji → text"
 EMOJI_SUCCESS="✦"
 EMOJI_WARN="⚠️"
 EMOJI_ERR="❌"
@@ -42,6 +43,38 @@ EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
 EMOJI_WAIT="⏳"
+
+# ────────────────────────────────────────────────────────────────
+# TODOs
+# ────────────────────────────────────────────────────────────────
+
+# TODO: converti in full macOS/Linux POSIX compatible ".sh" script
+# TODO: update code to be be as described above :
+
+# ────────────────────────────────────────────────────────────────
+# PSEUDO-CODE
+# ────────────────────────────────────────────────────────────────
+
+# main()
+# |→ check_env                  → Checks env
+# |     |→ check_os                 → Checks if OS is supported
+# |     |→ check_unicode            → Checks if emojis are supported
+# |     |→ parse_args               → Inits global variables referring to given args
+# |     |→ resolve_paths            → Resolves absolute paths
+# |→ display_start              → Displays welcome message
+# |     |→ display_ascii_logo       → Displays ascii art style logo
+# |     |→ prinstyled               → Displays waiting message
+# |→ setup_env                  → Setup required tools
+# |     |→ check_curl               → Firt try: curl (macOS)
+# |     |→ check_wget               → Fallback: wget (Linux)
+# |     |→ check_zsh                → Try to install zsh for running GACLI (TODO: store in config file if it's a formulae / cask)
+# |     |→ check_brew               → Try to install Homebrew (for downloading further dependencies)
+# |→ prinstyled                 → Displays waiting message
+# |→ download_gacli             → Download GACLI files from Github
+# |     |→ download_gacli           → Download GACLI files from Github
+# |     |→ brew_bundle                → Install GACLI dependencies from "${DIR}/.data/dependencies/core.Brewfile" (temporary rename it "Brewfile" if needed)
+# |→ prinstyled                 → Displays success message
+# |→ auto_launch                → Launch GACLI
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -107,6 +140,7 @@ check_os() {
 }
 
 # Check if system supports unicode emojis
+# TODO: reverse "text → emoji" instead of "emoji → text"
 check_unicode() {
     # Check if locale supports unicode
     if ! locale charmap | grep -iq "utf"; then
@@ -604,7 +638,7 @@ printStyled() {
             ;;        
         debug)
             color=$YELLOW
-            final_message="🔦 ===> ${BOLD}${raw_message}${NONE}"
+            final_message="🔦 ${BOLD}${raw_message}${NONE}"
             ;;
         *)
             color=$NONE

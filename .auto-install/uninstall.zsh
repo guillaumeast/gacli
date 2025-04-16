@@ -1,8 +1,9 @@
 ###############################
-# FICHIER /.run/core/uninstall.zsh
+# FICHIER /.install/uninstall.zsh
 ###############################
-
 #!/usr/bin/env zsh
+
+# TODO: converti in full macOS/Linux POSIX compatible ".sh" script
 
 # Uninstall GACLI: remove all file and cleanup .zshrc
 gacli_uninstall() {

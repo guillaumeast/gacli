@@ -21,7 +21,7 @@ update_init() {
     _update_get_config || return 1
 
     # Initialize config
-    if [[ "$INITIALIZED" == "false" ]]; then
+    if [[ "$INITIALIZED" = "false" ]]; then
         update_edit_config || return 1
     fi
 
@@ -56,7 +56,7 @@ update_edit_config() {
         NEXT_UPDATE=""
     else
         if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
-            printStyled warning "[update_manual] Failed to compute next update date"
+            printStyled warning "[update_edit_config] Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
@@ -73,12 +73,12 @@ update_edit_config() {
     _update_set_config || return 1
 }
 
-# Auto-update GACLI if needed (based on config.json and coreutils)
+# Auto-update GACLI if needed
 update_auto() {
     local today
 
     # Check if auto update is enabled
-    if [[ "${AUTO_UPDATE}" == "false" ]]; then
+    if [[ "${AUTO_UPDATE}" = "false" ]]; then
         printStyled info "[gacli_auto_update] Auto-update is disabled → skipping"
         return 0
     fi
@@ -177,7 +177,6 @@ _update_ask_freq() {
     while true; do
         print -n "👉 ${BOLD}How many days between each auto-update? (OFF = 0) ${NONE}"
         read -r FREQ_DAYS
-        print ""
 
         # Check format
         if [[ "$FREQ_DAYS" =~ ^[0-9]+$ ]]; then

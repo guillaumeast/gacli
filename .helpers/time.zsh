@@ -1,5 +1,5 @@
 ###############################
-# FICHIER /.run/helpers/time.zsh
+# FICHIER /.helpers/time.zsh
 ###############################
 
 #!/usr/bin/env zsh
