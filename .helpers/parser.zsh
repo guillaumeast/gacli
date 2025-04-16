@@ -5,7 +5,7 @@
 #!/usr/bin/env zsh
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
+# Functions - PUBLIC - Universal read/write/reset
 # ────────────────────────────────────────────────────────────────
 
 # Universal reader: parser_read <file> <key>
@@ -124,7 +124,9 @@ parser_reset() {
             }
             ;;
         brewfile)
-            _reset_brew "${file}" "${key}"
+            _reset_brew "${file}" "${key}" || {
+                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                return 1
             ;;
         *)
             printStyled error "[reset] Unsupported file format: .${extension}"
@@ -134,9 +136,10 @@ parser_reset() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - PUBLIC
+# Functions - PUBLIC - Brewfile read/write/reset
 # ────────────────────────────────────────────────────────────────
 
+# Return file extension in lowercase (special case for Brewfile)
 _get_extension() {
     local file="${1}"
     local file_name="${file##*/}"
@@ -149,6 +152,7 @@ _get_extension() {
     echo "${extension:l}"
 }
 
+# Read values from a Brewfile (formulae or casks)
 _read_brew() {
     local file="${1}"
     local key="${2}"
@@ -167,6 +171,7 @@ _read_brew() {
     esac
 }
 
+# Write value to a Brewfile (append line if not already present)
 _write_brew() {
     local file="${1}"
     local key="${2}"
@@ -194,6 +199,7 @@ _write_brew() {
     fi
 }
 
+# Reset values from a Brewfile (remove matching lines)
 _reset_brew() {
     local file="${1}"
     local key="${2}"
