@@ -73,6 +73,9 @@ EMOJI_WAIT="..."
 
 # Entry point that sequences environment checks, download, install and shell reload
 main() {
+
+    echo ""
+    printf "%s\n" "${GREY}${EMOJI_INFO}Checking environment${NONE}${EMOJI_WAIT}"
     check_env      || exit 1
     init_style
     parse_args "$@" || exit 2
@@ -84,15 +87,15 @@ main() {
     install_zsh    || exit 5
 
     echo ""
-    printStyled info "Downloading GACLI into \"${DIR}\"... ${EMOJI_WAIT}"
+    printStyled info "Downloading ${ORANGE}GACLI${GREY} → ${NONE}\"${DIR}\"${GREY}... ${EMOJI_WAIT}"
     download_gacli || exit 6
 
     echo ""
-    printStyled info "Installing dependencies..."
+    printStyled info "Installing dependencies... ${EMOJI_WAIT}"
     install_deps   || exit 7
 
     echo ""
-    printStyled info "Installing GACLI... ${EMOJI_WAIT}"
+    printStyled info "Installing ${ORANGE}GACLI${GREY}... ${EMOJI_WAIT}"
     make_executable || exit 8
     create_wrapper  || exit 9
     update_zshrc    || exit 10
@@ -113,21 +116,21 @@ check_env() {
         Linux)  IS_LINUX=true ;;
         *)      printStyled error "[check_env] Unsupported OS: $ud"; return 1 ;;
     esac
-    printStyled success "OS detected: $ud"
+    printStyled success "OS detected: ${ORANGE}$ud${NONE}"
 
     # Detect package manager
     if command -v brew >/dev/null 2>&1; then
         PACKAGE_MANAGER="brew"
-        printStyled success "Package manager: Homebrew"
+        printStyled success "Package manager: ${ORANGE}Homebrew${NONE}"
     elif command -v apt >/dev/null 2>&1; then
         PACKAGE_MANAGER="apt"
-        printStyled success "Package manager: apt"
+        printStyled success "Package manager: ${ORANGE}apt${NONE}"
     elif command -v dnf >/dev/null 2>&1; then
         PACKAGE_MANAGER="dnf"
-        printStyled success "Package manager: dnf"
+        printStyled success "Package manager: ${ORANGE}dnf${NONE}"
     elif command -v pacman >/dev/null 2>&1; then
         PACKAGE_MANAGER="pacman"
-        printStyled success "Package manager: pacman"
+        printStyled success "Package manager: ${ORANGE}pacman${NONE}"
     else
         PACKAGE_MANAGER=""
         printStyled warning "[check_env] No supported package manager found"
@@ -136,17 +139,17 @@ check_env() {
     # Detect default shell
     SHELL_PATH=${SHELL:-$(command -v sh)}
     SHELL_NAME=$(basename "$SHELL_PATH")
-    printStyled success "Default shell: ${SHELL_NAME} (${SHELL_PATH})"
+    printStyled success "Default shell: ${ORANGE}${SHELL_NAME}${GREY} → ${NONE}${SHELL_PATH}"
 
     # Detect HTTP client
     for client in $CLIENTS; do
         if command -v "$client" >/dev/null 2>&1; then
             HTTP_CLIENT="$client"
-            printStyled success "${client} detected"
+            printStyled success "HTTP client: ${ORANGE}${client}${NONE}"
             break
         fi
     done
-    [ -n "$HTTP_CLIENT" ] || { printStyled error "[check_env] No curl, wget or git found"; return 1; }
+    [ -n "$HTTP_CLIENT" ] || { printStyled error "[check_env] No ${ORANGE}curl${RED}, ${ORANGE}wget${RED} or ${ORANGE}git${RED} found"; return 1; }
 
     return 0
 }
@@ -154,11 +157,11 @@ check_env() {
 # Prints ASCII banner and activates emoji styling when UTF‑8 is supported
 init_style() {
     printf "%s\n" "${ORANGE}  _____          _____ _      _____ ${NONE}"
-    printf "%s\n" "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
-    printf "%s\n" "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
-    printf "%s\n" "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    printf "%s\n" "${ORANGE} / ____|   /\\   / ____| |    |_   _|${NONE}"
+    printf "%s\n" "${ORANGE}| |  __   /  \\ | |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| | |_ | / /\\ \\| |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| |__| |/ ____ \\ |____| |____ _| |_ ${NONE}"
+    printf "%s\n" "${ORANGE} \\_____/_/    \\_\\_____|______|_____|${NONE}"
     printf "%s\n" ""
 
     # Détection Unicode
@@ -250,18 +253,18 @@ resolve_paths() {
 
 # Installs Homebrew non‑interactively when absent, selecting curl or wget as downloader
 install_brew() {
-    command -v brew >/dev/null 2>&1 && { printStyled success "Homebrew detected"; return 0; }
-
-    [ "$IS_MACOS" = true ] || [ "$IS_LINUX" = true ] || {
-        printStyled error "[install_brew] Unsupported OS"; return 1
-    }
+    
+    if command -v brew >/dev/null 2>&1; then
+        printStyled success "Ready: ${ORANGE}Homebrew${GREEN}"
+        return 0
+    fi
 
     if command -v curl >/dev/null 2>&1; then
         downloader="curl -fsSL"
     elif command -v wget >/dev/null 2>&1; then
         downloader="wget -q -O -"
     else
-        printStyled error "[install_brew] curl or wget required"; return 1
+        printStyled error "[install_brew] ${ORANGE}curl${RED} or ${ORANGE}wget${RED} required"; return 1
     fi
 
     install_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
@@ -270,12 +273,16 @@ install_brew() {
         printStyled error "[install_brew] Failed"; return 1
     }
     command -v brew >/dev/null 2>&1 && eval "$(brew shellenv)" && hash -r 2>/dev/null
-    printStyled success "Homebrew installed"
+    printStyled success "Ready: ${ORANGE}Homebrew${GREEN}"
 }
 
 # Installs zsh via the detected package manager when it is not already present
 install_zsh() {
-    command -v zsh >/dev/null 2>&1 && { printStyled success "zsh detected"; return 0; }
+    
+    if command -v zsh >/dev/null 2>&1; then
+        printStyled success "Ready: ${ORANGE}zsh${GREEN}"
+        return 0
+    fi
 
     case "$PACKAGE_MANAGER" in
         brew)    install_cmd="brew install zsh" ;;
@@ -287,7 +294,7 @@ install_zsh() {
 
     printStyled info "Installing zsh..."
     eval "$install_cmd" || { printStyled error "[install_zsh] Failed"; return 1; }
-    printStyled success "zsh installed"
+    printStyled success "Ready: ${ORANGE}zsh${GREEN}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -306,7 +313,7 @@ download_gacli() {
 
     case "$HTTP_CLIENT" in
         curl)
-            curl -fSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
+            curl -sSfL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
                 || { printStyled error "[download_gacli] Failed to download/extract archive"; return 1; }
             ;;
         wget)
@@ -324,7 +331,7 @@ download_gacli() {
             return 1
             ;;
     esac
-    printStyled success "GACLI downloaded into $DIR"
+    printStyled success "Downloaded"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -339,7 +346,7 @@ install_deps() {
             printStyled error "[install_deps] Failed to run Brewfile"
             return 1
         }
-        printStyled success "Dependencies installed"
+        printStyled success "Installed"
     else
         printStyled warning "[install_deps] No Brewfile found or brew unavailable → skipping"
     fi
@@ -370,7 +377,7 @@ create_wrapper() {
     } > "$SYMLINK" && chmod +x "$SYMLINK" || {
         printStyled error "[create_wrapper] Failed to create wrapper"; return 1
     }
-    printStyled success "Wrapper created: $SYMLINK → $ENTRY_POINT"
+    printStyled success "Wrapper created → ${NONE}$SYMLINK${GREY} → ${NONE}$ENTRY_POINT"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
@@ -395,7 +402,7 @@ update_zshrc() {
 
 auto_launch() {
     echo ""
-    printStyled success "GACLI successfully installed 🚀"
+    printStyled success "${ORANGE}GACLI${GREEN} successfully installed 🚀"
     echo ""
     if [ -n "$ZSH_VERSION" ]; then
         printStyled info "Reloading shell... ${EMOJI_WAIT}"
