@@ -1,8 +1,7 @@
+#!/usr/bin/env sh
 ###############################
-# FICHIER /.install/install.zsh
+# FICHIER /.auto-install/install.sh
 ###############################
-
-#!/usr/bin/env zsh
 
 # Options
 FORCE_MODE="false"
@@ -13,7 +12,6 @@ IS_LINUX=false
 
 # GACLI urls
 REPO="https://github.com/guillaumeast/gacli"
-# ARCHIVE="${REPO}/archive/refs/heads/main.tar.gz"
 ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
 
 # GACLI paths
@@ -21,20 +19,24 @@ DIR=".gacli"
 ENTRY_POINT=".run/gacli.zsh"
 ZSHRC=".zshrc"
 
-# SYMLINK
+# WRAPPER
 SYM_DIR=".local/bin"
 SYMLINK="gacli"
+
+# Tools
+CLIENTS="curl wget git"
+HTTP_CLIENT=""
 
 # Colors
 RED="$(printf '\033[31m')"
 GREEN="$(printf '\033[32m')"
-YELLOW='\033[33m'
+YELLOW="$(printf '\033[33m')"
 ORANGE="$(printf '\033[38;5;208m')"
 GREY="$(printf '\033[90m')"
 NONE="$(printf '\033[0m')"
 BOLD="$(printf '\033[1m')"
 
-# Emojis (swicthed to emojis if system supports unicode)
+# Emojis
 EMOJI_SUCCESS="[OK]"
 EMOJI_WARN="[!]"
 EMOJI_ERR="[X]"
@@ -44,104 +46,120 @@ EMOJI_DEBUG="[???]"
 EMOJI_WAIT="..."
 
 # ────────────────────────────────────────────────────────────────
-# TODOs
-# ────────────────────────────────────────────────────────────────
-
-# TODO: converti in full macOS/Linux POSIX compatible ".sh" script
-# TODO: update code to be be as described above :
-
-# ────────────────────────────────────────────────────────────────
 # PSEUDO-CODE
 # ────────────────────────────────────────────────────────────────
 
 # main()
-# |→ check_env                  → Checks env
-# |     |→ check_os                 → Checks if OS is supported
-# |     |→ enable_emojis            → Checks if emojis are supported
-# |     |→ parse_args               → Inits global variables referring to given args
-# |     |→ resolve_paths            → Resolves absolute paths
-# |→ display_start              → Displays welcome message
-# |     |→ display_ascii_logo       → Displays ascii art style logo
-# |     |→ prinstyled               → Displays waiting message
-# |→ setup_env                  → Setup required tools
-# |     |→ check_curl               → Firt try: curl (macOS)
-# |     |→ check_wget               → Fallback: wget (Linux)
-# |     |→ check_zsh                → Try to install zsh for running GACLI (TODO: store in config file if it's a formulae / cask)
-# |     |→ check_brew               → Try to install Homebrew (for downloading further dependencies)
-# |→ prinstyled                 → Displays waiting message
-# |→ download_gacli             → Download GACLI files from Github
-# |     |→ download_gacli           → Download GACLI files from Github
-# |     |→ brew_bundle                → Install GACLI dependencies from "${DIR}/.data/dependencies/core.Brewfile" (temporary rename it "Brewfile" if needed)
-# |→ prinstyled                 → Displays success message
-# |→ auto_launch                → Launch GACLI
+# |→ check_env                  → Checks env:
+# |     |→ ✅ check_env                 → Detect environment: OS, package manager and default shell
+# |     |→ ✅ init_style                → Enable emojis if system can handle it + welcome message
+# |     |→ ✅ parse_args                → Inits global variables referring to given args
+# |     |→ ✅ resolve_paths             → Resolve relative paths to absolute paths
+# |→ setup_env                  → Setup required tools:
+# |     |→ ✅ install_brew              → Try to install Homebrew (for downloading further dependencies)
+# |     |→ ✅ install_zsh               → Install zsh via package manager or add to Brewfile if available as a formula/cask
+# |→ download_gacli             → Download GACLI files from Github:
+# |     |→ ✅ download_gacli            → Download GACLI files from Github
+# |     |→ ✅ install_deps              → Install GACLI dependencies from "${DIR}/.auto-install/Brewfile"
+# |→ install_gacli              → Execute GACLI installation steps:
+# |     |→ ✅ make_executable           → Ensure GACLI entry point is executable
+# |     |→ ✅ create_wrapper            → Generate a small shell script to launch GACLI reliably across shells
+# |     |→ ✅ update_zshrc              → Append GACLI to PATH and source its entry point in ~/.zshrc
+# |→ ✅ auto_launch             → Launch GACLI
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
 # ────────────────────────────────────────────────────────────────
 
+# Entry point that sequences environment checks, download, install and shell reload
 main() {
-    
-    # Check env compatibility
-    check_os || exit 01             # Linux and macOS are supported (Windows is NOT supported)
-    enable_emojis                   # Enable emojis if system can handle it
-    
-    # Init
-    display_ascii_logo
-    printStyled info "Initializing... ${EMOJI_WAIT}"
-    parse_args "$@" || exit 02      # Parse args and set command relative variables
-    resolve_paths || exit 03        # Resolve relative paths to absolute paths
-    check_zsh || exit 04            # Needed to run GACLI
+    check_env      || exit 1
+    init_style
+    parse_args "$@" || exit 2
+    resolve_paths  || exit 3
 
-    # Install dependencies
     echo ""
     printStyled info "Installing dependencies... ${EMOJI_WAIT}"
-    curl_install || wget_install || git_install || exit 05
-    brew_install || exit 07         # Needed to install coreutils
-    coreutils_install || exit 08    # Needed for cross-platform compatibility
+    install_brew   || exit 4
+    install_zsh    || exit 5
 
-    # Configure GACLI
     echo ""
-    printStyled info "Installing GACLI into \"${DIR}\"... ${EMOJI_WAIT}"
-    gacli_download || exit 09       # Clone GACLI repo
-    make_executable || exit 10      # Make GACLI entry point executable
-    create_wrapper || exit 11       # Create a wrapper to enable gacli commands (avoid symlink's shell env corruption)
-    update_zshrc || exit 12         # Add GACLI to path and auto-source it
+    printStyled info "Downloading GACLI into \"${DIR}\"... ${EMOJI_WAIT}"
+    download_gacli || exit 6
+    install_deps   || exit 7
 
-    # Done
-    auto_launch                     # Launch GACLI after install (only if shell is zsh)
+    echo ""
+    printStyled info "Installing GACLI... ${EMOJI_WAIT}"
+    make_executable || exit 8
+    create_wrapper  || exit 9
+    update_zshrc    || exit 10
+
+    auto_launch     || exit 11
 }
 
 # ────────────────────────────────────────────────────────────────
-# Functions - INIT
+# CHECK ENV
 # ────────────────────────────────────────────────────────────────
 
-# Detect the operating system and set the corresponding flags
-check_os() {
+# Detects OS, package manager, default shell and available HTTP client
+check_env() {
+    # Detect OS via uname
+    ud=$(uname -s)
+    case "$ud" in
+        Darwin) IS_MACOS=true ;;
+        Linux)  IS_LINUX=true ;;
+        *)      printStyled error "[check_env] Unsupported OS: $ud"; return 1 ;;
+    esac
+    printStyled success "OS detected: $ud"
 
-    # Check if $OSTYPE is set
-    if [[ -z "$OSTYPE" ]]; then
-        echo "[check_os] Error: \$OSTYPE is not set" >&2
-        return 1
+    # Detect package manager
+    if command -v brew >/dev/null 2>&1; then
+        PACKAGE_MANAGER="brew"
+        printStyled success "Package manager: Homebrew"
+    elif command -v apt >/dev/null 2>&1; then
+        PACKAGE_MANAGER="apt"
+        printStyled success "Package manager: apt"
+    elif command -v dnf >/dev/null 2>&1; then
+        PACKAGE_MANAGER="dnf"
+        printStyled success "Package manager: dnf"
+    elif command -v pacman >/dev/null 2>&1; then
+        PACKAGE_MANAGER="pacman"
+        printStyled success "Package manager: pacman"
+    else
+        PACKAGE_MANAGER=""
+        printStyled warning "[check_env] No supported package manager found"
     fi
 
-    # Check if current OS is supported
-    case "$OSTYPE" in
-        darwin*) IS_MACOS=true ;;
-        linux*)  IS_LINUX=true ;;
-        *)
-            echo "[check_os] Error: Unknown OS type: ${OSTYPE}" >&2
-            return 1
-            ;;
-    esac
-    
-    # Display success
-    printStyled success "OS supported: ${OSTYPE}"
+    # Detect default shell
+    SHELL_PATH=${SHELL:-$(command -v sh)}
+    SHELL_NAME=$(basename "$SHELL_PATH")
+    printStyled success "Default shell: ${SHELL_NAME} (${SHELL_PATH})"
+
+    # Detect HTTP client
+    for client in $CLIENTS; do
+        if command -v "$client" >/dev/null 2>&1; then
+            HTTP_CLIENT="$client"
+            printStyled success "${client} detected"
+            break
+        fi
+    done
+    [ -n "$HTTP_CLIENT" ] || { printStyled error "[check_env] No curl, wget or git found"; return 1; }
+
+    return 0
 }
 
-# TODO
-enable_emojis() {
-    # Check if locale supports unicode
-    if locale charmap | grep -iq "utf"; then
+# Prints ASCII banner and activates emoji styling when UTF‑8 is supported
+init_style() {
+    printf "%s\n" "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    printf "%s\n" "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
+    printf "%s\n" "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
+    printf "%s\n" "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    printf "%s\n" ""
+
+    # Détection Unicode
+    if printf '%s\n' "${LC_CTYPE:-$LANG}" | grep -qi 'utf-8'; then
         EMOJI_SUCCESS="✦"
         EMOJI_WARN="⚠️"
         EMOJI_ERR="❌"
@@ -151,521 +169,357 @@ enable_emojis() {
         EMOJI_WAIT="⏳"
         printStyled success "Emojis enabled"
     else
-        printStyled info "[enable_emojis] Unicode unsupported, emojis disabled for compatibility"
+        printStyled info "[enable_emojis] Unicode unsupported, emojis disabled"
     fi
 }
 
-# Parse arguments
-parse_args() {
-    for arg in "$@"; do
-        case "$arg" in
-            --force)
-                # Enable force mode
-                FORCE_MODE="true"
-                ;;
-            *)
-                printStyled error "[GACLI] Error: Unknown option [${arg}]"
-                return 1
-                ;;
-        esac
-    done
-
-    # Display success
-    printStyled success "Arguments parsed"
-}
-
-# Resolve paths
-resolve_paths() {
-
-    # Check if $HOME is set
-    if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
-        printStyled error "[GACLI] Error: \$HOME is not set or invalid"
-        return 1
-    fi
-
-    # Resolve paths
-    DIR="${HOME}/${DIR}"
-    ENTRY_POINT="${DIR}/${ENTRY_POINT}"
-    ZSHRC="${HOME}/${ZSHRC}"
-    SYM_DIR="${HOME}/${SYM_DIR}"
-    SYMLINK="${SYM_DIR}/${SYMLINK}"
-
-    # Check .zshrc path
-    while [ -z "${ZSHRC}" ] || [ ! -f "${ZSHRC}" ]; do
-        printStyled warning ".zshrc not found at ${ZSHRC}"
-        printStyled highlight "Please provide the correct path to your .zshrc file:"
-        printf "> "
-        read ZSHRC
-    done
-
-    # Display success
-    printStyled success "Paths resolved"
-}
-
-# Check if zsh is installed
-check_zsh() {
-
-    # Check
-    if ! command -v zsh >/dev/null 2>&1; then
-        printStyled error "[GACLI] Error: zsh is not installed"
-        echo ""
-        printStyled highlight "Please install zsh manually before continuing"
-        printStyled info "macOS : already available, enable it via System Preferences > Shell"
-        printStyled info "Linux : sudo apt install zsh   # or your distro equivalent"
-        echo ""
-        return 1
-    fi
-
-    # Display success
-    printStyled success "Zsh detected"
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - DEPENDENCIES
-# ────────────────────────────────────────────────────────────────
-
-# Install curl
-curl_install() {
-    printStyled debug "-------------------"
-    printStyled debug "[CURL] Checking..."
-
-    # Check
-    if ! command -v curl >/dev/null 2>&1; then
-        printStyled debug "[CURL] ---> Not installed"
-
-        printStyled highlight "Installing curl (your password may be asked)... ${EMOJI_WAIT}"
-
-        # Try auto-install
-        printStyled debug "[CURL] Trying to install..."
-        if [ "$IS_MACOS" = true ]; then
-            printStyled debug "[CURL] Running 'brew install curl'..."
-            if brew install curl; then
-                printStyled success "Curl installed"
-                return 0
-            fi
-            printStyled debug "[CURL] ---> Failed"
-        elif [ "$IS_LINUX" = true ]; then
-            if command -v apt >/dev/null 2>&1; then
-                printStyled debug "[CURL] Running 'sudo apt install curl'..."
-                if sudo apt install curl; then
-                    printStyled success "Curl installed"
-                    return 0
-                fi
-                printStyled debug "[CURL] ---> Failed"
-            elif command -v dnf >/dev/null 2>&1; then
-                printStyled debug "[CURL] Running 'sudo dnf install curl'..."
-                if sudo dnf install curl; then
-                    printStyled success "Curl installed"
-                    return 0
-                fi
-                printStyled debug "[CURL] ---> Failed"
-            elif command -v pacman >/dev/null 2>&1; then
-                printStyled debug "[CURL] Running 'sudo pacman -S curl'..."
-                if sudo pacman -S curl; then
-                    printStyled success "Curl installed"
-                    return 0
-                fi
-                printStyled debug "[CURL] ---> Failed"
-            fi
-        fi
-
-        # Manual fallback
-        printStyled error "[GACLI] Error: curl is not installed"
-        echo ""
-        printStyled highlight "Please install curl manually before continuing"
-        printStyled info "macOS : brew install curl"
-        printStyled info "Linux : Use your package manager"
-        echo ""
-        return 1
-    fi
-
-    # Display success
-    printStyled success "Curl detected"
-}
-
-# Install wget
-wget_install() {
-    printStyled debug "-------------------"
-    printStyled debug "[WGET] Checking..."
-
-    # Check
-    if ! command -v wget >/dev/null 2>&1; then
-        printStyled debug "[WGET] ---> Not installed"
-
-        printStyled highlight "Installing wget (your password may be asked)... ${EMOJI_WAIT}"
-
-        # Try auto-install
-        printStyled debug "[WGET] Trying to install..."
-        if [ "$IS_MACOS" = true ]; then
-            printStyled debug "[WGET] Running 'brew install wget'..."
-            if brew install wget; then
-                printStyled success "wget installed"
-                return 0
-            fi
-            printStyled debug "[WGET] ---> Failed"
-        elif [ "$IS_LINUX" = true ]; then
-            if command -v apt >/dev/null 2>&1; then
-                printStyled debug "[WGET] Running 'sudo apt install wget'..."
-                if sudo apt install wget; then
-                    printStyled success "wget installed"
-                    return 0
-                fi
-                printStyled debug "[WGET] ---> Failed"
-            elif command -v dnf >/dev/null 2>&1; then
-                printStyled debug "[WGET] Running 'sudo dnf install wget'..."
-                if sudo dnf install wget; then
-                    printStyled success "wget installed"
-                    return 0
-                fi
-                printStyled debug "[WGET] ---> Failed"
-            elif command -v pacman >/dev/null 2>&1; then
-                printStyled debug "[CURL] Running 'sudo pacman -S wget'..."
-                if sudo pacman -S wget; then
-                    printStyled success "wget installed"
-                    return 0
-                fi
-                printStyled debug "[WGET] ---> Failed"
-            fi
-        fi
-
-        # Manual fallback
-        printStyled warning "[GACLI] Unable to install wget"
-        return 1
-    fi
-
-    # Display success
-    printStyled success "wget detected"
-}
-
-# Install git
-git_install() {
-
-    # Check
-    if ! command -v git >/dev/null 2>&1; then
-
-        printStyled highlight "Installing git (your password may be asked)... ${EMOJI_WAIT}"
-
-        # Try auto-install
-        if [ "$IS_MACOS" = true ]; then
-            if xcode-select --install; then
-                printStyled success "Git installed"
-                return 0
-            fi
-        elif [ "$IS_LINUX" = true ]; then 
-            if command -v apt >/dev/null 2>&1; then
-                if sudo apt install git; then
-                    printStyled success "Git installed"
-                    return 0
-                fi
-            elif command -v dnf >/dev/null 2>&1; then
-                if sudo dnf install git; then
-                    printStyled success "Git installed"
-                    return 0
-                fi
-            elif command -v pacman >/dev/null 2>&1; then
-                if sudo pacman -S git; then
-                    printStyled success "Git installed"
-                    return 0
-                fi
-            fi
-        fi
-
-        # Manual fallback
-        printStyled error "[GACLI] Error: git is not installed"
-        echo ""
-        printStyled highlight "Please install git manually before continuing"
-        printStyled info "macOS : xcode-select --install"
-        printStyled info "Linux : Use your package manager"
-        echo ""
-        return 1
-    fi
-
-    # Display success
-    printStyled success "Git detected"
-}
-
-# Install Homebrew
-brew_install() {
-
-    # Check if Homebrew is already installed
-    if command -v brew >/dev/null 2>&1; then
-        printStyled success "Homebrew detected"
-        return 0
-    fi
-
-    # Compute Homebrew install command
-    local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-    if $IS_MACOS || $IS_LINUX; then
-        if $IS_LINUX; then
-            install_cmd="NONINTERACTIVE=1 ${install_cmd}"
-        fi
-    else
-        echo "${EMOJI_ERR} [brew_install] Unsupported OS: ${OSTYPE}"
-        return 1
-    fi
-
-    # Install Homebrew
-    if ! eval "$install_cmd"; then
-        echo "${EMOJI_ERR} [brew_install] Homebrew installation failed"
-        return 1
-    fi
-
-    # Add Homebrew to PATH
-    local brew_exec_path
-    if ! brew_exec_path="$(command -v brew)"; then
-        echo "${EMOJI_ERR} [brew_install] Failed to detect brew after installation"
-        return 1
-    fi
-
-    if ! eval "$("$brew_exec_path" shellenv)"; then
-        echo "${EMOJI_ERR} [brew_install] Failed to set Homebrew environment"
-        return 1
-    fi
-
-    # Refresh hashmap command table
-    if ! hash -r; then
-        echo "${EMOJI_ERR} [brew_install] Failed to refresh shell hash table"
-    fi
-
-    # Display success
-    printStyled success "Homebrew installed"
-}
-
-# Install coreutils
-coreutils_install() {
-
-    # Check if Coreutils is already installed
-    if command -v gdate >/dev/null 2>&1; then
-        printStyled success "Coreutils detected"
-        return 0
-    fi
-
-    # Install coreutils
-    printStyled info "coreutils not found → installing with Homebrew..."
-    if brew install coreutils; then
-        printStyled success "Coreutils installed"
-    else
-        printStyled error "Failed to install coreutils"
-        return 1
-    fi
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - GACLI INSTALL
-# ────────────────────────────────────────────────────────────────
-
-# Download GACLI (curl + fallback git)
-gacli_download() {
-
-    # Check if GACLI is already installed
-    if [ -d "${DIR}" ]; then
-        if [ "$FORCE_MODE" = "true" ]; then
-            rm -rf "${DIR}"
-        else
-            printStyled error "[GACLI] Error: already installed at ${DIR}"
-            printStyled highlight "Use --force to overwrite"
-            return 1
-        fi
-    fi
-
-    # Try download archive
-    local tmp_archive="$(mktemp)"
-    if curl -fsSL "${ARCHIVE}" -o "${tmp_archive}"; then
-        mkdir -p "${DIR}" || {
-            echo "${EMOJI_ERR} [GACLI] Failed to create directory: ${DIR}"
-            rm -f "${tmp_archive}"
-            return 1
-        }
-
-        if tar -xzf "${tmp_archive}" --strip-components=1 -C "${DIR}"; then
-            rm -f "${tmp_archive}"
-            echo "${GREEN}${EMOJI_SUCCESS} GACLI downloaded (via archive)${NONE}"
-            return 0
-        else
-            echo "${EMOJI_WARN} [GACLI] Failed to extract archive"
-            rm -f "${tmp_archive}"
-        fi
-    else
-        echo "${EMOJI_WARN} [GACLI] Failed to download archive"
-    fi
-
-    # Fallback to git clone
-    echo "${EMOJI_INFO} Trying fallback: git clone... ${EMOJI_WAIT}"
-    if git clone "${REPO}" "${DIR}" > /dev/null 2>&1; then
-        echo "${GREEN}${EMOJI_SUCCESS} GACLI downloaded (via git)${NONE}"
-        return 0
-    fi
-
-    echo "${EMOJI_ERR} [GACLI] Error: Failed to download GACLI (both archive and git failed)"
-    return 1
-}
-
-# Make main script executable
-make_executable() {
-    if ! chmod +x "${ENTRY_POINT}"; then
-        printStyled error "[GACLI] Error: Failed to make ${ENTRY_POINT} executable"
-        return 1
-    fi
-
-    # Display success
-    printStyled success "GACLI has been made executable"
-}
-
-# Create executable wrapper script for GACLI (instead of symlink for cross-shell compatibility)
-create_wrapper() {
-
-    # Create bin folder if needed
-    local sym_dir="$(dirname "${SYMLINK}")"
-    if ! mkdir -p "${sym_dir}"; then
-        printStyled error "[GACLI] Error: Failed to create ${sym_dir}"
-        return 1
-    fi
-
-    # Remove previous symlink or file if exists
-    if [[ -e "${SYMLINK}" || -L "${SYMLINK}" ]]; then
-        rm -f "${SYMLINK}" || {
-            printStyled warning "[GACLI] Failed to delete existing symlink or file at ${SYMLINK}"
-        }
-    fi
-
-    # Create executable wrapper
-    if ! {
-        echo '#!/bin/sh' > "${SYMLINK}" &&
-        echo "exec zsh \"${ENTRY_POINT}\" \"\$@\"" >> "${SYMLINK}" &&
-        chmod +x "${SYMLINK}"
-    }; then
-        printStyled error "[GACLI] Error: Failed to create wrapper script at ${SYMLINK}"
-        return 1
-    fi
-
-    # Display success
-    printStyled success "Wrapper created: ${SYMLINK} → ${ENTRY_POINT}"
-}
-
-# Update ~/.zshrc to include GACLI in PATH and source gacli.zsh
-update_zshrc() {
-
-    # Check if GACLI is already in zshrc
-    if grep -q '# GACLI' "${ZSHRC}"; then
-        printStyled success ".zshrc already configured"
-        return 0
-    fi
-
-    # Append GACLI block
-    {
-        echo ""
-        echo ""
-        echo "# GACLI"
-        echo "export PATH=\"${SYM_DIR}:\$PATH\""
-        echo "source \"${ENTRY_POINT}\""
-    } >> "${ZSHRC}" || {
-        printStyled error "Failed to update ${ZSHRC}"
-        return 1
-    }
-
-    printStyled success ".zshrc updated"
-}
-
-# Launch GACLI after install (only if shell is zsh)
-auto_launch() {
-    echo ""
-    printStyled success "GACLI installed! 🚀"
-    echo ""
-
-    # Launch only if shell is zsh
-    if [ -n "${ZSH_VERSION}" ]; then
-        printStyled info "Reloading shell environment... ${EMOJI_WAIT}"
-        echo ""
-        exec zsh
-    else
-        printStyled warning "Open a new terminal window or run: exec zsh"
-        echo ""
-    fi
-}
-
-# ────────────────────────────────────────────────────────────────
-# Functions - I/O
-# ────────────────────────────────────────────────────────────────
-
-# Display ASCII art logo
-display_ascii_logo() {
-    print "${ORANGE}  _____          _____ _      _____ ${NONE}"
-    print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
-    print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
-    print "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
-    print "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
-    print "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
-    print ""
-}
-
-# Display formatted message
+# Centralised formatter to colour‑code and prefix log messages by severity
 printStyled() {
-    # Variables
-    local style=$1
-    local raw_message=$2
-    local final_message=""
-    local color=$NONE
-
-    # Argument check
-    if [[ -z "$style" || -z "$raw_message" ]]; then
-        printStyled error "Veuillez fournir un ${YELLOW}style${RED} et un ${YELLOW}message${RED} pour afficher du texte"
-        return 1
-    fi
-
-    # Formatting
+    style=$1
+    msg=$2
+    color=$NONE
     case "$style" in
         error)
-            print "${RED}${BOLD}${EMOJI_ERR} ${raw_message}${NONE}" >&2
+            printf "%s\n" "${RED}${BOLD}${EMOJI_ERR} ${msg}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${raw_message}${NONE}" >&2
+            printf "%s\n" "${YELLOW}${BOLD}${EMOJI_WARN} ${msg}${NONE}" >&2
             return
             ;;
         success)
             color=$GREEN
-            final_message="${EMOJI_SUCCESS} ${raw_message}"
+            prefix=$EMOJI_SUCCESS
             ;;
         info)
             color=$GREY
-            final_message="${EMOJI_INFO} ${raw_message}"
+            prefix=$EMOJI_INFO
             ;;
         highlight)
             color=$NONE
-            final_message="${EMOJI_DEBUG} ${raw_message}"
-            ;;        
-        debug)
-            color=$YELLOW
-            final_message="🔦 ${BOLD}${raw_message}${NONE}"
+            prefix=$EMOJI_HIGHLIGHT
             ;;
         *)
-            color=$NONE
-            final_message="${raw_message}"
+            prefix=""
             ;;
     esac
+    printf "%s\n" "${color}${prefix} ${msg}${NONE}"
+}
 
-    # Display
-    print "${color}$final_message${NONE}"
+# Parses CLI options (currently only --force) and sets corresponding flags
+parse_args() {
+    for arg in "$@"; do
+        case "$arg" in
+            --force)
+                FORCE_MODE="true"
+                ;;
+            *)
+                printStyled error "[parse_args] Expected : --force (received : $arg)"
+                return 1
+                ;;
+        esac
+    done
+    printStyled success "Arguments parsed"
+}
+
+# Expands user‑relative paths, ensures .zshrc exists, and defines wrapper targets
+resolve_paths() {
+    [ -n "$HOME" ] || { printStyled error "[resolve_paths] \$HOME not set"; return 1; }
+
+    DIR="$HOME/$DIR"
+    ENTRY_POINT="$DIR/$ENTRY_POINT"
+    ZSHRC="$HOME/$ZSHRC"
+    SYM_DIR="$HOME/$SYM_DIR"
+    SYMLINK="$SYM_DIR/$SYMLINK"
+
+    while [ ! -f "$ZSHRC" ]; do
+        printStyled warning ".zshrc introuvable: $ZSHRC"
+        printStyled highlight "Chemin de .zshrc :"
+        printf "> "
+        read -r ZSHRC
+    done
+    printStyled success "Paths resolved"
+}
+
+# ────────────────────────────────────────────────────────────────
+# SETUP ENV
+# ────────────────────────────────────────────────────────────────
+
+# Installs Homebrew non‑interactively when absent, selecting curl or wget as downloader
+install_brew() {
+    command -v brew >/dev/null 2>&1 && { printStyled success "Homebrew detected"; return 0; }
+
+    [ "$IS_MACOS" = true ] || [ "$IS_LINUX" = true ] || {
+        printStyled error "[install_brew] Unsupported OS"; return 1
+    }
+
+    if command -v curl >/dev/null 2>&1; then
+        downloader="curl -fsSL"
+    elif command -v wget >/dev/null 2>&1; then
+        downloader="wget -q -O -"
+    else
+        printStyled error "[install_brew] curl ou wget requis"; return 1
+    fi
+
+    install_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+    printStyled info "Installation Homebrew..."
+    $downloader "$install_url" | /bin/bash || {
+        printStyled error "[install_brew] Échec"; return 1
+    }
+    command -v brew >/dev/null 2>&1 && eval "$(brew shellenv)" && hash -r 2>/dev/null
+    printStyled success "Homebrew installé"
+}
+
+# Installs zsh via the detected package manager when it is not already present
+install_zsh() {
+    command -v zsh >/dev/null 2>&1 && { printStyled success "zsh détecté"; return 0; }
+
+    case "$PACKAGE_MANAGER" in
+        brew)    install_cmd="brew install zsh" ;;
+        apt)     install_cmd="sudo apt-get update && sudo apt-get install -y zsh" ;;
+        dnf)     install_cmd="sudo dnf install -y zsh" ;;
+        pacman)  install_cmd="sudo pacman -Sy --noconfirm zsh" ;;
+        *)       printStyled error "[install_zsh] No supported package manager"; return 1 ;;
+    esac
+
+    printStyled info "Installation de zsh..."
+    eval "$install_cmd" || { printStyled error "[install_zsh] Échec"; return 1; }
+    printStyled success "zsh installé"
+}
+
+# ────────────────────────────────────────────────────────────────
+# DOWNLOAD
+# ────────────────────────────────────────────────────────────────
+
+# Retrieves GACLI source (curl, wget or git) into the target directory, honouring --force
+download_gacli() {
+    [ ! -d "$DIR" ] || {
+        [ "$FORCE_MODE" = "true" ] && { rm -rf "$DIR"; } || {
+            printStyled error "[download_gacli] $DIR existe déjà (–-force pour écraser)"
+            return 1
+        }
+    }
+    mkdir -p "$DIR" || { printStyled error "[download_gacli] Impossible de créer $DIR"; return 1; }
+
+    case "$HTTP_CLIENT" in
+        curl)
+            curl -fSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
+                || { printStyled error "[download_gacli] Échec download/extract"; return 1; }
+            ;;
+        wget)
+            wget -q -O - "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
+                || { printStyled error "[download_gacli] Échec download/extract"; return 1; }
+            ;;
+        git)
+            branch="${ARCHIVE##*/}"
+            branch="${branch%.tar.gz}"
+            git clone --depth 1 --branch "$branch" "$REPO" "$DIR" \
+                || { printStyled error "[download_gacli] Échec git clone"; return 1; }
+            ;;
+        *)
+            printStyled error "[download_gacli] HTTP client non pris en charge: $HTTP_CLIENT"
+            return 1
+            ;;
+    esac
+    printStyled success "GACLI téléchargé dans $DIR"
+}
+
+# ────────────────────────────────────────────────────────────────
+# INSTALL
+# ────────────────────────────────────────────────────────────────
+
+# Runs brew bundle on the downloaded Brewfile to install required formulae and casks
+install_deps() {
+    brewfile="$DIR/.auto-install/Brewfile"
+    if command -v brew >/dev/null 2>&1 && [ -f "$brewfile" ]; then
+        printStyled info "Installation des dépendances..."
+        brew bundle --file="$brewfile" || {
+            printStyled error "[install_deps] Échec Brewfile"
+            return 1
+        }
+        printStyled success "Dépendances installées"
+    else
+        printStyled warning "[install_deps] Pas de Brewfile ou brew indisponible, skip"
+    fi
+}
+
+# Adds execute permission to the downloaded GACLI entry‑point script
+make_executable() {
+    chmod +x "$ENTRY_POINT" || {
+        printStyled error "[make_executable] Impossible de chmod +x $ENTRY_POINT"
+        return 1
+    }
+    printStyled success "Point d’entrée rendu exécutable"
+}
+
+# Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
+create_wrapper() {
+    mkdir -p "$SYM_DIR" || {
+        printStyled error "[create_wrapper] Impossible de créer $SYM_DIR"; return 1
+    }
+
+    if [ -f "$SYMLINK" ] || [ -d "$SYMLINK" ] || [ -h "$SYMLINK" ]; then
+        rm -f "$SYMLINK"
+    fi
+
+    {
+        printf '%s\n' '#!/usr/bin/env sh'
+        printf '%s\n' "exec zsh \"$ENTRY_POINT\" \"\$@\""
+    } > "$SYMLINK" && chmod +x "$SYMLINK" || {
+        printStyled error "[create_wrapper] Impossible de créer wrapper"; return 1
+    }
+    printStyled success "Wrapper créé: $SYMLINK → $ENTRY_POINT"
+}
+
+# Appends PATH export and source command to the user’s .zshrc when missing
+update_zshrc() {
+    if grep -q '# GACLI' "$ZSHRC"; then
+        printStyled success ".zshrc déjà configuré"
+        return 0
+    fi
+    {
+        printf '\n# GACLI\n'
+        printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
+        printf 'source "%s"\n' "$ENTRY_POINT"
+    } >> "$ZSHRC" || {
+        printStyled error "[update_zshrc] Échec update $ZSHRC"; return 1
+    }
+    printStyled success ".zshrc mis à jour"
 }
 
 # ────────────────────────────────────────────────────────────────
 # RUN
 # ────────────────────────────────────────────────────────────────
 
+auto_launch() {
+    echo ""
+    printStyled success "GACLI installé ! 🚀"
+    echo ""
+    if [ -n "$ZSH_VERSION" ]; then
+        printStyled info "Reloading shell... ${EMOJI_WAIT}"
+        exec zsh
+    else
+        printStyled warning "Ouvrez un nouveau terminal ou lancez : exec zsh"
+    fi
+}
+
+# Displays success message and either execs a new zsh or prompts the user to reopen a shell
 main "$@"
+
+###############################
+# FICHIER /.auto-install/Brewfile
+###############################
+
+brew "curl"
+brew "wget"
+brew "coreutils"
+brew "yq"
+brew "jq"
+
+#!/usr/bin/env zsh
+###############################
+# FICHIER /.auto-install/uninstall.zsh
+###############################
+
+# TODO: converti in full macOS/Linux POSIX compatible ".sh" script
+
+# [GACLI uninstaller script]
+   #   - Deletes GACLI directory
+   #   - Removes PATH entry from .zshrc
+   #   - Deletes executable wrapper
+
+   # Depends on:
+   #   - gacli.zsh          → for styled outputs
+
+   # Used by:
+   #   - gacli.zsh          → triggered via `gacli uninstall`
+
+   # Note: Wrapper path and zshrc path must be resolved before calling
+#
+
+# Uninstall GACLI: remove all file and cleanup .zshrc
+gacli_uninstall() {
+    printStyled info "Uninstalling... ⏳"
+
+    # Variables
+    local zshrc_file="$HOME/.zshrc"
+    local config_file="${CONFIG}"
+
+    # Remove GACLI lines from .zshrc
+    print ""
+    printStyled info "Updating .zshrc file... ⏳"
+    if [[ -f "${zshrc_file}" ]]; then
+        cp "${zshrc_file}" "${zshrc_file}.bak" || {
+            printStyled error "[gacli_uninstall] Failed to backup zshrc file"
+            return 1
+        }
+
+        # Remove all GACLI lines (header + source + alias)
+        grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
+            printStyled error "[gacli_uninstall] Failed to parse zshrc file"
+            return 1
+        }
+
+
+        mv "${zshrc_file}.tmp" "$zshrc_file" || {
+            printStyled error "[gacli_uninstall] Failed to update zshrc file"
+            return 1
+        }
+
+    else
+        printStyled warning "[gacli_uninstall] .zshrc file not found ($zshrc_file)"
+    fi
+    printStyled success "Updated"
+
+    # Remove GACLI wrapper
+    print ""
+    printStyled info "Removing wrapper... ⏳"
+    local wrapper_path="${HOME}/.local/bin/gacli"
+    if [[ -f "${wrapper_path}" ]]; then
+        rm -f "${wrapper_path}" || {
+            printStyled warning "[gacli_uninstall] Failed to delete wrapper ${wrapper_path}"
+        }
+    fi
+    printStyled success "Removed"
+
+    # Delete GACLI directory
+    print ""
+    printStyled info "Deleting GACLI files... ⏳"
+    if [[ -d "${GACLI_DIR}" ]]; then
+        rm -rf "${GACLI_DIR}" || {
+            printStyled error "[gacli_uninstall] Failed to delete directory ${GACLI_DIR}"
+            return 1
+        }
+    else
+        printStyled error "[gacli_uninstall] Unable to find GACLI directory: ${GACLI_DIR}"
+        return 1
+    fi
+    printStyled success "Deleted"
+
+    print ""
+    printStyled success "Uninstall complete ✅"
+    print ""
+    printStyled highlight "Restart your terminal"
+    print ""
+}
 
 ###############################
 # FICHIER /.data/config/update.config.yaml
 ###############################
 
-# Use: Auto-update settings descriptor
+# [Auto-update config descriptor]
+   #   - Stores update status and timestamps
+   #   - Defines update frequency and toggle
+   #   - Used for auto-update scheduling
 
-# This file is runtime generated by GACLI
-# All read/write operations are delegated to parser.zsh
+   # Depends on:
+   #   - (none)             → pure data file
 
-# Used by:
-#   - update.zsh    → init values on first launch
-#   - update.zsh    → checks if update is due on each startup
+   # Used by:
+   #   - update.zsh         → loads and saves update settings via `parser.zsh`
+
+   # Note: All read/write operations are delegated to parser.zsh
+#
 
 initialized: false
 auto_update: false
@@ -677,12 +531,19 @@ next_update:
 # FICHIER /.data/tools/core.tools.yaml
 ###############################
 
-# Use: Core dependencies descriptor
+# [Core dependencies descriptor]
+   #   - Lists core formulae required by GACLI
+   #   - Ensures cross-platform compatibility
+   #   - Defines minimal runtime requirements
 
-# No read/write operations
+   # Depends on:
+   #   - (none)             → pure data file
 
-# Used by:
-#   - update.zsh    → merges this file with "modules.tools.yaml" into a temporary file before checking if update is due
+   # Used by:
+   #   - update.zsh         → merge this file with modules tools via `parser.zsh`
+
+   # Note: All read/write operations are delegated to parser.zsh
+#
 
 formulae:
   - curl         # HTTP(S) tool (macOS)
@@ -695,38 +556,43 @@ formulae:
 # FICHIER /.data/tools/installed.tools.yaml
 ###############################
 
-# Use: Merged modules tools descriptor
+# [Merged modules dependencies descriptor]
+   #   - Aggregates formulae and casks from all modules
+   #   - Regenerated at each update or init phase
+   #   - Merged with core and user tools before install
 
-# This file is runtime generated by GACLI
-# All read/write operations are delegated to parser.zsh
+   # Depends on:
+   #   - (none)             → runtime-generated file
 
-# Used by:
-#   - modules.zsh   → merges all modules "tools.yaml" files into this one
-#   - update.zsh    → merges this file with "core.tools.yaml" into a temporary file before checking if update is due
+   # Used by:
+   #   - update.zsh         → merged and written via `parser.zsh`
+   #   - modules.zsh        → regenerated via `parser.zsh`
 
+   # Note: All read/write operations are delegated to parser.zsh
+#
+
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.run/gacli.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# FILE DESCRIPTION:
-    # GACLI main entry point
-    #   - Entry script called by user via `gacli` wrapper
-    #   - Detects OS, resolves paths, loads core scripts and modules
-    #   - Dispatches CLI commands and displays global status/help
+# [GACLI CLI entry point]
+   #   - Loads core scripts and modules
+   #   - Checks system compatibility and file integrity
+   #   - Enables auto-update mechanism
+   #   - Dispatches commands from CLI
 
-    # Depends on:
-    #   - update.zsh        → for auto-update procedure
-    #   - modules.zsh       → for modules management
-    #   - brew.zsh          → for getting formulae and caks status
-    #   - uninstall.zsh     → for gacli uninstall procedure
+   # Depends on:
+   #   - update.zsh         → handles auto-update and dependency merge
+   #   - modules.zsh        → loads external modules and tools
+   #   - brew.zsh           → checks Homebrew tools status
+   #   - uninstall.zsh      → provides uninstall logic
 
-    # Used by:
-    #   - gacli wrapper     → executes this file directly
-    #   - install.zsh       → makes this file executable and sources it in `.zshrc`
+   # Used by:
+   #   - install.zsh        → sets executable and sources it in shell
+   #   - wrapper (gacli)    → executes this script directly
 
-    # Note: Relies on `BUFFER`, `FORMULAE`, `CASKS`, and other globals for runtime state.
-    #       Also embeds IO helpers like `printStyled` and `style_ascii_logo` directly.
+   # Note: Holds the `main` dispatcher and core system setup logic
 #
 
 # Easter egg display
@@ -1117,24 +983,25 @@ print_mods_commands() {
 # Call main with all command args
 main "$@"
 
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/time.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Time utilities using UNIX timestamps
-#   - Get current time, convert between human and timestamp formats
-#   - Add days to a given timestamp
-#   - All conversions rely on `gdate` from coreutils for compatibility
+# [Cross-platform time utilities]
+   #   - Gets current timestamp
+   #   - Converts between human date and timestamp
+   #   - Adds days to a given timestamp
 
-# Depends on:
-#   - coreutils (gdate)             → required for cross-platform date handling
-#   - gacli.zsh                     → to display formatted messages
+   # Depends on:
+   #   - coreutils (gdate)  → ensures compatibility on macOS/Linux
+   #   - gacli.zsh          → for styled error output
 
-# Used by:
-#   - update.zsh                    → to compute and manage auto-update scheduling
+   # Used by:
+   #   - update.zsh         → computes next update date
 
-# Note: Only supports `YYYY-MM-DD` format for human-readable dates
+   # Note: Only supports YYYY-MM-DD format for human input/output
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -1214,28 +1081,29 @@ time_from_human() {
     fi
 }
 
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/parser.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Parser helpers for reading/writing files
-#   - Read/write/reset values in yaml, json and Brewfile formats
-#   - Handle both generic and brew-specific keys (formulae, casks)
-#   - Used to centralize data manipulation logic across the codebase
+# [File parser for tools/config]
+   #   - Reads/writes YAML, JSON and Brewfile formats
+   #   - Handles formulae, casks and modules values
+   #   - Resets values from descriptors
+   #   - Detects file type and applies correct tool
 
-# Depends on:
-#   - yq            → to parse/modify YAML files
-#   - jq            → to parse/modify JSON files
-#   - gacli.zsh     → to display formatted messages
+   # Depends on:
+   #   - yq                 → YAML parsing
+   #   - jq                 → JSON parsing
+   #   - gacli.zsh          → for styled error output
 
-# Used by:
-#   - brew.zsh      → to read/write formulae and casks from Brewfile
-#   - update.zsh    → to read/update config.yaml for auto-update logic
-#   - modules.zsh   → to read dependencies from tools.yaml and modules
+   # Used by:
+   #   - brew.zsh           → reads/writes Brewfile
+   #   - update.zsh         → manages config and dependencies
+   #   - modules.zsh        → parses tools.yaml in each module
 
-# Note: `_get_extension`, `_read_brew`, `_write_brew`, and `_reset_brew`
-# are internal helpers and must not be used outside this file.
+   # Note: Exposes unified `parser_read`, `parser_write`, `parser_reset` interface
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -1468,24 +1336,26 @@ _reset_brew() {
     }
 }
 
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/brew.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Homebrew installer and updater
-#   - Install Homebrew if missing
-#   - Run `brew bundle` based on a Brewfile (if formulae/casks not yet active)
-#   - Expose status checking methods for formulae and casks
+# [Homebrew tools manager]
+   #   - Checks if formulae and casks are active
+   #   - Runs brew bundle if needed
+   #   - Installs and configures Homebrew
 
-# Depends on:
-#   - parser.zsh        → to read formulae/casks from Brewfile
-#   - gacli.zsh         → to display formatted messages
+   # Depends on:
+   #   - parser.zsh         → reads Brewfile content
+   #   - gacli.zsh          → for styled outputs
 
-# Used by:
-#   - update.zsh        → to trigger bundle updates via `brew_bundle`
+   # Used by:
+   #   - update.zsh         → updates dependencies from merged Brewfile
+   #   - modules.zsh        → installs tools required by modules
 
-# Note: Update is only triggered if at least one formula or cask is not already active.
+   # Note: Triggers update only if missing tools are detected
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -1639,11 +1509,268 @@ _brew_is_update_due() {
     done
 }
 
+#!/usr/bin/env zsh
+###############################
+# FICHIER /.run/core/modules.zsh
+###############################
+
+# TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
+#   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
+
+# [Modules manager and loader]
+   #   - Downloads modules recursively
+   #   - Merges modules dependencies
+   #   - Loads and activates modules
+   #   - Registers dynamic CLI commands
+
+   # Depends on:
+   #   - parser.zsh         → reads and writes tools descriptors
+   #   - brew.zsh           → installs missing Homebrew dependencies
+
+   # Used by:
+   #   - gacli.zsh          → loads modules at startup
+   #   - update.zsh         → triggers modules refresh before updates
+
+   # Note: Handles module download conflicts and nested modules
+#
+
+# Github repo containing all available modules
+MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
+
+# Modules signature
+ENTRY_POINT="main.zsh"
+CONFIG_FILE="tools.yaml"
+
+# Active modules and commands
+MODULES_INSTALLED=()
+MODULES_ACTIV=()
+
+# ────────────────────────────────────────────────────────────────
+# DOWNLOAD FILES
+# ────────────────────────────────────────────────────────────────
+
+# PUBLIC - Download and merge all modules
+modules_init() {
+    local modules_to_check=()
+    local merged_formulae=()
+    local merged_casks=()
+
+    # Reset merged file
+    parser_reset "${MODULES_TOOLS}" formulae || return 1
+    parser_reset "${MODULES_TOOLS}" casks || return 1
+
+    # Get modules list from $MODULES_DIR
+    setopt local_options nullglob # Avoid errors when MODULES_DIR is empty
+    local folders=("${MODULES_DIR}"/*(/))
+    if [[ ${#folders[@]} -gt 0 ]]; then
+        local module_path
+        for module_path in "${folders[@]}"; do
+            modules_to_check+=("${module_path##*/}")
+        done
+    fi
+
+    # Get modules list from $USER_TOOLS
+    parser_read "${USER_TOOLS}" modules || return 1
+    if [[ ${#BUFFER[@]} -gt 0 ]]; then
+    for module in "${BUFFER[@]}"; do
+        modules_to_check+=("${module}")
+    done
+
+    # Modules are optional
+    [[ ${#modules_to_check[@]} = 0 ]] && return 0
+
+    # Download modules
+    for module in $modules_to_check; do
+        # Download module and nested modules
+        _module_download "${module}" || continue
+
+        # Merge formulae dependencies
+        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" formulae || continue
+        merged_formulae+=("${BUFFER[@]}")
+
+        # Merge casks dependencies
+        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" casks || continue
+        merged_casks+=("${BUFFER[@]}")
+    fi
+
+    # Save merged dependencies
+    parser_write "${MODULES_TOOLS}" formulae "${merged_formulae[@]}" || {
+        printstyled error "[modules] Unable to merge modules dependencies"
+        return 1
+    }
+    parser_write "${MODULES_TOOLS}" casks "${merged_casks[@]}"|| {
+        printstyled error "[modules] Unable to merge modules dependencies"
+        return 1
+    }
+}
+
+# PRIVATE - Download and extract a module (recursively)
+_module_download() {
+    local module="${1}"
+
+    # Download module if needed
+    if ! _module_is_downloaded "${module}"; then
+        local descriptor_url="${MODULES_LIB}/${module}.yaml"
+        local tmp_descriptor="$(mktemp)"
+        tmp_descriptor="${TMP_DIR}/${module}.yaml"
+
+        # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
+        curl "${descriptor_url}" > "${descriptor_path}" || {
+            printstyled error "[_module_download] Unable to download descriptor"
+            printstyled error "→ url: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+
+        # Get archive url
+        parser_read "${descriptor_path}" module_url || {
+            printstyled error "[_module_download] Unable to parse descriptor"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+        local module_url="${BUFFER[1]}"
+        rm -f "$tmp_descriptor"
+
+        # Download module archive
+        local tmp_archive="$(mktemp)"
+        if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
+            printstyled error "[_module_download] Unable to download module archive"
+            printstyled error "→ url: ${module_url}"
+            rm -f "$tmp_archive"
+            return 1
+        fi
+
+        # Create target directory
+        mkdir -p "${MODULES_DIR}/${module}" || {
+            printStyled error "[_module_download] Failed to create module directory: ${MODULES_DIR}/${module}"
+            rm -f "$tmp_archive"
+            return 1
+        }
+
+        # Extract archive to module directory
+        if ! tar -xzf "$tmp_archive" -C "${MODULES_DIR}/${module}"; then
+            printStyled error "[_module_download] Failed to extract archive: ${tmp_archive}"
+            rm -f "$tmp_archive"
+            return 1
+        fi
+
+        # Cleanup
+        rm -f "$tmp_archive"
+
+        # Check integrity
+        _module_is_downloaded "${module}" || {
+            printstyled error "[_module_download] Unable to recognize module: ${module}"
+            return 1
+        }
+    fi
+
+    # Download nested modules (recursive)
+    local config="${MODULES_DIR}/${module}/${CONFIG_FILE}"
+    parser_read "${config}" modules
+    for nested_module in "${BUFFER[@]}"; do
+        _module_download "${nested_module}" || {
+            printstyled error "[_module_download] Unable to download nested modules for module: ${module}"
+            return 1
+        }
+    done
+
+    # Add to installed modules variable
+    MODULES_INSTALLED+=("${module}")
+}
+
+# PRIVATE - Check if a module is correctly installed
+_module_is_downloaded() {
+
+    # Resolve paths
+    local module="${1}"
+    local module_path="${MODULES_DIR}/${module}"
+    local entry_point="${module_path}/${ENTRY_POINT}"
+    local config_file="${module_path}/${CONFIG_FILE}"
+
+    # Check signatures
+    [[ -d "${module_path}" ]] || return 1
+    [[ -f "${entry_point}" ]] || return 1
+    [[ -f "${config_file}" ]] || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# SOURCE CODE
+# ────────────────────────────────────────────────────────────────
+
+# PUBLIC - Source installed modules and activate their commands
+modules_load() {
+    local MODULES_ACTIV=()
+
+    # Reset modules value into $INSTALLED_TOOLS file
+    parser_reset "${INSTALLED_TOOLS}" modules
+
+    # Source installed modules
+    local module
+    for module in "${MODULES_INSTALLED[@]}"; do
+        source "${module}" && _module_get_commands "${module}" && MODULES_ACTIV+=("${module}")
+    done
+
+    # Set modules value into $INSTALLED_TOOLS file
+    parser_write "${INSTALLED_TOOLS}" modules "${MODULES_ACTIV[@]}"
+}
+
+# PRIVATE - Extract dynamic commands from a module via get_commands
+_module_get_commands() {
+    local file="$1"
+
+    # Argument check
+    if [[ -z "$file" ]]; then
+        printStyled error "[_module_get_commands] Expected : <file> (received : $1)"
+        return 1
+    fi
+
+    # get_commands is optional
+    if ! typeset -f get_commands >/dev/null; then
+        return 0
+    fi
+
+    # Capture and validate output
+    local raw_output
+    if ! raw_output="$(get_commands)"; then
+        printStyled error "[_module_get_commands] get_commands failed in ${file}"
+        return 1
+    fi
+
+    local cmd
+    for cmd in ${(f)raw_output}; do
+        if [[ "$cmd" != *=* ]]; then
+            printStyled warning "[_module_get_commands] Invalid command format: '$cmd' in ${file}"
+            printStyled highlight "Expected : 'command=function'"
+            continue
+        fi
+        COMMANDS_MODS+=("$cmd")
+    done
+
+    unfunction get_commands
+}
+
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.run/core/update.zsh
 ###############################
 
-#!/usr/bin/env zsh
+# [Auto-update and merge system]
+   #   - Loads and saves update config values
+   #   - Checks if update is required (date/tools)
+   #   - Merges tools from core, modules and user
+   #   - Runs Homebrew update and cleanup
+
+   # Depends on:
+   #   - time.zsh           → computes next update timestamps
+   #   - parser.zsh         → reads/writes config and tools files
+   #   - modules.zsh        → ensures modules and dependencies are loaded
+   #   - brew.zsh           → installs and updates Homebrew tools
+
+   # Used by:
+   #   - gacli.zsh          → triggers update check at launch
+
+   # Note: Includes both auto and manual update flows
+#
 
 TODAY=""
 
@@ -1914,234 +2041,5 @@ _update_display_next() {
     else
         printStyled info "Auto updates disabled"
     fi
-}
-
-###############################
-# FICHIER /.run/core/modules.zsh
-###############################
-
-# 1. Download files (recursive)
-# 2. Merge dependencies in /.config/modules_Brewfile
-# 2. Source files (init)
-#   |-> If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
-#   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
-# 3. Call get_commands() on each module (ord)
-# 4. Call main()
-
-#!/usr/bin/env zsh
-
-# Github repo containing all available modules
-MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
-
-# Modules signature
-ENTRY_POINT="main.zsh"
-CONFIG_FILE="tools.yaml"
-
-# Active modules and commands
-MODULES_INSTALLED=()
-MODULES_ACTIV=()
-
-# ────────────────────────────────────────────────────────────────
-# DOWNLOAD FILES
-# ────────────────────────────────────────────────────────────────
-
-# PUBLIC - Download and merge all modules
-modules_init() {
-    local modules_to_check=()
-    local merged_formulae=()
-    local merged_casks=()
-
-    # Reset merged file
-    parser_reset "${MODULES_TOOLS}" formulae || return 1
-    parser_reset "${MODULES_TOOLS}" casks || return 1
-
-    # Get modules list from $MODULES_DIR
-    setopt local_options nullglob # Avoid errors when MODULES_DIR is empty
-    local folders=("${MODULES_DIR}"/*(/))
-    if [[ ${#folders[@]} -gt 0 ]]; then
-        local module_path
-        for module_path in "${folders[@]}"; do
-            modules_to_check+=("${module_path##*/}")
-        done
-    fi
-
-    # Get modules list from $USER_TOOLS
-    parser_read "${USER_TOOLS}" modules || return 1
-    if [[ ${#BUFFER[@]} -gt 0 ]]; then
-    for module in "${BUFFER[@]}"; do
-        modules_to_check+=("${module}")
-    done
-
-    # Modules are optional
-    [[ ${#modules_to_check[@]} = 0 ]] && return 0
-
-    # Download modules
-    for module in $modules_to_check; do
-        # Download module and nested modules
-        _module_download "${module}" || continue
-
-        # Merge formulae dependencies
-        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" formulae || continue
-        merged_formulae+=("${BUFFER[@]}")
-
-        # Merge casks dependencies
-        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" casks || continue
-        merged_casks+=("${BUFFER[@]}")
-    fi
-
-    # Save merged dependencies
-    parser_write "${MODULES_TOOLS}" formulae "${merged_formulae[@]}" || {
-        printstyled error "[modules] Unable to merge modules dependencies"
-        return 1
-    }
-    parser_write "${MODULES_TOOLS}" casks "${merged_casks[@]}"|| {
-        printstyled error "[modules] Unable to merge modules dependencies"
-        return 1
-    }
-}
-
-# PRIVATE - Download and extract a module (recursively)
-_module_download() {
-    local module="${1}"
-
-    # Download module if needed
-    if ! _module_is_downloaded "${module}"; then
-        local descriptor_url="${MODULES_LIB}/${module}.yaml"
-        local tmp_descriptor="$(mktemp)"
-        tmp_descriptor="${TMP_DIR}/${module}.yaml"
-
-        # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
-        curl "${descriptor_url}" > "${descriptor_path}" || {
-            printstyled error "[_module_download] Unable to download descriptor"
-            printstyled error "→ url: ${descriptor_url}"
-            rm -f "$tmp_descriptor"
-            return 1
-        }
-
-        # Get archive url
-        parser_read "${descriptor_path}" module_url || {
-            printstyled error "[_module_download] Unable to parse descriptor"
-            rm -f "$tmp_descriptor"
-            return 1
-        }
-        local module_url="${BUFFER[1]}"
-        rm -f "$tmp_descriptor"
-
-        # Download module archive
-        local tmp_archive="$(mktemp)"
-        if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
-            printstyled error "[_module_download] Unable to download module archive"
-            printstyled error "→ url: ${module_url}"
-            rm -f "$tmp_archive"
-            return 1
-        fi
-
-        # Create target directory
-        mkdir -p "${MODULES_DIR}/${module}" || {
-            printStyled error "[_module_download] Failed to create module directory: ${MODULES_DIR}/${module}"
-            rm -f "$tmp_archive"
-            return 1
-        }
-
-        # Extract archive to module directory
-        if ! tar -xzf "$tmp_archive" -C "${MODULES_DIR}/${module}"; then
-            printStyled error "[_module_download] Failed to extract archive: ${tmp_archive}"
-            rm -f "$tmp_archive"
-            return 1
-        fi
-
-        # Cleanup
-        rm -f "$tmp_archive"
-
-        # Check integrity
-        _module_is_downloaded "${module}" || {
-            printstyled error "[_module_download] Unable to recognize module: ${module}"
-            return 1
-        }
-    fi
-
-    # Download nested modules (recursive)
-    local config="${MODULES_DIR}/${module}/${CONFIG_FILE}"
-    parser_read "${config}" modules
-    for nested_module in "${BUFFER[@]}"; do
-        _module_download "${nested_module}" || {
-            printstyled error "[_module_download] Unable to download nested modules for module: ${module}"
-            return 1
-        }
-    done
-
-    # Add to installed modules variable
-    MODULES_INSTALLED+=("${module}")
-}
-
-# PRIVATE - Check if a module is correctly installed
-_module_is_downloaded() {
-
-    # Resolve paths
-    local module="${1}"
-    local module_path="${MODULES_DIR}/${module}"
-    local entry_point="${module_path}/${ENTRY_POINT}"
-    local config_file="${module_path}/${CONFIG_FILE}"
-
-    # Check signatures
-    [[ -d "${module_path}" ]] || return 1
-    [[ -f "${entry_point}" ]] || return 1
-    [[ -f "${config_file}" ]] || return 1
-}
-
-# ────────────────────────────────────────────────────────────────
-# SOURCE CODE
-# ────────────────────────────────────────────────────────────────
-
-# PUBLIC - Source installed modules and activate their commands
-modules_load() {
-    local MODULES_ACTIV=()
-
-    # Reset modules value into $INSTALLED_TOOLS file
-    parser_reset "${INSTALLED_TOOLS}" modules
-
-    # Source installed modules
-    local module
-    for module in "${MODULES_INSTALLED[@]}"; do
-        source "${module}" && _module_get_commands "${module}" && MODULES_ACTIV+=("${module}")
-    done
-
-    # Set modules value into $INSTALLED_TOOLS file
-    parser_write "${INSTALLED_TOOLS}" modules "${MODULES_ACTIV[@]}"
-}
-
-# PRIVATE - Extract dynamic commands from a module via get_commands
-_module_get_commands() {
-    local file="$1"
-
-    # Argument check
-    if [[ -z "$file" ]]; then
-        printStyled error "[_module_get_commands] Expected : <file> (received : $1)"
-        return 1
-    fi
-
-    # get_commands is optional
-    if ! typeset -f get_commands >/dev/null; then
-        return 0
-    fi
-
-    # Capture and validate output
-    local raw_output
-    if ! raw_output="$(get_commands)"; then
-        printStyled error "[_module_get_commands] get_commands failed in ${file}"
-        return 1
-    fi
-
-    local cmd
-    for cmd in ${(f)raw_output}; do
-        if [[ "$cmd" != *=* ]]; then
-            printStyled warning "[_module_get_commands] Invalid command format: '$cmd' in ${file}"
-            printStyled highlight "Expected : 'command=function'"
-            continue
-        fi
-        COMMANDS_MODS+=("$cmd")
-    done
-
-    unfunction get_commands
 }
 

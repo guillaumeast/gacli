@@ -1,0 +1,10 @@
+###############################
+# FICHIER /.auto-install/Brewfile
+###############################
+
+brew "curl"
+brew "wget"
+brew "coreutils"
+brew "yq"
+brew "jq"
+

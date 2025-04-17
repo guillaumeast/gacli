@@ -14,8 +14,9 @@ gacli/
 ├── .run/
 │   ├── modules.zsh           # <----- 3. MODULES LOADER
 │   └── update.zsh            # <----- 4. (AUTO) UPDATE PROCESS
-└── modules/
-    └── ...                   # <----- 4. OPTIONAL MODULES (1 folder = 1 module)
+├── modules/
+│   └── ...                   # <----- 4. OPTIONAL MODULES (1 folder = 1 module)
+└── sys_prompts/              # FYI: My personal prompts for LLMs assistants
 ```
 
 ## Module structure

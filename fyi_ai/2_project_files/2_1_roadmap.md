@@ -1,6 +1,6 @@
-# Roadmap
+# ROADMAP / TODO LIST 
 
-## WIP 
+## WIP
 
 ✅ `gacli.zsh`:
     - `main` :
@@ -42,17 +42,20 @@
 
 ✅ Update `codebase.txt` and all `GPT project GACLI` files
 
-6. Update all files `description`
+✅ Update all files `description`
 
-7. Passer tous les commentaires de fonction au format requis (`"# PRIVATE - ..."` / `"# PUBLIC - ..."`)
+8. Update of `install.zsh`:
+- `.zsh` → convert into `.sh` full POSIX LINUX/macOS script
+- `curl` → fallback `wget` / `git`
+- install dependencies declared in downloaded `gacli/.auto-install/Brewfile`
 
-8. Final review of `install.zsh`
+8. Passer tous les commentaires de fonction au format requis (`"# PRIVATE - ..."` / `"# PUBLIC - ..."`)
 
 9. 🙌
 
 ---
 
-1. rewrite all possible `if ... then ...` → `... 2> /dev/null || {...}` (mute called function error messages if calling function can handle error)
+1. rewrite all possible `if ... then ...` → `... 2> /dev/null || {...}` (easier to read + mute called function error messages if calling function can handle error)
 
 ---
 

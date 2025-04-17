@@ -1,9 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.install/uninstall.zsh
+# FICHIER /.auto-install/uninstall.zsh
 ###############################
-
-# TODO: converti in full macOS/Linux POSIX compatible ".sh" script
 
 # [GACLI uninstaller script]
    #   - Deletes GACLI directory
