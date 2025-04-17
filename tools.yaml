@@ -3,21 +3,25 @@
 ###############################
 
 # ────────────────────────────────────────────────────────────────
-# Your custom tools
+# Your custom tools ✨
 # ────────────────────────────────────────────────────────────────
 
-# How does it work ?
-# 1. Add or remove any formula, cask or module in this file
+# How does it work?
+# 1. Add or remove any formula, cask or module below
 # 2. Save the file
-# 3. Run "gacli update"
+# 3. Run `gacli update` to apply changes
+
+# Tip 💡 You can also use:
+#   - `gacli add-form <formula>` / `gacli rm-form <formula>`
+#   - `gacli add-cask <cask>`   / `gacli rm-cask <cask>`
+#   - `gacli add-mod <module>` / `gacli rm-mod <module>`
 
 formulae:
   # List your custom HOMEBREW FORMULAE here
-  # Or run `gacli add-form <formula_name>` / `gacli rm-form <formula_name>`
+
 casks:
   # List your custom HOMEBREW CASKS here
-  # Or run `gacli add-cask <cask_name>` / `gacli rm-cask <cask_name>`
+
 modules:
   # List your custom GACLI MODULES here
-  # Or run `gacli add-mod <module_name>` / `gacli rm-mod <module_name>`
 

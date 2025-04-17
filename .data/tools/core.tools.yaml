@@ -2,12 +2,19 @@
 # FICHIER /.data/tools/core.tools.yaml
 ###############################
 
-# Use: Core dependencies descriptor
+# [Core dependencies descriptor]
+   #   - Lists core formulae required by GACLI
+   #   - Ensures cross-platform compatibility
+   #   - Defines minimal runtime requirements
 
-# No read/write operations
+   # Depends on:
+   #   - (none)             → pure data file
 
-# Used by:
-#   - update.zsh    → merges this file with "modules.tools.yaml" into a temporary file before checking if update is due
+   # Used by:
+   #   - update.zsh         → merge this file with modules tools via `parser.zsh`
+
+   # Note: All read/write operations are delegated to parser.zsh
+#
 
 formulae:
   - curl         # HTTP(S) tool (macOS)

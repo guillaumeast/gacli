@@ -1,9 +1,23 @@
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.install/uninstall.zsh
 ###############################
-#!/usr/bin/env zsh
 
 # TODO: converti in full macOS/Linux POSIX compatible ".sh" script
+
+# [GACLI uninstaller script]
+   #   - Deletes GACLI directory
+   #   - Removes PATH entry from .zshrc
+   #   - Deletes executable wrapper
+
+   # Depends on:
+   #   - gacli.zsh          → for styled outputs
+
+   # Used by:
+   #   - gacli.zsh          → triggered via `gacli uninstall`
+
+   # Note: Wrapper path and zshrc path must be resolved before calling
+#
 
 # Uninstall GACLI: remove all file and cleanup .zshrc
 gacli_uninstall() {

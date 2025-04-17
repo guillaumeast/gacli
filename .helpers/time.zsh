@@ -1,21 +1,22 @@
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/time.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Time utilities using UNIX timestamps
-#   - Get current time, convert between human and timestamp formats
-#   - Add days to a given timestamp
-#   - All conversions rely on `gdate` from coreutils for compatibility
+# [Cross-platform time utilities]
+   #   - Gets current timestamp
+   #   - Converts between human date and timestamp
+   #   - Adds days to a given timestamp
 
-# Depends on:
-#   - coreutils (gdate)             → required for cross-platform date handling
-#   - gacli.zsh                     → to display formatted messages
+   # Depends on:
+   #   - coreutils (gdate)  → ensures compatibility on macOS/Linux
+   #   - gacli.zsh          → for styled error output
 
-# Used by:
-#   - update.zsh                    → to compute and manage auto-update scheduling
+   # Used by:
+   #   - update.zsh         → computes next update date
 
-# Note: Only supports `YYYY-MM-DD` format for human-readable dates
+   # Note: Only supports YYYY-MM-DD format for human input/output
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC

@@ -1,26 +1,25 @@
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.run/gacli.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# FILE DESCRIPTION:
-    # GACLI main entry point
-    #   - Entry script called by user via `gacli` wrapper
-    #   - Detects OS, resolves paths, loads core scripts and modules
-    #   - Dispatches CLI commands and displays global status/help
+# [GACLI CLI entry point]
+   #   - Loads core scripts and modules
+   #   - Checks system compatibility and file integrity
+   #   - Enables auto-update mechanism
+   #   - Dispatches commands from CLI
 
-    # Depends on:
-    #   - update.zsh        → for auto-update procedure
-    #   - modules.zsh       → for modules management
-    #   - brew.zsh          → for getting formulae and caks status
-    #   - uninstall.zsh     → for gacli uninstall procedure
+   # Depends on:
+   #   - update.zsh         → handles auto-update and dependency merge
+   #   - modules.zsh        → loads external modules and tools
+   #   - brew.zsh           → checks Homebrew tools status
+   #   - uninstall.zsh      → provides uninstall logic
 
-    # Used by:
-    #   - gacli wrapper     → executes this file directly
-    #   - install.zsh       → makes this file executable and sources it in `.zshrc`
+   # Used by:
+   #   - install.zsh        → sets executable and sources it in shell
+   #   - wrapper (gacli)    → executes this script directly
 
-    # Note: Relies on `BUFFER`, `FORMULAE`, `CASKS`, and other globals for runtime state.
-    #       Also embeds IO helpers like `printStyled` and `style_ascii_logo` directly.
+   # Note: Holds the `main` dispatcher and core system setup logic
 #
 
 # Easter egg display

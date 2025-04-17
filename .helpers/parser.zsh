@@ -1,25 +1,26 @@
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/parser.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Parser helpers for reading/writing files
-#   - Read/write/reset values in yaml, json and Brewfile formats
-#   - Handle both generic and brew-specific keys (formulae, casks)
-#   - Used to centralize data manipulation logic across the codebase
+# [File parser for tools/config]
+   #   - Reads/writes YAML, JSON and Brewfile formats
+   #   - Handles formulae, casks and modules values
+   #   - Resets values from descriptors
+   #   - Detects file type and applies correct tool
 
-# Depends on:
-#   - yq            → to parse/modify YAML files
-#   - jq            → to parse/modify JSON files
-#   - gacli.zsh     → to display formatted messages
+   # Depends on:
+   #   - yq                 → YAML parsing
+   #   - jq                 → JSON parsing
+   #   - gacli.zsh          → for styled error output
 
-# Used by:
-#   - brew.zsh      → to read/write formulae and casks from Brewfile
-#   - update.zsh    → to read/update config.yaml for auto-update logic
-#   - modules.zsh   → to read dependencies from tools.yaml and modules
+   # Used by:
+   #   - brew.zsh           → reads/writes Brewfile
+   #   - update.zsh         → manages config and dependencies
+   #   - modules.zsh        → parses tools.yaml in each module
 
-# Note: `_get_extension`, `_read_brew`, `_write_brew`, and `_reset_brew`
-# are internal helpers and must not be used outside this file.
+   # Note: Exposes unified `parser_read`, `parser_write`, `parser_reset` interface
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC

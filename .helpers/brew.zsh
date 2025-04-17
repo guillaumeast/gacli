@@ -1,21 +1,23 @@
+#!/usr/bin/env zsh
 ###############################
 # FICHIER /.helpers/brew.zsh
 ###############################
-#!/usr/bin/env zsh
 
-# Homebrew installer and updater
-#   - Install Homebrew if missing
-#   - Run `brew bundle` based on a Brewfile (if formulae/casks not yet active)
-#   - Expose status checking methods for formulae and casks
+# [Homebrew tools manager]
+   #   - Checks if formulae and casks are active
+   #   - Runs brew bundle if needed
+   #   - Installs and configures Homebrew
 
-# Depends on:
-#   - parser.zsh        → to read formulae/casks from Brewfile
-#   - gacli.zsh         → to display formatted messages
+   # Depends on:
+   #   - parser.zsh         → reads Brewfile content
+   #   - gacli.zsh          → for styled outputs
 
-# Used by:
-#   - update.zsh        → to trigger bundle updates via `brew_bundle`
+   # Used by:
+   #   - update.zsh         → updates dependencies from merged Brewfile
+   #   - modules.zsh        → installs tools required by modules
 
-# Note: Update is only triggered if at least one formula or cask is not already active.
+   # Note: Triggers update only if missing tools are detected
+#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
