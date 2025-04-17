@@ -86,6 +86,9 @@ main() {
     echo ""
     printStyled info "Downloading GACLI into \"${DIR}\"... ${EMOJI_WAIT}"
     download_gacli || exit 6
+
+    echo ""
+    printStyled info "Installing dependencies..."
     install_deps   || exit 7
 
     echo ""
@@ -332,8 +335,7 @@ download_gacli() {
 install_deps() {
     brewfile="$DIR/.auto-install/Brewfile"
     if command -v brew >/dev/null 2>&1 && [ -f "$brewfile" ]; then
-        printStyled info "Installing dependencies..."
-        brew bundle --file="$brewfile" || {
+        brew bundle --file="$brewfile" >/dev/null || {
             printStyled error "[install_deps] Failed to run Brewfile"
             return 1
         }
@@ -378,7 +380,7 @@ update_zshrc() {
         return 0
     fi
     {
-        printf '\n# GACLI\n'
+        printf '\n\n# GACLI\n'
         printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
         printf 'source "%s"\n' "$ENTRY_POINT"
     } >> "$ZSHRC" || {
