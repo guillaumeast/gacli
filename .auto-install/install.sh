@@ -79,7 +79,7 @@ main() {
     resolve_paths  || exit 3
 
     echo ""
-    printStyled info "Installing dependencies... ${EMOJI_WAIT}"
+    printStyled info "Setting up environment... ${EMOJI_WAIT}"
     install_brew   || exit 4
     install_zsh    || exit 5
 
@@ -184,7 +184,7 @@ printStyled() {
             return
             ;;
         warning)
-            printf "%s\n" "${YELLOW}${BOLD}${EMOJI_WARN} ${msg}${NONE}" >&2
+            printf "%s\n" "${YELLOW}${BOLD}${EMOJI_WARN}  ${msg}${NONE}" >&2
             return
             ;;
         success)
@@ -233,8 +233,8 @@ resolve_paths() {
     SYMLINK="$SYM_DIR/$SYMLINK"
 
     while [ ! -f "$ZSHRC" ]; do
-        printStyled warning ".zshrc introuvable: $ZSHRC"
-        printStyled highlight "Chemin de .zshrc :"
+        printStyled warning ".zshrc not found: $ZSHRC"
+        printStyled highlight "Enter path to your .zshrc:"
         printf "> "
         read -r ZSHRC
     done
@@ -258,21 +258,21 @@ install_brew() {
     elif command -v wget >/dev/null 2>&1; then
         downloader="wget -q -O -"
     else
-        printStyled error "[install_brew] curl ou wget requis"; return 1
+        printStyled error "[install_brew] curl or wget required"; return 1
     fi
 
     install_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-    printStyled info "Installation Homebrew..."
+    printStyled info "Installing Homebrew..."
     $downloader "$install_url" | /bin/bash || {
-        printStyled error "[install_brew] Échec"; return 1
+        printStyled error "[install_brew] Failed"; return 1
     }
     command -v brew >/dev/null 2>&1 && eval "$(brew shellenv)" && hash -r 2>/dev/null
-    printStyled success "Homebrew installé"
+    printStyled success "Homebrew installed"
 }
 
 # Installs zsh via the detected package manager when it is not already present
 install_zsh() {
-    command -v zsh >/dev/null 2>&1 && { printStyled success "zsh détecté"; return 0; }
+    command -v zsh >/dev/null 2>&1 && { printStyled success "zsh detected"; return 0; }
 
     case "$PACKAGE_MANAGER" in
         brew)    install_cmd="brew install zsh" ;;
@@ -282,9 +282,9 @@ install_zsh() {
         *)       printStyled error "[install_zsh] No supported package manager"; return 1 ;;
     esac
 
-    printStyled info "Installation de zsh..."
-    eval "$install_cmd" || { printStyled error "[install_zsh] Échec"; return 1; }
-    printStyled success "zsh installé"
+    printStyled info "Installing zsh..."
+    eval "$install_cmd" || { printStyled error "[install_zsh] Failed"; return 1; }
+    printStyled success "zsh installed"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -295,33 +295,33 @@ install_zsh() {
 download_gacli() {
     [ ! -d "$DIR" ] || {
         [ "$FORCE_MODE" = "true" ] && { rm -rf "$DIR"; } || {
-            printStyled error "[download_gacli] $DIR existe déjà (–-force pour écraser)"
+            printStyled error "[download_gacli] $DIR already exists (--force to overwrite)"
             return 1
         }
     }
-    mkdir -p "$DIR" || { printStyled error "[download_gacli] Impossible de créer $DIR"; return 1; }
+    mkdir -p "$DIR" || { printStyled error "[download_gacli] Unable to create $DIR"; return 1; }
 
     case "$HTTP_CLIENT" in
         curl)
             curl -fSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
-                || { printStyled error "[download_gacli] Échec download/extract"; return 1; }
+                || { printStyled error "[download_gacli] Failed to download/extract archive"; return 1; }
             ;;
         wget)
             wget -q -O - "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 \
-                || { printStyled error "[download_gacli] Échec download/extract"; return 1; }
+                || { printStyled error "[download_gacli] Failed to download/extract archive"; return 1; }
             ;;
         git)
             branch="${ARCHIVE##*/}"
             branch="${branch%.tar.gz}"
             git clone --depth 1 --branch "$branch" "$REPO" "$DIR" \
-                || { printStyled error "[download_gacli] Échec git clone"; return 1; }
+                || { printStyled error "[download_gacli] Failed to clone repository"; return 1; }
             ;;
         *)
-            printStyled error "[download_gacli] HTTP client non pris en charge: $HTTP_CLIENT"
+            printStyled error "[download_gacli] Unsupported HTTP client: $HTTP_CLIENT"
             return 1
             ;;
     esac
-    printStyled success "GACLI téléchargé dans $DIR"
+    printStyled success "GACLI downloaded into $DIR"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -332,30 +332,30 @@ download_gacli() {
 install_deps() {
     brewfile="$DIR/.auto-install/Brewfile"
     if command -v brew >/dev/null 2>&1 && [ -f "$brewfile" ]; then
-        printStyled info "Installation des dépendances..."
+        printStyled info "Installing dependencies..."
         brew bundle --file="$brewfile" || {
-            printStyled error "[install_deps] Échec Brewfile"
+            printStyled error "[install_deps] Failed to run Brewfile"
             return 1
         }
-        printStyled success "Dépendances installées"
+        printStyled success "Dependencies installed"
     else
-        printStyled warning "[install_deps] Pas de Brewfile ou brew indisponible, skip"
+        printStyled warning "[install_deps] No Brewfile found or brew unavailable → skipping"
     fi
 }
 
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
     chmod +x "$ENTRY_POINT" || {
-        printStyled error "[make_executable] Impossible de chmod +x $ENTRY_POINT"
+        printStyled error "[make_executable] Failed make $ENTRY_POINT executable"
         return 1
     }
-    printStyled success "Point d’entrée rendu exécutable"
+    printStyled success "Entry point made executable"
 }
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 create_wrapper() {
     mkdir -p "$SYM_DIR" || {
-        printStyled error "[create_wrapper] Impossible de créer $SYM_DIR"; return 1
+        printStyled error "[create_wrapper] Failed to create $SYM_DIR"; return 1
     }
 
     if [ -f "$SYMLINK" ] || [ -d "$SYMLINK" ] || [ -h "$SYMLINK" ]; then
@@ -366,15 +366,15 @@ create_wrapper() {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec zsh \"$ENTRY_POINT\" \"\$@\""
     } > "$SYMLINK" && chmod +x "$SYMLINK" || {
-        printStyled error "[create_wrapper] Impossible de créer wrapper"; return 1
+        printStyled error "[create_wrapper] Failed to create wrapper"; return 1
     }
-    printStyled success "Wrapper créé: $SYMLINK → $ENTRY_POINT"
+    printStyled success "Wrapper created: $SYMLINK → $ENTRY_POINT"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
 update_zshrc() {
     if grep -q '# GACLI' "$ZSHRC"; then
-        printStyled success ".zshrc déjà configuré"
+        printStyled success ".zshrc already configured"
         return 0
     fi
     {
@@ -382,9 +382,9 @@ update_zshrc() {
         printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
         printf 'source "%s"\n' "$ENTRY_POINT"
     } >> "$ZSHRC" || {
-        printStyled error "[update_zshrc] Échec update $ZSHRC"; return 1
+        printStyled error "[update_zshrc] Failed update $ZSHRC"; return 1
     }
-    printStyled success ".zshrc mis à jour"
+    printStyled success ".zshrc updated"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -393,13 +393,14 @@ update_zshrc() {
 
 auto_launch() {
     echo ""
-    printStyled success "GACLI installé ! 🚀"
+    printStyled success "GACLI successfully installed 🚀"
     echo ""
     if [ -n "$ZSH_VERSION" ]; then
         printStyled info "Reloading shell... ${EMOJI_WAIT}"
         exec zsh
     else
-        printStyled warning "Ouvrez un nouveau terminal ou lancez : exec zsh"
+        printStyled warning "Open a new terminal or run: exec zsh"
+        echo ""
     fi
 }
 
