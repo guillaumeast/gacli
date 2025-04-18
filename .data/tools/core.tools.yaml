@@ -17,9 +17,10 @@
 #
 
 formulae:
-  - curl         # HTTP(S) tool (macOS)
-  - wget         # HTTP(S) tool (Linux)
-  - coreutils    # Cross-platform tools
-  - yq           # YAML processor
-  - jq           # JSON processor
+   - bash         # Shell (required by Homebrew)
+   - zsh          # Shell (required by GACLI)
+   - curl         # HTTP(S) client
+   - coreutils    # Cross-platform tools
+   - yq           # YAML processor
+   - jq           # JSON processor
 

@@ -2,8 +2,9 @@
 # FICHIER /.auto-install/Brewfile
 ###############################
 
+brew "bash"
+brew "zsh"
 brew "curl"
-brew "wget"
 brew "coreutils"
 brew "yq"
 brew "jq"
