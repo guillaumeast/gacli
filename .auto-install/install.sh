@@ -83,36 +83,36 @@ main() {
 
     init_style
     printStyled highlight "Initializing..."
-    parse_args "$@" || exit 1
-    resolve_paths   || exit 2
+    parse_args "$@" || return 1
+    resolve_paths   || return 2
 
     echo ""
     printStyled highlight "Checking environment..."
-    check_env       || exit 3
+    check_env       || return 3
 
     echo ""
     printStyled highlight "Installing package manager: Homebrew..."
-    install_brew    || exit 4
+    install_brew    || return 4
 
-    echo ""
-    printStyled highlight "Installing shell: zsh..."
-    # TODO: fix install_zsh     || exit 5
+    # echo ""
+    # printStyled highlight "Installing shell: zsh..."
+    # TODO: fix install_zsh     || return 5
 
     echo ""
     printStyled highlight "Downloading GACLI ${GREY}→${NONE}${DIR}..."
-    download_gacli  || exit 6
+    download_gacli  || return 6
 
     echo ""
-    printStyled highlight "Installing GACLI dependencies..."
-    install_gacli_deps    || exit 7
+    printStyled highlight "Installing GACLI dependencies...${EMOJI_WAIT}"
+    install_gacli_deps    || return 7
 
     echo ""
     printStyled highlight "Installing GACLI CLI..."
-    make_executable || exit 8
-    create_wrapper  || exit 9
-    update_zshrc    || exit 10
+    make_executable || return 8
+    create_wrapper  || return 9
+    update_zshrc    || return 10
 
-    auto_launch     || exit 11
+    auto_launch     || return 11
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -288,21 +288,21 @@ install_brew_deps() {
     # Depending on current package manager
     if command -v apt >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}apt${NONE}"
-        printStyled info "Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
         $SUDO apt-get update -y >/dev/null 2>&1
         $SUDO apt-get install -y build-essential procps curl file git bash >/dev/null 2>&1
     elif command -v dnf >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}dnf${NONE}"
-        printStyled info "Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
         $SUDO dnf groupinstall -y "Development Tools" >/dev/null 2>&1
         $SUDO dnf install -y procps-ng file bash >/dev/null 2>&1
     elif command -v pacman >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}pacman${NONE}"
-        printStyled info "Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
         $SUDO pacman -Sy --noconfirm base-devel procps-ng curl file git bash >/dev/null 2>&1
     elif command -v yum >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}yum${NONE}"
-        printStyled info "Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
         $SUDO yum groupinstall 'Development Tools' >/dev/null 2>&1
         $SUDO yum install -y procps-ng curl file git bash >/dev/null 2>&1
     else
@@ -396,16 +396,16 @@ install_gacli_deps() {
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
     chmod +x "$ENTRY_POINT" || {
-        printStyled error "Failed make $ENTRY_POINT executable"
+        printStyled warning "Failed make $ENTRY_POINT executable"
         return 1
     }
-    printStyled success "Entry point made executable"
+    printStyled info "Entry point: ${GREEN}executable${NONE}"
 }
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 create_wrapper() {
     mkdir -p "$SYM_DIR" || {
-        printStyled error "Failed to create $SYM_DIR"; return 1
+        printStyled warning "Failed to create $SYM_DIR"; return 1
     }
 
     if [ -f "$SYMLINK" ] || [ -d "$SYMLINK" ] || [ -L "$SYMLINK" ]; then
@@ -416,9 +416,9 @@ create_wrapper() {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec zsh \"$ENTRY_POINT\" \"\$@\""
     } > "$SYMLINK" && chmod +x "$SYMLINK" || {
-        printStyled error "Failed to create wrapper"; return 1
+        printStyled warning "Failed to create wrapper"; return 1
     }
-    printStyled success "Wrapper created → ${NONE}$SYMLINK${GREY} → ${NONE}$ENTRY_POINT"
+    printStyled info "Wrapper: → ${NONE}$SYMLINK${GREY} → ${GREEN}$ENTRY_POINT${NONE}"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
@@ -440,7 +440,7 @@ update_zshrc() {
     } >> "$ZSHRC" || {
         printStyled error "Failed update $ZSHRC"; return 1
     }
-    printStyled success ".zshrc updated"
+    printStyled success ".zshrc: ${GREEN}updated${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────

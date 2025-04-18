@@ -76,18 +76,16 @@ ORANGE='\033[38;5;208m'
 GREY='\033[90m'
 NONE='\033[0m'
 
-# Icons (on / off)
-ICON_ON="${GREEN}[ON]${NONE}"
-ICON_OFF="${RED}[OFF]${NONE}"
-
-# Emojis (swicthed to emojis if system supports unicode)
-EMOJI_SUCCESS="[OK]"
-EMOJI_WARN="[!]"
-EMOJI_ERR="[X]"
-EMOJI_INFO="[i]"
-EMOJI_HIGHLIGHT="=>"
-EMOJI_DEBUG="[???]"
-EMOJI_WAIT="..."
+# Emojis
+EMOJI_SUCCESS="✦"
+EMOJI_WARN="⚠️"
+EMOJI_ERR="❌"
+EMOJI_INFO="✧"
+EMOJI_HIGHLIGHT="👉"
+EMOJI_DEBUG="🔎"
+EMOJI_WAIT="⏳"
+ICON_ON="${GREEN}⊙${NONE}"
+ICON_OFF="${RED}○${NONE}"
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -97,7 +95,6 @@ EMOJI_WAIT="..."
 main() {
     # Check env compatibility and files integrity
     _gacli_check_system || abort "1"
-    _gacli_enable_emojis
     _gacli_check_files || abort "2"
 
     # Load core scripts
@@ -205,25 +202,6 @@ abort() {
 # ────────────────────────────────────────────────────────────────
 # OUTPUTS
 # ────────────────────────────────────────────────────────────────
-
-# PRIVATE - Enable emoji support if terminal supports UTF characters
-_gacli_enable_emojis() {
-    # Check if locale supports unicode
-    if locale charmap | grep -iq "utf"; then
-        EMOJI_SUCCESS="✦"
-        EMOJI_WARN="⚠️"
-        EMOJI_ERR="❌"
-        EMOJI_INFO="✧"
-        EMOJI_HIGHLIGHT="👉"
-        EMOJI_DEBUG="🔎"
-        EMOJI_WAIT="⏳"
-        ICON_ON="${GREEN}⊙${NONE}"
-        ICON_OFF="${RED}○${NONE}"
-        printStyled success "Emojis enabled"
-    else
-        printStyled info "[_gacli_enable_emojis] Unicode unsupported, emojis disabled for compatibility"
-    fi
-}
 
 # PUBLIC - ASCII art logo
 style_ascii_logo() {
