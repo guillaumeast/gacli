@@ -27,7 +27,7 @@
 brew_bundle() {
     local brewfile="${1}"
 
-    _brew_is_update_due || return 0
+    _brew_is_update_due "${1}" || return 0
 
     # Loading mesage
     print ""
@@ -35,24 +35,24 @@ brew_bundle() {
 
     # Update Homebrew
     if ! brew update  > /dev/null 2>&1; then
-        printStyled warning "[brew_update] Failed to update Homebrew"
+        printStyled warning "Failed to update Homebrew"
     fi
 
     # Install/uninstall formulae & casks referring to the Brewfile
     if ! brew bundle --file="${brewfile}" 1>/dev/null; then
-        printStyled error "[brew_update] Failed to run bundle Homebrew"
+        printStyled error "Failed to run bundle Homebrew"
         return 1
     fi
 
     # Upgrade
     if ! brew upgrade 1>/dev/null; then
-        printStyled error "[brew_update] Failed to upgrade Homebrew packages"
+        printStyled error "Failed to upgrade Homebrew packages"
         return 1
     fi
 
     # Cleanup
     if ! brew cleanup 1>/dev/null; then
-        printStyled warning "[brew_update] Failed to cleanup Homebrew packages"
+        printStyled warning "Failed to cleanup Homebrew packages"
     fi
 }
 
@@ -105,32 +105,32 @@ _brew_install() {
             install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
     else
-        printStyled error "[brew_install] Unsupported OS: ${OSTYPE}"
+        printStyled error "Unsupported OS: ${OSTYPE}"
         return 1
     fi
 
     # Execute install command
     if ! eval "$install_cmd"; then
-        printStyled error "[brew_install] Homebrew installation failed"
+        printStyled error "Homebrew installation failed"
         return 1
     fi
 
     # Add Homebrew to PATH
     local brew_exec_path
     if ! brew_exec_path="$(command -v brew)"; then
-        printStyled error "[brew_install] Failed to detect brew after installation"
+        printStyled error "Failed to detect brew after installation"
         return 1
     fi
 
     # Check if install is successful
     if ! eval "$("$brew_exec_path" shellenv)"; then
-        printStyled error "[brew_install] Failed to set Homebrew environment"
+        printStyled error "Failed to set Homebrew environment"
         return 1
     fi
 
     # Refresh command hash table
     if ! hash -r; then
-        printStyled warning "[brew_install] Failed to refresh shell hash table"
+        printStyled warning "Failed to refresh shell hash table"
     fi
 }
 
@@ -142,13 +142,13 @@ _brew_is_update_due() {
 
     # Arg check
     [[ -f "${brewfile}" ]] || {
-        printstyled error "[_brew_is_update_due] Expected: <brewfile> (received: ${brewfile})"
+        printStyled error "Expected: <brewfile> (received: ${brewfile})"
         return 1
     }
 
     # Get formulae from $brewfile
     parser_read "${brewfile}" "formulae" || {
-        printstyled error "[_brew_is_update_due] Unable to read Brewfile: ${brewfile}"
+        printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
     formulae+=("${BUFFER[@]}")
@@ -160,7 +160,7 @@ _brew_is_update_due() {
 
     # Get casks from $brewfile
     parser_read "${brewfile}" "casks" || {
-        printstyled error "[_brew_is_update_due] Unable to read Brewfile: ${brewfile}"
+        printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
     formulae+=("${BUFFER[@]}")

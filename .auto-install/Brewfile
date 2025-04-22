@@ -2,10 +2,10 @@
 # FICHIER /.auto-install/Brewfile
 ###############################
 
-brew "bash"
-brew "zsh"
-brew "curl"
-brew "coreutils"
-brew "yq"
-brew "jq"
+brew "curl"         # HTTP CLIENT → Required to donwload Homebrew and GACLI files
+brew "bash"         # SHELL INTERPRETER → Required to run Homebrew
+brew "zsh"          # SHELL INTERPRETER → Required to run GACLI
+brew "coreutils"    # CROSS-PLATFORM TOOLS → Required to run GACLI on macOS and Linux
+brew "yq"           # YAML PARSER → Required to parse GACLI config files
+brew "jq"           # JSON PARSER → Required by "yq"
 

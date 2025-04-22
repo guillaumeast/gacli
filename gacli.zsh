@@ -39,20 +39,34 @@ if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
 fi
 
 # Directories
-ROOT_DIR="${HOME}/.gacli"
-HELPERS_DIR="${ROOT_DIR}/.helpers"
-CORE_DIR="${ROOT_DIR}/.run"
-MODULES_DIR="${ROOT_DIR}/modules"
-DIRS=("${ROOT_DIR}" "${HELPERS_DIR}" "${CORE_DIR}" "${MODULES_DIR}")
+DIR_ROOT="${HOME}/.gacli"
+DIR_DATA="${DIR_ROOT}/.data"
+DIR_CONFIG="${DIR_DATA}/config"
+DIR_TOOLS="${DIR_DATA}/tools"
+DIR_HELPERS="${DIR_ROOT}/.helpers"
+DIR_RUN="${DIR_ROOT}/.run"
+DIR_MODS="${DIR_ROOT}/modules"
+DIR_TMP="${DIR_ROOT}/.tmp"
+DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_RUN}" "${DIR_MODS}" "${DIR_TMP}")
+
+# Config files
+FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.yaml"
+FILES_CONFIG=("${FILE_CONFIG_UPDATE}")
+
+# Tools files
+FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.yaml"
+FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.yaml"
+FILE_TOOLS_USER="${DIR_ROOT}/tools.yaml"
+FILES_TOOLS=("${FILE_TOOLS_CORE}" "${FILE_TOOLS_MODULES}" "${FILE_TOOLS_USER}")
 
 # Scripts files
 SCRIPTS=( \
-    "${ROOT_DIR}/.helpers/time.zsh" \
-    "${ROOT_DIR}/.helpers/parser.zsh" \
-    "${ROOT_DIR}/.helpers/brew.zsh" \
-    "${ROOT_DIR}/.run/modules.zsh" \
-    "${ROOT_DIR}/.run/update.zsh" \
-    "${ROOT_DIR}.auto-install/uninstall.zsh" \
+    "${DIR_ROOT}/.helpers/time.zsh" \
+    "${DIR_ROOT}/.helpers/parser.zsh" \
+    "${DIR_ROOT}/.helpers/brew.zsh" \
+    "${DIR_ROOT}/.run/modules.zsh" \
+    "${DIR_ROOT}/.run/update.zsh" \
+    "${DIR_ROOT}/.auto-install/uninstall.zsh" \
 )
 
 # Available commands
@@ -75,6 +89,10 @@ CYAN='\033[36m'
 ORANGE='\033[38;5;208m'
 GREY='\033[90m'
 NONE='\033[0m'
+COLOR_FORMULAE="${BLUE}"
+COLOR_CASKS="${CYAN}"
+COLOR_MODS="${PURPLE}"
+COLOR_COMMANDS="${ORANGE}"
 
 # Emojis
 EMOJI_SUCCESS="✦"
@@ -84,8 +102,8 @@ EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
 EMOJI_WAIT="⏳"
-ICON_ON="${GREEN}⊙${NONE}"
-ICON_OFF="${RED}○${NONE}"
+ICON_ON="⊙"
+ICON_OFF="○"
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -94,24 +112,25 @@ ICON_OFF="${RED}○${NONE}"
 # Main function
 main() {
     # Check env compatibility and files integrity
-    _gacli_check_system || abort "1"
-    _gacli_check_files || abort "2"
+    _gacli_check_system || abort "1" || return 1
+    _gacli_check_files || abort "2" || return 1
 
     # Load core scripts
     local script
     for script in $SCRIPTS; do
         if ! source "${script}"; then
-            printstyled error "[gacli.zsh] Unable to load required script: ${script}"
-            abort "3"
+            printStyled error "Unable to load required script: ${script}"
+            abort "3" || return 1
         fi
     done
 
     # Load modules and check if update is due (date or new dependencies)
-    update_check || abort "4"           # Implemented in update.zsh
-    modules_load || abort "5"           # Implemented in modules.zsh
+    modules_init || abort "4" || return 1           # Implemented in modules.zsh
+    update_init || abort "5" || return 1            # Implemented in update.zsh
+    modules_load || abort "6" || return 1           # Implemented in modules.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "6"
+    _gacli_dispatch "$@" || abort "7" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -121,7 +140,7 @@ main() {
 # PRIVATE - Detect the operating system and set the corresponding flags
 _gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
-        printstyled error "[_gacli_check_system] \$OSTYPE is not set" >&2
+        printStyled error "\$OSTYPE is not set" >&2
         return 1
     fi
 
@@ -129,29 +148,29 @@ _gacli_check_system() {
         darwin*) IS_MACOS=true ;;
         linux*)  IS_LINUX=true ;;
         *)
-            printstyled error "[_gacli_check_system] Unknown OS type: $OSTYPE" >&2
+            printStyled error "Unknown OS type: $OSTYPE" >&2
             return 1
             ;;
     esac
 }
 
-# PRIVATE - Resolve absolute paths, check files integrity and source scripts
+# PRIVATE - Check files integrity
 _gacli_check_files() {
+    local dir file
+    local files=("${FILES_CONFIG[@]}" "${FILES_TOOLS[@]}")
 
     # Check directories integrity
-    local dir
     for dir in $DIRS; do
-        mkdir -p "${MODULES_DIR}" || {
-            printstyled error "[_gacli_check_files] Unable to resolve dir: ${dir}"
+        mkdir -p "${dir}" || {
+            printStyled error "Unable to resolve dir: ${dir}"
             return 1
         }
     done
 
-    # Check config files integrity
-    local file
-    for file in $FILES; do
-        [[ -f "${file}" ]] || {
-            printstyled error "[_gacli_check_files] Unable to resolve file: ${dir}"
+    # Check files integrity
+    for file in $files; do
+        touch "${file}" || {
+            printStyled error "Unable to resolve file: ${file}"
             return 1
         }
     done
@@ -167,11 +186,11 @@ _gacli_dispatch() {
             print_modules
             print_core_commands
             print_mods_commands
-            print ""
             ;;
         *)
             # Dynamic commands (declared via get_commands in modules)
-            for cmd in "${COMMANDS_MODS[@]}"; do
+            local commands=("${COMMANDS_CORE[@]}" "${COMMANDS_MODS[@]}")
+            for cmd in "${commands[@]}"; do
                 local command_name="${cmd%%=*}"
                 local function_name="${cmd#*=}"
 
@@ -183,7 +202,7 @@ _gacli_dispatch() {
             done
 
             # No command matched
-            printStyled error "[GACLI] Error: unknown command '$1'" >&2
+            printStyled error "Unknown command '$1'" >&2
             modules_print_commands
             return 1
     esac
@@ -196,7 +215,7 @@ abort() {
     echo " ---> [GACLI] E${1}: fatal error, exiting GACLI <---" >&2
     echo "-------------------------------------------------------"
     echo ""
-    exit "${1}"
+    return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -231,28 +250,28 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}❌ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}⚠️  ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         success)
             color=$GREEN
-            final_message="✦ ${raw_message}"
+            final_message="${EMOJI_SUCCESS} ${raw_message}"
             ;;
         info)
             color=$GREY
-            final_message="✧ ${raw_message}"
+            final_message="${EMOJI_INFO} ${raw_message}"
             ;;
         highlight)
             color=$NONE
-            final_message="👉 ${raw_message}"
+            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
             ;;
         debug)
             color=$YELLOW
-            final_message="🔦 ${BOLD}${raw_message}${NONE}"
+            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
             ;;
         *)
             color=$NONE
@@ -267,31 +286,31 @@ printStyled() {
 # PUBLIC - Diplay tips
 help() {
     print ""
-    printStyled highlight "Formulaes: (more info: https://formulae.brew.sh/formula)"
+    printStyled highlight "${ORANGE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
     print_formulae
 
     print ""
-    printStyled highlight "Casks: (more info: https://formulae.brew.sh/cask/)"
+    printStyled highlight "${CYAN}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
     print_casks
 
     print ""
-    printStyled highlight "Modules: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${GREEN}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
     print_modules
 
     print ""
-    printStyled highlight "Core commands: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${RED}Core commands${GREY}"
     print_core_commands
 
     print ""
-    printStyled highlight "Modules commands: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${GREEN}Modules commands${GREY}"
     print_mods_commands
     print ""
 }
 
 # PUBLIC - Print installed status for all formulae defined in tools descriptors
 print_formulae() {
-    local tmp_brewfile=$(mktemp)
-    local icon, formula, output
+    local tmp_brewfile="${DIR_TMP}/Brewfile"
+    local formula output
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
@@ -305,9 +324,9 @@ print_formulae() {
 
     # Compute
     for formula in "${BUFFER[@]}"; do
-        icon="${ICON_OFF}"
-        brew_is_f_active "${formula}" && icon="${ICON_ON}"
-        output+="${icon} ${ORANGE}$formula${GREY}|${NONE} "
+        local icon="${GREY}${ICON_OFF}${NONE}"
+        brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
@@ -319,8 +338,8 @@ print_formulae() {
 
 # PUBLIC - Print installed status for all casks defined in tools descriptors
 print_casks() {
-    local tmp_brewfile=$(mktemp)
-    local icon, cask, output
+    local tmp_brewfile="${DIR_TMP}/Brewfile"
+    local cask output
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
@@ -334,13 +353,18 @@ print_casks() {
 
     # Compute
     for cask in "${BUFFER[@]}"; do
-        icon="${ICON_OFF}"
-        brew_is_c_active "${cask}" && icon="${ICON_ON}"
-        output+="${icon} ${CYAN}$cask${GREY}|${NONE} "
+        local icon="${GREY}${ICON_OFF}${NONE}"
+        brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_CASKS}$cask${GREY}|${NONE} "
     done
 
-    # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
+    # Display
+    if [[ -n "${output}" ]]; then
+        # Display (removing trailing " | ")
+        print "${output% ${GREY}|${NONE} }"
+    else
+        print "${GREY}${ICON_OFF} No cask installed → https://formulae.brew.sh/cask/ ${NONE}"
+    fi
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
@@ -352,11 +376,18 @@ print_modules() {
     local icon
 
     for module in $MODULES_INSTALLED; do
-        icon="${ICON_OFF}"
-        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${ICON_ON}"
-        output+="${icon} ${GREEN}${module}${NONE} ${GREY}|${NONE} "
+        icon="${GREY}${ICON_OFF}${NONE}"
+        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
     done
-    print "${output% ${GREY}|${NONE} }"
+    
+    # Display
+    if [[ -n "${output}" ]]; then
+        # Display (removing trailing " | ")
+        print "${output% ${GREY}|${NONE} }"
+    else
+        print "${GREY}${ICON_OFF} No module installed → https://github.com/guillaumeast/gacli ${NONE}"
+    fi
 }
 
 # PUBLIC - Print available built-in GACLI core commands
@@ -365,7 +396,7 @@ print_core_commands() {
 
     for cmd in $COMMANDS_CORE; do
         local command_name="${cmd%%=*}"
-        output+="${ICON_ON} ${RED}${command_name} ${GREY}|${NONE} "
+        output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
     print "${output% ${GREY}|${NONE} }"
 }
@@ -376,7 +407,7 @@ print_mods_commands() {
 
     for cmd in $COMMANDS_MODS; do
         local command_name="${cmd%%=*}"
-        output+="${ICON_ON} ${GREEN}${command_name} ${GREY}|${NONE} "
+        output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
     print "${output% ${GREY}|${NONE} }"
 }

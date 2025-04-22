@@ -36,11 +36,11 @@ parser_read() {
 
     # Check arguments
     if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[read] Expected: <file> <key> (received: \"${file}\" \"${key}\")"
+        printStyled error "Expected: <file> <key> (received: \"${file}\" \"${key}\")"
         return 1
     fi
     if [[ ! -f "${file}" ]]; then
-        printStyled error "[read] Unable to find file: ${file}"
+        printStyled error "Unable to find file: ${file}"
         return 1
     fi
 
@@ -50,7 +50,7 @@ parser_read() {
     # Use corresponding processor
     case "${extension}" in
         yml|yaml)
-            BUFFER=("${(@f)$(yq e ".${key}" "${file}" 2>/dev/null)}") && return 0
+            _read_yq "${file}" "${key}" && return 0
             ;;
         json)
             BUFFER=("${(@f)$(jq -r ".${key}" "${file}" 2>/dev/null)}") && return 0
@@ -59,12 +59,12 @@ parser_read() {
             _read_brew "${file}" "${key}" && return 0
             ;;
         *)
-            printStyled error "[read] Unsupported file format: .${extension}"
+            printStyled error "Unsupported file format: .${extension}"
             return 1
             ;;
     esac
 
-    printStyled error "[read] Failed to read key '${key}' in ${file}"
+    printStyled error "Failed to read key '${key}' in ${file}"
 }
 
 # Universal writer: parser_write <file> <key> <value>
@@ -75,11 +75,11 @@ parser_write() {
 
     # Check arguments
     if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[write] Expected: <file> <key> <value> (received: \"${1}\" \"${2}\" \"${3}\")"
+        printStyled error "Expected: <file> <key> <value> (received: \"${1}\" \"${2}\" \"${3}\")"
         return 1
     fi
     if [[ ! -f "${file}" ]]; then
-        printStyled error "[write] Unable to find file: ${file}"
+        printStyled error "Unable to find file: ${file}"
         return 1
     fi
 
@@ -93,7 +93,7 @@ parser_write() {
             ;;
         json)
             if ! jq ".${key} = \"${value}\"" "${file}" > "${file}.tmp" 2>/dev/null; then
-                printStyled error "[write] Failed to write key '${key}' in ${file}"
+                printStyled error "Failed to write key '${key}' in ${file}"
                 return 1
             fi
             mv "${file}.tmp" "${file}" && return 0
@@ -102,11 +102,11 @@ parser_write() {
             _write_brew "${file}" "${key}" "${value}" && return 0
             ;;
         *)
-            printStyled error "[write] Unsupported file format: .${extension}"; return 1
+            printStyled error "Unsupported file format: .${extension}"; return 1
             ;;
     esac
 
-    printStyled error "[write] Failed to write key '${key}' = ${value} in ${file}"
+    printStyled error "Failed to write key '${key}' = ${value} in ${file}"
 }
 
 # Universal reset: parser_reset <file> <key>
@@ -116,11 +116,11 @@ parser_reset() {
 
     # Check arguments
     if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[reset] Expected: <file> <key> (received: \"${1}\" \"${2}\")"
+        printStyled error "Expected: <file> <key> (received: \"${1}\" \"${2}\")"
         return 1
     fi
     if [[ ! -f "${file}" ]]; then
-        printStyled error "[reset] File not found: ${file}"
+        printStyled error "File not found: ${file}"
         return 1
     fi
 
@@ -131,24 +131,24 @@ parser_reset() {
     case "${extension}" in
         yml|yaml)
             yq e "del(.${key})" -i "${file}" 2>/dev/null || {
-                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                printStyled error "Failed to reset key '${key}' in ${file}"
                 return 1
             }
             ;;
         json)
             jq "del(.${key})" "${file}" > "${file}.tmp" && mv "${file}.tmp" "${file}" || {
-                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                printStyled error "Failed to reset key '${key}' in ${file}"
                 return 1
             }
             ;;
         brewfile)
             _reset_brew "${file}" "${key}" || {
-                printStyled error "[reset] Failed to reset key '${key}' in ${file}"
+                printStyled error "Failed to reset key '${key}' in ${file}"
                 return 1
             }
             ;;
         *)
-            printStyled error "[reset] Unsupported file format: .${extension}"
+            printStyled error "Unsupported file format: .${extension}"
             return 1
             ;;
     esac
@@ -184,7 +184,7 @@ _read_brew() {
             BUFFER=($(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)) && return 0
             ;;
         *)
-            printStyled error "[read] Unknown key for brewfile: ${key}"
+            printStyled error "Unknown key for brewfile: '${key}'"
             return 1
             ;;
     esac
@@ -198,21 +198,21 @@ _write_brew() {
     local line=""
 
     case "${key}" in
-        formula)
+        formulae)
             line="brew \"${value}\""
             ;;
-        cask)
+        casks)
             line="cask \"${value}\""
             ;;
         *)
-            printStyled error "[write] Unknown key for brewfile: ${key}"
+            printStyled error "Unknown key for brewfile: '${key}'"
             return 1
             ;;
     esac
 
     if ! grep -qF "${line}" "${file}"; then
         echo "${line}" >> "${file}" || {
-            printStyled error "[write] Failed to append line to ${file}"
+            printStyled error "Failed to append line to ${file}"
             return 1
         }
     fi
@@ -227,29 +227,52 @@ _reset_brew() {
     case "${key}" in
         formulae)
             grep -v '^brew "' "${file}" > "${tmp_file}" || {
-                printStyled error "[reset] Failed to clean formulae from ${file}"
+                printStyled error "Failed to clean formulae from ${file}"
                 rm -f "$tmp_file"
                 return 1
             }
             ;;
         casks)
             grep -v '^cask "' "${file}" > "${tmp_file}" || {
-                printStyled error "[reset] Failed to clean casks from ${file}"
+                printStyled error "Failed to clean casks from ${file}"
                 rm -f "$tmp_file"
                 return 1
             }
             ;;
         *)
-            printStyled error "[reset] Unknown key for Brewfile: ${key}"
+            printStyled error "Unknown key for Brewfile: ${key}"
             rm -f "$tmp_file"
             return 1
             ;;
     esac
 
     mv "${tmp_file}" "${file}" || {
-        printStyled error "[reset] Failed to overwrite ${file}"
+        printStyled error "Failed to overwrite ${file}"
         rm -f "$tmp_file"
         return 1
     }
+}
+
+_read_yq() {
+  local file=$1 key=$2
+
+  # Check if key is a sequence
+  if yq eval ".${key} | tag" "$file" 2>/dev/null | grep -q '!!seq'; then
+    node_is_sequence=true
+  else
+    node_is_sequence=false
+  fi
+
+  if [[ $node_is_sequence == true ]]; then
+    # Sequence → read each element
+    while IFS= read -r element; do
+      [[ -n $element ]] && BUFFER+=("$element")
+    done < <(yq eval -r ".${key}[]" "$file" 2>/dev/null)
+  else
+    # Scalar → read value
+    local val
+    val=$(yq eval -r ".${key} // \"\"" "$file" 2>/dev/null)
+    BUFFER=("$val")
+  fi
 }
 

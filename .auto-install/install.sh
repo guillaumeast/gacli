@@ -36,6 +36,7 @@ SYMLINK="gacli"
 RED="$(printf '\033[31m')"
 GREEN="$(printf '\033[32m')"
 YELLOW="$(printf '\033[33m')"
+CYAN="$(printf '\033[36m')"
 ORANGE="$(printf '\033[38;5;208m')"
 GREY="$(printf '\033[90m')"
 NONE="$(printf '\033[0m')"
@@ -99,7 +100,7 @@ main() {
     # TODO: fix install_zsh     || return 5
 
     echo ""
-    printStyled highlight "Downloading GACLI ${GREY}→${NONE}${DIR}..."
+    printStyled highlight "Downloading GACLI ${GREY}→${CYAN} ${DIR}${GREY}...${NONE}"
     download_gacli  || return 6
 
     echo ""
@@ -215,7 +216,7 @@ check_env() {
         color="${RED}"
         SHELL_NAME="unknwon"
     fi
-    printStyled info "Default shell: ${color}${SHELL_NAME}${GREY} → ${NONE}${SHELL_PATH}"
+    printStyled info "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
 
     # — Privilege escalation setup —
     if [ "$(id -u)" -ne 0 ]; then
@@ -288,21 +289,21 @@ install_brew_deps() {
     # Depending on current package manager
     if command -v apt >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}apt${NONE}"
-        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO apt-get update -y >/dev/null 2>&1
         $SUDO apt-get install -y build-essential procps curl file git bash >/dev/null 2>&1
     elif command -v dnf >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}dnf${NONE}"
-        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO dnf groupinstall -y "Development Tools" >/dev/null 2>&1
         $SUDO dnf install -y procps-ng file bash >/dev/null 2>&1
     elif command -v pacman >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}pacman${NONE}"
-        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO pacman -Sy --noconfirm base-devel procps-ng curl file git bash >/dev/null 2>&1
     elif command -v yum >/dev/null 2>&1; then
         printStyled info "Current package manager: ${ORANGE}yum${NONE}"
-        printStyled info "→ Installing core dependencies... ${EMOJI_WAIT}"
+        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO yum groupinstall 'Development Tools' >/dev/null 2>&1
         $SUDO yum install -y procps-ng curl file git bash >/dev/null 2>&1
     else
@@ -418,7 +419,7 @@ create_wrapper() {
     } > "$SYMLINK" && chmod +x "$SYMLINK" || {
         printStyled warning "Failed to create wrapper"; return 1
     }
-    printStyled info "Wrapper: → ${NONE}$SYMLINK${GREY} → ${GREEN}$ENTRY_POINT${NONE}"
+    printStyled info "Wrapper: ${GREEN}created${GREY} → ${CYAN}$SYMLINK${GREY} → ${CYAN}$ENTRY_POINT${NONE}"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
@@ -438,9 +439,9 @@ update_zshrc() {
         printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
         printf 'source "%s"\n' "$ENTRY_POINT"
     } >> "$ZSHRC" || {
-        printStyled error "Failed update $ZSHRC"; return 1
+        printStyled warning "Failed update $ZSHRC"; return 1
     }
-    printStyled success ".zshrc: ${GREEN}updated${NONE}"
+    printStyled info ".zshrc: ${GREEN}updated${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -462,3 +463,4 @@ auto_launch() {
 
 # Displays success message and either execs a new zsh or prompts the user to reopen a shell
 main "$@"
+

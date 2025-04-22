@@ -17,10 +17,10 @@
 #
 
 formulae:
-   - bash         # Shell (required by Homebrew)
-   - zsh          # Shell (required by GACLI)
-   - curl         # HTTP(S) client
-   - coreutils    # Cross-platform tools
-   - yq           # YAML processor
-   - jq           # JSON processor
+   - bash         # SHELL INTERPRETER → Required to run Homebrew
+   - zsh          # SHELL INTERPRETER → Required to run GACLI
+   - curl         # HTTP CLIENT → Required to donwload Homebrew and GACLI files
+   - coreutils    # CROSS-PLATFORM TOOLS → Required to run GACLI on macOS and Linux
+   - yq           # YAML PARSER → Required to parse GACLI config files
+   - jq           # JSON PARSER → Required by "yq"
 

@@ -45,12 +45,12 @@ modules_init() {
     local merged_casks=()
 
     # Reset merged file
-    parser_reset "${MODULES_TOOLS}" formulae || return 1
-    parser_reset "${MODULES_TOOLS}" casks || return 1
+    parser_reset "${FILE_TOOLS_MODULES}" formulae || return 1
+    parser_reset "${FILE_TOOLS_MODULES}" casks || return 1
 
-    # Get modules list from $MODULES_DIR
-    setopt local_options nullglob # Avoid errors when MODULES_DIR is empty
-    local folders=("${MODULES_DIR}"/*(/))
+    # Get modules list from $DIR_MODS
+    setopt local_options nullglob # Avoid errors when DIR_MODS is empty
+    local folders=("${DIR_MODS}"/*(/))
     if [[ ${#folders[@]} -gt 0 ]]; then
         local module_path
         for module_path in "${folders[@]}"; do
@@ -58,12 +58,15 @@ modules_init() {
         done
     fi
 
-    # Get modules list from $USER_TOOLS
-    parser_read "${USER_TOOLS}" modules || return 1
+    # Get modules list from $FILE_TOOLS_USER
+    parser_read "${FILE_TOOLS_USER}" modules || return 1
+
     if [[ ${#BUFFER[@]} -gt 0 ]]; then
-    for module in "${BUFFER[@]}"; do
-        modules_to_check+=("${module}")
-    done
+        for module in "${BUFFER[@]}"; do
+            [[ -z "$module" ]] && continue
+            modules_to_check+=("${module}")
+        done
+    fi
 
     # Modules are optional
     [[ ${#modules_to_check[@]} = 0 ]] && return 0
@@ -74,21 +77,21 @@ modules_init() {
         _module_download "${module}" || continue
 
         # Merge formulae dependencies
-        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" formulae || continue
+        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae || continue
         merged_formulae+=("${BUFFER[@]}")
 
         # Merge casks dependencies
-        parser_read "${MODULES_DIR}/${module}/${CONFIG_FILE}" casks || continue
+        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks || continue
         merged_casks+=("${BUFFER[@]}")
-    fi
+    done
 
     # Save merged dependencies
-    parser_write "${MODULES_TOOLS}" formulae "${merged_formulae[@]}" || {
-        printstyled error "[modules] Unable to merge modules dependencies"
+    parser_write "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
+        printStyled error "Unable to merge modules dependencies"
         return 1
     }
-    parser_write "${MODULES_TOOLS}" casks "${merged_casks[@]}"|| {
-        printstyled error "[modules] Unable to merge modules dependencies"
+    parser_write "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
         return 1
     }
 }
@@ -100,20 +103,19 @@ _module_download() {
     # Download module if needed
     if ! _module_is_downloaded "${module}"; then
         local descriptor_url="${MODULES_LIB}/${module}.yaml"
-        local tmp_descriptor="$(mktemp)"
-        tmp_descriptor="${TMP_DIR}/${module}.yaml"
+        local tmp_descriptor="${TMP_DIR}/${module}.yaml"
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
-        curl "${descriptor_url}" > "${descriptor_path}" || {
-            printstyled error "[_module_download] Unable to download descriptor"
-            printstyled error "→ url: ${descriptor_url}"
+        curl "${descriptor_url}" > "${tmp_descriptor}" || {
+            printStyled error "Unable to download descriptor"
+            printStyled error "→ url: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
 
         # Get archive url
-        parser_read "${descriptor_path}" module_url || {
-            printstyled error "[_module_download] Unable to parse descriptor"
+        parser_read "${tmp_descriptor}" module_url || {
+            printStyled error "Unable to parse descriptor"
             rm -f "$tmp_descriptor"
             return 1
         }
@@ -123,22 +125,22 @@ _module_download() {
         # Download module archive
         local tmp_archive="$(mktemp)"
         if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
-            printstyled error "[_module_download] Unable to download module archive"
-            printstyled error "→ url: ${module_url}"
+            printStyled error "Unable to download module archive"
+            printStyled error "→ url: ${module_url}"
             rm -f "$tmp_archive"
             return 1
         fi
 
         # Create target directory
-        mkdir -p "${MODULES_DIR}/${module}" || {
-            printStyled error "[_module_download] Failed to create module directory: ${MODULES_DIR}/${module}"
+        mkdir -p "${DIR_MODS}/${module}" || {
+            printStyled error "Failed to create module directory: ${DIR_MODS}/${module}"
             rm -f "$tmp_archive"
             return 1
         }
 
         # Extract archive to module directory
-        if ! tar -xzf "$tmp_archive" -C "${MODULES_DIR}/${module}"; then
-            printStyled error "[_module_download] Failed to extract archive: ${tmp_archive}"
+        if ! tar -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
+            printStyled error "Failed to extract archive: ${tmp_archive}"
             rm -f "$tmp_archive"
             return 1
         fi
@@ -148,17 +150,17 @@ _module_download() {
 
         # Check integrity
         _module_is_downloaded "${module}" || {
-            printstyled error "[_module_download] Unable to recognize module: ${module}"
+            printStyled error "Unable to recognize module: ${module}"
             return 1
         }
     fi
 
     # Download nested modules (recursive)
-    local config="${MODULES_DIR}/${module}/${CONFIG_FILE}"
+    local config="${DIR_MODS}/${module}/${CONFIG_FILE}"
     parser_read "${config}" modules
     for nested_module in "${BUFFER[@]}"; do
         _module_download "${nested_module}" || {
-            printstyled error "[_module_download] Unable to download nested modules for module: ${module}"
+            printStyled error "Unable to download nested modules for module: ${module}"
             return 1
         }
     done
@@ -172,7 +174,7 @@ _module_is_downloaded() {
 
     # Resolve paths
     local module="${1}"
-    local module_path="${MODULES_DIR}/${module}"
+    local module_path="${DIR_MODS}/${module}"
     local entry_point="${module_path}/${ENTRY_POINT}"
     local config_file="${module_path}/${CONFIG_FILE}"
 
@@ -188,19 +190,19 @@ _module_is_downloaded() {
 
 # PUBLIC - Source installed modules and activate their commands
 modules_load() {
-    local MODULES_ACTIV=()
 
-    # Reset modules value into $INSTALLED_TOOLS file
-    parser_reset "${INSTALLED_TOOLS}" modules
-
-    # Source installed modules
     local module
     for module in "${MODULES_INSTALLED[@]}"; do
-        source "${module}" && _module_get_commands "${module}" && MODULES_ACTIV+=("${module}")
+        source "${module}" || {
+            printStyled warning "Unable to load module: ${module}"
+            continue
+        }
+        _module_get_commands "${module}" || {
+            printStyled warning "Unable to fetch module commands: ${module}"
+            continue
+        }
+        MODULES_ACTIV+=("${module}")
     done
-
-    # Set modules value into $INSTALLED_TOOLS file
-    parser_write "${INSTALLED_TOOLS}" modules "${MODULES_ACTIV[@]}"
 }
 
 # PRIVATE - Extract dynamic commands from a module via get_commands
@@ -209,7 +211,7 @@ _module_get_commands() {
 
     # Argument check
     if [[ -z "$file" ]]; then
-        printStyled error "[_module_get_commands] Expected : <file> (received : $1)"
+        printStyled error "Expected : <file> (received : $1)"
         return 1
     fi
 
@@ -221,14 +223,14 @@ _module_get_commands() {
     # Capture and validate output
     local raw_output
     if ! raw_output="$(get_commands)"; then
-        printStyled error "[_module_get_commands] get_commands failed in ${file}"
+        printStyled error "get_commands failed in ${file}"
         return 1
     fi
 
     local cmd
     for cmd in ${(f)raw_output}; do
         if [[ "$cmd" != *=* ]]; then
-            printStyled warning "[_module_get_commands] Invalid command format: '$cmd' in ${file}"
+            printStyled warning "Invalid command format: '$cmd' in ${file}"
             printStyled highlight "Expected : 'command=function'"
             continue
         fi

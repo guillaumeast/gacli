@@ -24,28 +24,11 @@
 TODAY=""
 
 # Config
-CONFIG="${ROOT_DIR}/.data/config/update.config.yaml"
 INITIALIZED=""
 AUTO_UPDATE=""
 FREQ_DAYS=""
 LAST_UPDATE=""
 NEXT_UPDATE=""
-
-# Dependencies
-CORE_TOOLS="${ROOT_DIR}/.data/tools/core.tools.yaml"
-MODULES_TOOLS="${ROOT_DIR}/.data/tools/modules.tools.yaml"
-USER_TOOLS="${ROOT_DIR}/tools.yaml"
-DESCRIPTORS=("${CORE_TOOLS}" "${MODULES_TOOLS}" "${USER_TOOLS}")
-
-# Check paths (using check_path from gacli.zsh)
-_update_resolve() {
-    
-    local files=("${CONFIG}" "${DESCRIPTORS[@]}")
-    check_path file "${files[@]}" || {
-        printstyled error "[update] Unable to find required file: ${file}"
-        return 1
-    }
-}; _update_resolve
 
 # ────────────────────────────────────────────────────────────────
 # AUTO-UPDATE
@@ -53,32 +36,28 @@ _update_resolve() {
 
 # PUBLIC - Initialize config process and trigger auto-update if needed
 update_init() {
-    local tmp_brewfile=$(mktemp)
+    local tmp_brewfile="${DIR_TMP}/Brewfile"
 
     # Get config values
     _update_get_config || {
-        printstyled error "[update] Unable to load config"
-        rm -f "${tmp_brewfile}"
+        printStyled error "Unable to load config"
         return 1
     }
 
     # Merge dependencies
-    _update_merge_into "${tmp_brewfile}" || {
-        printstyled error "[update] Unable to merge dependencies"
+    update_merge_into "${tmp_brewfile}" || {
+        printStyled error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Run update if needed
     if [[ $(_update_is_reached) || $(_update_is_required "${tmp_brewfile}") ]]; then
-        _update_run "${tmp_brewfile}"
+        _update_run "${tmp_brewfile}" || printStyled warning "Unable to run update"
     fi
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
-
-    # Display next update status (date or "disabled")
-    _update_display_next
 }
 
 # PRIVATE - Check if the scheduled auto-update date is reached
@@ -89,7 +68,7 @@ _update_is_reached() {
 
     # Check if next_update is defined
     if [[ -z "$NEXT_UPDATE" || ! "$NEXT_UPDATE" =~ ^[0-9]+$ ]]; then
-        printStyled warning "[update] Unable to parse next update date → Auto-update disabled"
+        printStyled warning "Unable to parse next update date: '${NEXT_UPDATE}' \n    └→ Auto-update disabled"
         AUTO_UPDATE="false" && NEXT_UPDATE=""
         _update_set_config
         return 1
@@ -127,17 +106,17 @@ _update_is_required() {
 
 # PRIVATE - Run manual update by merging and applying all dependencies
 _update_manual() {
-    local tmp_brewfile=$(mktemp)
+    local tmp_brewfile="${DIR_TMP}/Brewfile"
 
     # Merge all dependencies
-    _update_merge_into "${tmp_brewfile}" || {
-        printstyled error "[update] Unable to merge dependencies"
+    update_merge_into "${tmp_brewfile}" || {
+        printStyled error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     _update_run "${tmp_brewfile}" || {
-        printstyled error "[update] Update failed"
+        printStyled error "Update failed"
         rm -f "${tmp_brewfile}"
         return 1
     }
@@ -149,15 +128,35 @@ update_merge_into() {
 
     # Download missing modules and merge modules dependencies
     modules_init || {
-        printstyled error "[update] Unable to init modules"
+        printStyled error "Unable to init modules"
         return 1
     }
 
-    for descriptor in $DESCRIPTORS; do
+    # Create output file if missing
+    touch "${output_brewfile}" || {
+        printStyled error "Unable to create merged Brewfile: ${output_brewfile}"
+        return 1
+    }
+
+    for descriptor in $FILES_TOOLS; do
+
+        # Formulae
         parser_read "${descriptor}" formulae || return 1
-        parser_write "${output_brewfile}" formulae "${BUFFER[@]}" || return 1
+        for formula in "${BUFFER[@]}"; do
+            [[ -z "${formula}" ]] && continue
+            parser_write "${output_brewfile}" formulae "${formula}" || {
+                printStyled warning "Unable to write formula: ${formula}"
+            }
+        done
+
+        # Casks
         parser_read "${descriptor}" casks || return 1
-        parser_write "${output_brewfile}" casks "${BUFFER[@]}" || return 1
+        for cask in "${BUFFER[@]}"; do
+            [[ -z "${cask}" ]] && continue
+            parser_write "${output_brewfile}" casks "${cask}" || {
+                printStyled warning "Unable to write cask: ${cask}"
+            }
+        done
     done
 }
 
@@ -165,13 +164,13 @@ update_merge_into() {
 _update_run() {
     local brewfile="${1}"
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
-    brew_update "${brewfile}" || return 1
+    brew_bundle "${brewfile}" || return 1
 
     # Update variables
     LAST_UPDATE="${TODAY}"
     if [[ $AUTO_UPDATE = true ]]; then
         if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
-            printStyled warning "[_update_manual] Failed to compute next update date"
+            printStyled warning "Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
@@ -196,26 +195,29 @@ _update_run() {
 _update_get_config() {
 
     # Read values from config file
-    parser_read "${CONFIG}" "initialized" || return 1
-    INITIALIZED="${BUFFER[1]}" || return 1
+    parser_read "${FILE_CONFIG_UPDATE}" "initialized" || return 1
+    INITIALIZED="${BUFFER}" || return 1
 
-    parser_read "${CONFIG}" "auto_update" || return 1
-    AUTO_UPDATE="${BUFFER[1]}" || return 1
+    parser_read "${FILE_CONFIG_UPDATE}" "auto_update" || return 1
+    AUTO_UPDATE="${BUFFER}" || return 1
 
-    parser_read "${CONFIG}" "last_update" || return 1
-    LAST_UPDATE="${BUFFER[1]}" || return 1
+    parser_read "${FILE_CONFIG_UPDATE}" "last_update" || return 1
+    LAST_UPDATE="${BUFFER}" || return 1
 
-    parser_read "${CONFIG}" "freq_days" || return 1
-    FREQ_DAYS="${BUFFER[1]}" || return 1
+    parser_read "${FILE_CONFIG_UPDATE}" "freq_days" || return 1
+    FREQ_DAYS="${BUFFER}" || return 1
 
-    parser_read "${CONFIG}" "next_update" || return 1
-    NEXT_UPDATE="${BUFFER[1]}" || return 1
+    parser_read "${FILE_CONFIG_UPDATE}" "next_update" || return 1
+    NEXT_UPDATE="${BUFFER}" || return 1
+
+    # Get current date
+    TODAY="$(time_get_current)" || return 1
 
     # Init config at first launch
-    [[ $INITIALIZED = "false" ]] && update_edit_config || return 1
-
-    # Get current date if auto-update is enabled
-    [[ $AUTO_UPDATE = "true" ]] && TODAY="$(time_get_current)" || return 1
+    if [[ $INITIALIZED != "true" ]]; then
+        update_edit_config || return 1
+        return 0
+    fi
 }
 
 # PUBLIC - Configure auto-update settings based on user input
@@ -230,7 +232,7 @@ update_edit_config() {
         NEXT_UPDATE=""
     else
         if ! NEXT_UPDATE="$(time_add_days "${TODAY}" "${FREQ_DAYS}")"; then
-            printStyled warning "[update_edit_config] Failed to compute next update date"
+            printStyled warning "Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
@@ -242,16 +244,18 @@ update_edit_config() {
     # Save
     INITIALIZED="true"
     _update_set_config || return 1
+    _update_display_next
+    echo ""
 }
 
 # PRIVATE - Save current update config values to config file
 _update_set_config() {
 
-    parser_write "${CONFIG}" "initialized" "${INITIALIZED}" || return 1
-    parser_write "${CONFIG}" "auto_update" "${AUTO_UPDATE}" || return 1
-    parser_write "${CONFIG}" "last_update" "${LAST_UPDATE}" || return 1
-    parser_write "${CONFIG}" "freq_days" "${FREQ_DAYS}" || return 1
-    parser_write "${CONFIG}" "next_update" "${NEXT_UPDATE}" || return 1
+    parser_write "${FILE_CONFIG_UPDATE}" "initialized" "${INITIALIZED}" || return 1
+    parser_write "${FILE_CONFIG_UPDATE}" "auto_update" "${AUTO_UPDATE}" || return 1
+    parser_write "${FILE_CONFIG_UPDATE}" "last_update" "${LAST_UPDATE}" || return 1
+    parser_write "${FILE_CONFIG_UPDATE}" "freq_days" "${FREQ_DAYS}" || return 1
+    parser_write "${FILE_CONFIG_UPDATE}" "next_update" "${NEXT_UPDATE}" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -260,16 +264,9 @@ _update_set_config() {
 
 # PRIVATE - Ask user for auto-update frequency (type safe)
 _update_ask_freq() {
-    # Welcome Message
-    print ""
-    print "👋 ${CYAN}Welcome to ${BOLD}${ORANGE}GACLI${NONE}${CYAN}, the CLI that makes your dev life easier!${NONE}"
-    print ""
-    print "${CYAN}Let’s start by choosing the ${BOLD}${ORANGE}update frequency${NONE}${CYAN},${NONE}"
-    print "${CYAN}then I’ll take care of installing all the tools you need${NONE} 💻✨"
-    print ""
 
-    # Question
     while true; do
+        echo ""
         print -n "👉 ${BOLD}How many days between each auto-update? (OFF = 0) ${NONE}"
         read -r FREQ_DAYS
 
