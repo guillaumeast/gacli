@@ -104,7 +104,7 @@ main() {
     download_gacli  || return 6
 
     echo ""
-    printStyled highlight "Installing GACLI dependencies...${EMOJI_WAIT}"
+    printStyled highlight "Installing GACLI dependencies... ${EMOJI_WAIT}"
     install_gacli_deps    || return 7
 
     echo ""

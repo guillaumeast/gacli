@@ -186,6 +186,7 @@ _gacli_dispatch() {
             print_modules
             print_core_commands
             print_mods_commands
+            echo ""
             ;;
         *)
             # Dynamic commands (declared via get_commands in modules)
@@ -205,6 +206,7 @@ _gacli_dispatch() {
             printStyled error "Unknown command '$1'" >&2
             modules_print_commands
             return 1
+            ;;
     esac
 }
 
@@ -286,23 +288,23 @@ printStyled() {
 # PUBLIC - Diplay tips
 help() {
     print ""
-    printStyled highlight "${ORANGE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
+    printStyled highlight "${COLOR_FORMULAE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
     print_formulae
 
     print ""
-    printStyled highlight "${CYAN}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
+    printStyled highlight "${COLOR_CASKS}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
     print_casks
 
     print ""
-    printStyled highlight "${GREEN}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
+    printStyled highlight "${COLOR_MODS}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
     print_modules
 
     print ""
-    printStyled highlight "${RED}Core commands${GREY}"
+    printStyled highlight "${COLOR_COMMANDS}Core commands${GREY}"
     print_core_commands
 
     print ""
-    printStyled highlight "${GREEN}Modules commands${GREY}"
+    printStyled highlight "${COLOR_COMMANDS}Modules commands${GREY}"
     print_mods_commands
     print ""
 }
@@ -355,16 +357,11 @@ print_casks() {
     for cask in "${BUFFER[@]}"; do
         local icon="${GREY}${ICON_OFF}${NONE}"
         brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_CASKS}$cask${GREY}|${NONE} "
+        output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
     done
 
-    # Display
-    if [[ -n "${output}" ]]; then
-        # Display (removing trailing " | ")
-        print "${output% ${GREY}|${NONE} }"
-    else
-        print "${GREY}${ICON_OFF} No cask installed → https://formulae.brew.sh/cask/ ${NONE}"
-    fi
+    # Display (removing trailing " | ")
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
@@ -381,13 +378,8 @@ print_modules() {
         output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
     done
     
-    # Display
-    if [[ -n "${output}" ]]; then
-        # Display (removing trailing " | ")
-        print "${output% ${GREY}|${NONE} }"
-    else
-        print "${GREY}${ICON_OFF} No module installed → https://github.com/guillaumeast/gacli ${NONE}"
-    fi
+    # Display (removing trailing " | ")
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 }
 
 # PUBLIC - Print available built-in GACLI core commands
@@ -409,7 +401,7 @@ print_mods_commands() {
         local command_name="${cmd%%=*}"
         output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
-    print "${output% ${GREY}|${NONE} }"
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 }
 
 # ────────────────────────────────────────────────────────────────
