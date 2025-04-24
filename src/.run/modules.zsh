@@ -28,7 +28,7 @@ MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads
 
 # Modules signature
 ENTRY_POINT="main.zsh"
-CONFIG_FILE="tools.yaml"
+CONFIG_FILE="tools.json"
 
 # Active modules and commands
 MODULES_INSTALLED=()
@@ -40,13 +40,14 @@ MODULES_ACTIV=()
 
 # PUBLIC - Download and merge all modules
 modules_init() {
+    local modules_raw=()
     local modules_to_check=()
     local merged_formulae=()
     local merged_casks=()
 
     # Reset merged file
-    parser_reset "${FILE_TOOLS_MODULES}" formulae || return 1
-    parser_reset "${FILE_TOOLS_MODULES}" casks || return 1
+    file_reset "${FILE_TOOLS_MODULES}" formulae || return 1
+    file_reset "${FILE_TOOLS_MODULES}" casks || return 1
 
     # Get modules list from $DIR_MODS
     setopt local_options nullglob # Avoid errors when DIR_MODS is empty
@@ -59,10 +60,10 @@ modules_init() {
     fi
 
     # Get modules list from $FILE_TOOLS_USER
-    parser_read "${FILE_TOOLS_USER}" modules || return 1
+    modules_raw+=("${(@f)$(file_read "${FILE_TOOLS_USER}" modules)}") || return 1
 
-    if [[ ${#BUFFER[@]} -gt 0 ]]; then
-        for module in "${BUFFER[@]}"; do
+    if [[ ${#modules_raw[@]} -gt 0 ]]; then
+        for module in "${modules_raw[@]}"; do
             [[ -z "$module" ]] && continue
             modules_to_check+=("${module}")
         done
@@ -72,25 +73,21 @@ modules_init() {
     [[ ${#modules_to_check[@]} = 0 ]] && return 0
 
     # Download modules
-    for module in $modules_to_check; do
+    for module in "${modules_to_check[@]}"; do
         # Download module and nested modules
         _module_download "${module}" || continue
 
-        # Merge formulae dependencies
-        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae || continue
-        merged_formulae+=("${BUFFER[@]}")
-
-        # Merge casks dependencies
-        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks || continue
-        merged_casks+=("${BUFFER[@]}")
+        # Merge dependencies
+        merged_formulae+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}") || continue
+        merged_casks+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}") || continue
     done
 
     # Save merged dependencies
-    parser_write "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
+    file_add "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
         printStyled error "Unable to merge modules dependencies"
         return 1
     }
-    parser_write "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
+    file_add "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
         printStyled error "Unable to merge modules dependencies"
         return 1
     }
@@ -99,11 +96,14 @@ modules_init() {
 # PRIVATE - Download and extract a module (recursively)
 _module_download() {
     local module="${1}"
+    local config=""
+    local nested_modules=()
 
     # Download module if needed
     if ! _module_is_downloaded "${module}"; then
-        local descriptor_url="${MODULES_LIB}/${module}.yaml"
-        local tmp_descriptor="${TMP_DIR}/${module}.yaml"
+        local descriptor_url="${MODULES_LIB}/${module}.json"
+        local tmp_descriptor="${TMP_DIR}/${module}.json"
+        local module_url=""
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
         curl "${descriptor_url}" > "${tmp_descriptor}" || {
@@ -114,13 +114,12 @@ _module_download() {
         }
 
         # Get archive url
-        parser_read "${tmp_descriptor}" module_url || {
+        module_url=$(file_read "${tmp_descriptor}" module_url) || {
             printStyled error "Unable to parse descriptor"
-            rm -f "$tmp_descriptor"
+            rm -f "${tmp_descriptor}"
             return 1
         }
-        local module_url="${BUFFER[1]}"
-        rm -f "$tmp_descriptor"
+        rm -f "${tmp_descriptor}"
 
         # Download module archive
         local tmp_archive="$(mktemp)"
@@ -156,11 +155,11 @@ _module_download() {
     fi
 
     # Download nested modules (recursive)
-    local config="${DIR_MODS}/${module}/${CONFIG_FILE}"
-    parser_read "${config}" modules
-    for nested_module in "${BUFFER[@]}"; do
+    config="${DIR_MODS}/${module}/${CONFIG_FILE}"
+    nested_modules+=("${(@f)$(file_read "${config}" modules)}")
+    for nested_module in "${nested_modules[@]}"; do
         _module_download "${nested_module}" || {
-            printStyled error "Unable to download nested modules for module: ${module}"
+            printStyled error "Unable to download nested module: ${nested_module}"
             return 1
         }
     done

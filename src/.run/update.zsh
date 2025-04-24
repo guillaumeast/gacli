@@ -83,17 +83,18 @@ _update_is_reached() {
 # PRIVATE - Check if any required dependency is missing in the system
 _update_is_required() {
     local brewfile="${1}"
-    local dependencie
+    local dependencies=()
+    local dependencie=""
 
     # Check if formulae are missing
-    parser_read "${brewfile}" formulae
-    for dependencie in "${BUFFER[@]}"; do
+    dependencies=("${(@f)$(file_read "${brewfile}" formulae)}")
+    for dependencie in "${dependencies[@]}"; do
         brew_is_f_active "${dependencie}" || return 0
     done
 
-    # Check if formulae are missing
-    parser_read "${brewfile}" casks
-    for dependencie in "${BUFFER[@]}"; do
+    # Check if casks are missing
+    dependencies=("${(@f)$(file_read "${brewfile}" casks)}")
+    for dependencie in "${dependencies[@]}"; do
         brew_is_c_active "${dependencie}" || return 0
     done
 
@@ -125,6 +126,8 @@ _update_manual() {
 # PUBLIC - Generate temporary merged Brewfile with all dependencies (core + modules + user)
 update_merge_into() {
     local output_brewfile="${1}"
+    local formulae=()
+    local casks=()
 
     # Download missing modules and merge modules dependencies
     modules_init || {
@@ -138,22 +141,22 @@ update_merge_into() {
         return 1
     }
 
-    for descriptor in $FILES_TOOLS; do
+    for descriptor in "${FILES_TOOLS[@]}"; do
 
         # Formulae
-        parser_read "${descriptor}" formulae || return 1
-        for formula in "${BUFFER[@]}"; do
+        formulae=("${(@f)$(file_read "${descriptor}" formulae)}") || return 1
+        for formula in "${formulae[@]}"; do
             [[ -z "${formula}" ]] && continue
-            parser_write "${output_brewfile}" formulae "${formula}" || {
+            file_add "${output_brewfile}" formulae "${formula}" || {
                 printStyled warning "Unable to write formula: ${formula}"
             }
         done
 
         # Casks
-        parser_read "${descriptor}" casks || return 1
-        for cask in "${BUFFER[@]}"; do
+        casks=("${(@f)$(file_read "${descriptor}" casks)}") || return 1
+        for cask in "${casks[@]}"; do
             [[ -z "${cask}" ]] && continue
-            parser_write "${output_brewfile}" casks "${cask}" || {
+            file_add "${output_brewfile}" casks "${cask}" || {
                 printStyled warning "Unable to write cask: ${cask}"
             }
         done
@@ -195,20 +198,11 @@ _update_run() {
 _update_get_config() {
 
     # Read values from config file
-    parser_read "${FILE_CONFIG_UPDATE}" "initialized" || return 1
-    INITIALIZED="${BUFFER}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "auto_update" || return 1
-    AUTO_UPDATE="${BUFFER}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "last_update" || return 1
-    LAST_UPDATE="${BUFFER}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "freq_days" || return 1
-    FREQ_DAYS="${BUFFER}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "next_update" || return 1
-    NEXT_UPDATE="${BUFFER}" || return 1
+    INITIALIZED="$(file_read "${FILE_CONFIG_UPDATE}" "initialized")" || return 1
+    AUTO_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "auto_update")" || return 1
+    LAST_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "last_update")" || return 1
+    FREQ_DAYS="$(file_read "${FILE_CONFIG_UPDATE}" "freq_days")" || return 1
+    NEXT_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "next_update")" || return 1
 
     # Get current date
     TODAY="$(time_get_current)" || return 1
@@ -251,11 +245,11 @@ update_edit_config() {
 # PRIVATE - Save current update config values to config file
 _update_set_config() {
 
-    parser_write "${FILE_CONFIG_UPDATE}" "initialized" "${INITIALIZED}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "auto_update" "${AUTO_UPDATE}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "last_update" "${LAST_UPDATE}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "freq_days" "${FREQ_DAYS}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "next_update" "${NEXT_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "initialized" "${INITIALIZED}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "auto_update" "${AUTO_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "last_update" "${LAST_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "freq_days" "${FREQ_DAYS}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "next_update" "${NEXT_UPDATE}" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────

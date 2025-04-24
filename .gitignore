@@ -1,12 +1,9 @@
 # Core
 .DS_Store
-.tmp
 
-# Ignore optional modules
-modules/*
-!modules/.core/
-!modules/.core/**
+# Ignore runtime content
+src/modules/*
+src/.tmp/
 
-# Temp
-tmp_ga
-
+# Ignore my personal temporary files
+tmp_ga/

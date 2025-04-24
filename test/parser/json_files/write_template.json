@@ -1,0 +1,7 @@
+{
+  "scalar_empty": "old value 1",
+  "scalar_value": "",
+  "list_reset": ["old value 2", "old value 3"],
+  "list_add": null,
+  "list_rm": ["old value 4", "old value 5", "old value 6", "old value 7"]
+}

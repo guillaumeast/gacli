@@ -1,0 +1,11 @@
+{
+  "formulae": [
+    "bash",
+    "zsh",
+    "curl",
+    "coreutils",
+    "yq",
+    "jq"
+  ],
+  "casks": []
+}

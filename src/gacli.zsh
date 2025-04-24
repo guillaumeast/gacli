@@ -50,13 +50,13 @@ DIR_TMP="${DIR_ROOT}/.tmp"
 DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_RUN}" "${DIR_MODS}" "${DIR_TMP}")
 
 # Config files
-FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.yaml"
+FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.json"
 FILES_CONFIG=("${FILE_CONFIG_UPDATE}")
 
 # Tools files
-FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.yaml"
-FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.yaml"
-FILE_TOOLS_USER="${DIR_ROOT}/tools.yaml"
+FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.json"
+FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.json"
+FILE_TOOLS_USER="${DIR_ROOT}/tools.json"
 FILES_TOOLS=("${FILE_TOOLS_CORE}" "${FILE_TOOLS_MODULES}" "${FILE_TOOLS_USER}")
 
 # Scripts files
@@ -72,9 +72,6 @@ SCRIPTS=( \
 # Available commands
 COMMANDS_CORE=("help=help" "config=update_edit_config" "update=update_manual" "uninstall=gacli_uninstall")
 COMMANDS_MODS=()
-
-# Buffer for cross-modules communication (kind of "stdinfo")
-BUFFER=()
 
 # Formatting
 BOLD="\033[1m"
@@ -117,7 +114,7 @@ main() {
 
     # Load core scripts
     local script
-    for script in $SCRIPTS; do
+    for script in "${SCRIPTS[@]}"; do
         if ! source "${script}"; then
             printStyled error "Unable to load required script: ${script}"
             abort "3" || return 1
@@ -160,7 +157,7 @@ _gacli_check_files() {
     local files=("${FILES_CONFIG[@]}" "${FILES_TOOLS[@]}")
 
     # Check directories integrity
-    for dir in $DIRS; do
+    for dir in "${DIRS[@]}"; do
         mkdir -p "${dir}" || {
             printStyled error "Unable to resolve dir: ${dir}"
             return 1
@@ -168,7 +165,7 @@ _gacli_check_files() {
     done
 
     # Check files integrity
-    for file in $files; do
+    for file in "${files[@]}"; do
         touch "${file}" || {
             printStyled error "Unable to resolve file: ${file}"
             return 1
@@ -252,11 +249,11 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         success)
@@ -273,7 +270,7 @@ printStyled() {
             ;;
         debug)
             color=$YELLOW
-            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${CYAN}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
+            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${YELLOW}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
             ;;
         *)
             color=$NONE
@@ -312,20 +309,22 @@ help() {
 # PUBLIC - Print installed status for all formulae defined in tools descriptors
 print_formulae() {
     local tmp_brewfile="${DIR_TMP}/Brewfile"
-    local formula output
+    local formula
+    local output
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
         rm -f "${tmp_brewfile}"
         return 1
     }
-    parser_read "${tmp_brewfile}" formulae || {
+    
+    formulae+=("${(@f)$(file_read "${tmp_brewfile}" formulae)}") || {
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Compute
-    for formula in "${BUFFER[@]}"; do
+    for formula in "${formulae[@]}"; do
         local icon="${GREY}${ICON_OFF}${NONE}"
         brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
@@ -341,20 +340,22 @@ print_formulae() {
 # PUBLIC - Print installed status for all casks defined in tools descriptors
 print_casks() {
     local tmp_brewfile="${DIR_TMP}/Brewfile"
-    local cask output
+    local casks=()
+    local cask=""
+    local output=""
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
         rm -f "${tmp_brewfile}"
         return 1
     }
-    parser_read "${tmp_brewfile}" casks || {
+    casks=("${(@f)$(file_read "${tmp_brewfile}" casks)}") || {
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Compute
-    for cask in "${BUFFER[@]}"; do
+    for cask in "${casks[@]}"; do
         local icon="${GREY}${ICON_OFF}${NONE}"
         brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
@@ -372,7 +373,7 @@ print_modules() {
     local output=""
     local icon
 
-    for module in $MODULES_INSTALLED; do
+    for module in "${MODULES_INSTALLED[@]}"; do
         icon="${GREY}${ICON_OFF}${NONE}"
         [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
@@ -386,7 +387,7 @@ print_modules() {
 print_core_commands() {
     local output
 
-    for cmd in $COMMANDS_CORE; do
+    for cmd in "${COMMANDS_CORE[@]}"; do
         local command_name="${cmd%%=*}"
         output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
@@ -397,7 +398,7 @@ print_core_commands() {
 print_mods_commands() {
     local output
 
-    for cmd in $COMMANDS_MODS; do
+    for cmd in "${COMMANDS_MODS[@]}"; do
         local command_name="${cmd%%=*}"
         output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done

@@ -371,7 +371,7 @@ download_gacli() {
     }
     mkdir -p "$DIR" || { printStyled error "Unable to create $DIR"; return 1; }
 
-    # Download
+    # Download → TODO: only download src folder !
     if curl -fsSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 >/dev/null 2>&1; then
         printStyled success "Downloaded"
         return 0

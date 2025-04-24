@@ -147,26 +147,24 @@ _brew_is_update_due() {
     }
 
     # Get formulae from $brewfile
-    parser_read "${brewfile}" "formulae" || {
+    formulae+=("${(@f)$(file_read "${brewfile}" "formulae")}") || {
         printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
-    formulae+=("${BUFFER[@]}")
 
     # Check each formula status
-    for formula in $formulae; do
+    for formula in "${formulae[@]}"; do
         brew_is_f_active "${formula}" || return 0
     done
 
     # Get casks from $brewfile
-    parser_read "${brewfile}" "casks" || {
+    casks+=("${(@f)$(file_read "${brewfile}" "casks")}") || {
         printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
-    formulae+=("${BUFFER[@]}")
 
     # Check each cask status
-    for cask in $casks; do
+    for cask in "${casks[@]}"; do
         brew_is_c_active "${cask}" || return 0
     done
 }

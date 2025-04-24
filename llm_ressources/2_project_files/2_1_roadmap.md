@@ -1,4 +1,6 @@
-# GACLI ROADMAP / TODO LIST 
+# GACLI ROADMAP / TODO LIST
+
+⚠️ All `.yaml` → `.json` (`yq` incompatible sur container `Linux`)
 
 ##  Version 1.1.0 → Final check before tests
 1. Vérifier la codebase globalement (structure, logique, problèmes bloquants...)
