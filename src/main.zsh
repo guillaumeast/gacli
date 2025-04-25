@@ -1,26 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/gacli.zsh
+# FICHIER /src/main.zsh
 ###############################
-
-# [GACLI CLI entry point]
-   #   - Loads core scripts and modules
-   #   - Checks system compatibility and file integrity
-   #   - Enables auto-update mechanism
-   #   - Dispatches commands from CLI
-
-   # Depends on:
-   #   - update.zsh         → handles auto-update and dependency merge
-   #   - modules.zsh        → loads external modules and tools
-   #   - brew.zsh           → checks Homebrew tools status
-   #   - uninstall.zsh      → provides uninstall logic
-
-   # Used by:
-   #   - install.zsh        → sets executable and sources it in shell
-   #   - wrapper (gacli)    → executes this script directly
-
-   # Note: Holds the `main` dispatcher and core system setup logic
-#
 
 # Easter egg display
 if [[ $1 == "" ]]; then
@@ -40,14 +21,14 @@ fi
 
 # Directories
 DIR_ROOT="${HOME}/.gacli"
-DIR_DATA="${DIR_ROOT}/.data"
+DIR_DATA="${DIR_ROOT}/data"
 DIR_CONFIG="${DIR_DATA}/config"
 DIR_TOOLS="${DIR_DATA}/tools"
-DIR_HELPERS="${DIR_ROOT}/.helpers"
-DIR_RUN="${DIR_ROOT}/.run"
+DIR_HELPERS="${DIR_ROOT}/helpers"
+DIR_LOGIC="${DIR_ROOT}/logic"
 DIR_MODS="${DIR_ROOT}/modules"
 DIR_TMP="${DIR_ROOT}/.tmp"
-DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_RUN}" "${DIR_MODS}" "${DIR_TMP}")
+DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_LOGIC}" "${DIR_MODS}" "${DIR_TMP}")
 
 # Config files
 FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.json"
@@ -56,17 +37,17 @@ FILES_CONFIG=("${FILE_CONFIG_UPDATE}")
 # Tools files
 FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.json"
 FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.json"
-FILE_TOOLS_USER="${DIR_ROOT}/tools.json"
+FILE_TOOLS_USER="${DIR_TOOLS}/user.tools.json"
 FILES_TOOLS=("${FILE_TOOLS_CORE}" "${FILE_TOOLS_MODULES}" "${FILE_TOOLS_USER}")
 
 # Scripts files
 SCRIPTS=( \
-    "${DIR_ROOT}/.helpers/time.zsh" \
-    "${DIR_ROOT}/.helpers/parser.zsh" \
-    "${DIR_ROOT}/.helpers/brew.zsh" \
-    "${DIR_ROOT}/.run/modules.zsh" \
-    "${DIR_ROOT}/.run/update.zsh" \
-    "${DIR_ROOT}/.auto-install/uninstall.zsh" \
+    "${DIR_ROOT}/helpers/time.zsh" \
+    "${DIR_ROOT}/helpers/parser.zsh" \
+    "${DIR_ROOT}/helpers/brew.zsh" \
+    "${DIR_ROOT}/logic/modules.zsh" \
+    "${DIR_ROOT}/logic/update.zsh" \
+    "${DIR_ROOT}/logic/uninstall.zsh" \
 )
 
 # Available commands

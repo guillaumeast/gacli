@@ -1,0 +1,9 @@
+{
+  "scalar_empty": "",
+  "scalar_value": "old value 1",
+  "list_0": null,
+  "list_1": ["old value 1"],
+  "list_2": ["old value 1", "old value 2"],
+  "list_3": ["old value 1", "old value 2", "old value 3"],
+  "list_4": ["old value 1", "old value 2", "old value 3", "old value 4"]
+}

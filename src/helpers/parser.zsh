@@ -1,9 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.helpers/parser.zsh
+# FICHIER /src/helpers/parser.zsh
 ###############################
-
-# TODO: find and replace old function names → parser_write | parser_reset | BUFFER
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -410,6 +408,10 @@ _brew_add() {
   esac
 
   if ! grep -qF "${line}" "${file}"; then
+    # Ensure newline at EOF before appending
+    [[ $(tail -c1 "${file}") != "" ]] && echo >> "${file}"
+
+    # Append value
     echo "${line}" >> "${file}" || {
       printStyled error "Failed to append line to ${file}"
       return 1
@@ -427,10 +429,10 @@ _brew_rm() {
   local pattern=""
   case "${key}" in
     formulae)
-      pattern="^brew \"${value}\"$"
+      pattern="^brew \"${value}\""
       ;;
     casks)
-      pattern="^cask \"${value}\"$"
+      pattern="^cask \"${value}\""
       ;;
     *)
       printStyled error "Unknown key for brewfile: '${key}'"

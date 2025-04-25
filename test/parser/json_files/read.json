@@ -1,9 +1,0 @@
-{
-  "scalar_empty": null,
-  "scalar_value": "value 1",
-  "list_empty": [],
-  "list_value": [
-    "value 2",
-    "value 3"
-  ]
-}

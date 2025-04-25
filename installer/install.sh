@@ -1,14 +1,17 @@
 #!/usr/bin/env sh
 ###############################
-# FICHIER /.auto-install/install.sh
+# FICHIER /src/.auto-install/install.sh
 ###############################
 
-# Run it automaticaly: ``
+# Run it automaticaly:
+# TODO: curl (local + Docker image with curl / wget + VM macOS)
 
 # Run it manually:
-    # docker run --name "test" -v "/Users/gui/Repos/docker/shared:/shared" -it "ubuntu" "sh"
-    # . ./shared/install.sh
-#
+# Move this file to your local shared folder (volume) then run:
+# docker run --rm -v "/Users/gui/Repos/docker/shared:/shared" -it ubuntu sh -c ". /shared/install.sh; exec zsh"
+
+# TODO: Télécharger uniquement le dossier "gacli/src" et le fichier "gacli/installer/Brewfile"
+# TODO: Après l'install → supprimer les fichiers "install.sh" et Brewfile
 
 # Options
 FORCE_MODE="false"
@@ -25,7 +28,7 @@ ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
 
 # GACLI paths
 DIR=".gacli"
-ENTRY_POINT="gacli.zsh"
+ENTRY_POINT="main.zsh"
 ZSHRC=".zshrc"
 
 # WRAPPER

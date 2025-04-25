@@ -1,0 +1,9 @@
+###############################
+# FICHIER /tests/unit/helpers/parser/Brewfile
+###############################
+
+# My comment
+
+brew "old formula 1"       # One comment
+
+brew "old formula 2"

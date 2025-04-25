@@ -11,12 +11,12 @@ brew "jq"           # JSON PARSER → Required by "yq"
 
 #!/usr/bin/env sh
 ###############################
-# FICHIER /.auto-install/install.sh
+# FICHIER /src/.auto-install/install.sh
 ###############################
 
-# Run it automaticaly: ``
+# Run it automaticaly: `` (TODO)
 
-# Run it manually:
+# Run it manually (TODO):
     # docker run --name "test" -v "/Users/gui/Repos/docker/shared:/shared" -it "ubuntu" "sh"
     # . ./shared/install.sh
 #
@@ -115,7 +115,7 @@ main() {
     download_gacli  || return 6
 
     echo ""
-    printStyled highlight "Installing GACLI dependencies...${EMOJI_WAIT}"
+    printStyled highlight "Installing GACLI dependencies... ${EMOJI_WAIT}"
     install_gacli_deps    || return 7
 
     echo ""
@@ -382,7 +382,7 @@ download_gacli() {
     }
     mkdir -p "$DIR" || { printStyled error "Unable to create $DIR"; return 1; }
 
-    # Download
+    # Download → TODO: only download src folder !
     if curl -fsSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 >/dev/null 2>&1; then
         printStyled success "Downloaded"
         return 0
@@ -477,22 +477,8 @@ main "$@"
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.auto-install/uninstall.zsh
+# FICHIER /src/.auto-install/uninstall.zsh
 ###############################
-
-# [GACLI uninstaller script]
-   #   - Deletes GACLI directory
-   #   - Removes PATH entry from .zshrc
-   #   - Deletes executable wrapper
-
-   # Depends on:
-   #   - gacli.zsh          → for styled outputs
-
-   # Used by:
-   #   - gacli.zsh          → triggered via `gacli uninstall`
-
-   # Note: Wrapper path and zshrc path must be resolved before calling
-#
 
 # Uninstall GACLI: remove all file and cleanup .zshrc
 gacli_uninstall() {
@@ -507,24 +493,24 @@ gacli_uninstall() {
     printStyled info "Updating .zshrc file... ⏳"
     if [[ -f "${zshrc_file}" ]]; then
         cp "${zshrc_file}" "${zshrc_file}.bak" || {
-            printStyled error "[gacli_uninstall] Failed to backup zshrc file"
+            printStyled error "Failed to backup zshrc file"
             return 1
         }
 
         # Remove all GACLI lines (header + source + alias)
         grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
-            printStyled error "[gacli_uninstall] Failed to parse zshrc file"
+            printStyled error "Failed to parse zshrc file"
             return 1
         }
 
 
         mv "${zshrc_file}.tmp" "$zshrc_file" || {
-            printStyled error "[gacli_uninstall] Failed to update zshrc file"
+            printStyled error "Failed to update zshrc file"
             return 1
         }
 
     else
-        printStyled warning "[gacli_uninstall] .zshrc file not found ($zshrc_file)"
+        printStyled warning ".zshrc file not found ($zshrc_file)"
     fi
     printStyled success "Updated"
 
@@ -534,7 +520,7 @@ gacli_uninstall() {
     local wrapper_path="${HOME}/.local/bin/gacli"
     if [[ -f "${wrapper_path}" ]]; then
         rm -f "${wrapper_path}" || {
-            printStyled warning "[gacli_uninstall] Failed to delete wrapper ${wrapper_path}"
+            printStyled warning "Failed to delete wrapper ${wrapper_path}"
         }
     fi
     printStyled success "Removed"
@@ -544,11 +530,11 @@ gacli_uninstall() {
     printStyled info "Deleting GACLI files... ⏳"
     if [[ -d "${GACLI_DIR}" ]]; then
         rm -rf "${GACLI_DIR}" || {
-            printStyled error "[gacli_uninstall] Failed to delete directory ${GACLI_DIR}"
+            printStyled error "Failed to delete directory ${GACLI_DIR}"
             return 1
         }
     else
-        printStyled error "[gacli_uninstall] Unable to find GACLI directory: ${GACLI_DIR}"
+        printStyled error "Unable to find GACLI directory: ${GACLI_DIR}"
         return 1
     fi
     printStyled success "Deleted"
@@ -560,96 +546,10 @@ gacli_uninstall() {
     print ""
 }
 
-###############################
-# FICHIER /.data/config/update.config.yaml
-###############################
-
-# [Auto-update config descriptor]
-   #   - Stores update status and timestamps
-   #   - Defines update frequency and toggle
-   #   - Used for auto-update scheduling
-
-   # Depends on:
-   #   - (none)             → pure data file
-
-   # Used by:
-   #   - update.zsh         → loads and saves update settings via `parser.zsh`
-
-   # Note: All read/write operations are delegated to parser.zsh
-#
-
-initialized: false
-auto_update: false
-last_update:
-freq_days:
-next_update:
-
-###############################
-# FICHIER /.data/tools/core.tools.yaml
-###############################
-
-# [Core dependencies descriptor]
-   #   - Lists core formulae required by GACLI
-   #   - Ensures cross-platform compatibility
-   #   - Defines minimal runtime requirements
-
-   # Depends on:
-   #   - (none)             → pure data file
-
-   # Used by:
-   #   - update.zsh         → merge this file with modules tools via `parser.zsh`
-
-   # Note: All read/write operations are delegated to parser.zsh
-#
-
-formulae:
-   - bash         # SHELL INTERPRETER → Required to run Homebrew
-   - zsh          # SHELL INTERPRETER → Required to run GACLI
-   - curl         # HTTP CLIENT → Required to donwload Homebrew and GACLI files
-   - coreutils    # CROSS-PLATFORM TOOLS → Required to run GACLI on macOS and Linux
-   - yq           # YAML PARSER → Required to parse GACLI config files
-   - jq           # JSON PARSER → Required by "yq"
-
-###############################
-# FICHIER /.data/tools/installed.tools.yaml
-###############################
-
-# [Merged modules dependencies descriptor]
-   #   - Aggregates formulae and casks from all modules
-   #   - Regenerated at each update or init phase
-   #   - Merged with core and user tools before install
-
-   # Depends on:
-   #   - (none)             → runtime-generated file
-
-   # Used by:
-   #   - update.zsh         → merged and written via `parser.zsh`
-   #   - modules.zsh        → regenerated via `parser.zsh`
-
-   # Note: All read/write operations are delegated to parser.zsh
-#
-
-
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.helpers/brew.zsh
+# FICHIER /src/.helpers/brew.zsh
 ###############################
-
-# [Homebrew tools manager]
-   #   - Checks if formulae and casks are active
-   #   - Runs brew bundle if needed
-   #   - Installs and configures Homebrew
-
-   # Depends on:
-   #   - parser.zsh         → reads Brewfile content
-   #   - gacli.zsh          → for styled outputs
-
-   # Used by:
-   #   - update.zsh         → updates dependencies from merged Brewfile
-   #   - modules.zsh        → installs tools required by modules
-
-   # Note: Triggers update only if missing tools are detected
-#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -659,7 +559,7 @@ formulae:
 brew_bundle() {
     local brewfile="${1}"
 
-    _brew_is_update_due || return 0
+    _brew_is_update_due "${1}" || return 0
 
     # Loading mesage
     print ""
@@ -667,24 +567,24 @@ brew_bundle() {
 
     # Update Homebrew
     if ! brew update  > /dev/null 2>&1; then
-        printStyled warning "[brew] Failed to update Homebrew"
+        printStyled warning "Failed to update Homebrew"
     fi
 
     # Install/uninstall formulae & casks referring to the Brewfile
     if ! brew bundle --file="${brewfile}" 1>/dev/null; then
-        printStyled error "[brew] Failed to run bundle Homebrew"
+        printStyled error "Failed to run bundle Homebrew"
         return 1
     fi
 
     # Upgrade
     if ! brew upgrade 1>/dev/null; then
-        printStyled error "[brew] Failed to upgrade Homebrew packages"
+        printStyled error "Failed to upgrade Homebrew packages"
         return 1
     fi
 
     # Cleanup
     if ! brew cleanup 1>/dev/null; then
-        printStyled warning "[brew] Failed to cleanup Homebrew packages"
+        printStyled warning "Failed to cleanup Homebrew packages"
     fi
 }
 
@@ -737,32 +637,32 @@ _brew_install() {
             install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
     else
-        printStyled error "[brew] Unsupported OS: ${OSTYPE}"
+        printStyled error "Unsupported OS: ${OSTYPE}"
         return 1
     fi
 
     # Execute install command
     if ! eval "$install_cmd"; then
-        printStyled error "[brew] Homebrew installation failed"
+        printStyled error "Homebrew installation failed"
         return 1
     fi
 
     # Add Homebrew to PATH
     local brew_exec_path
     if ! brew_exec_path="$(command -v brew)"; then
-        printStyled error "[brew] Failed to detect brew after installation"
+        printStyled error "Failed to detect brew after installation"
         return 1
     fi
 
     # Check if install is successful
     if ! eval "$("$brew_exec_path" shellenv)"; then
-        printStyled error "[brew] Failed to set Homebrew environment"
+        printStyled error "Failed to set Homebrew environment"
         return 1
     fi
 
     # Refresh command hash table
     if ! hash -r; then
-        printStyled warning "[brew] Failed to refresh shell hash table"
+        printStyled warning "Failed to refresh shell hash table"
     fi
 }
 
@@ -774,202 +674,258 @@ _brew_is_update_due() {
 
     # Arg check
     [[ -f "${brewfile}" ]] || {
-        printStyled error "[brew] Expected: <brewfile> (received: ${brewfile})"
+        printStyled error "Expected: <brewfile> (received: ${brewfile})"
         return 1
     }
 
     # Get formulae from $brewfile
-    parser_read "${brewfile}" "formulae" || {
-        printStyled error "[brew] Unable to read Brewfile: ${brewfile}"
+    formulae+=("${(@f)$(file_read "${brewfile}" "formulae")}") || {
+        printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
-    formulae+=("${BUFFER[@]}")
 
     # Check each formula status
-    for formula in $formulae; do
+    for formula in "${formulae[@]}"; do
         brew_is_f_active "${formula}" || return 0
     done
 
     # Get casks from $brewfile
-    parser_read "${brewfile}" "casks" || {
-        printStyled error "[brew] Unable to read Brewfile: ${brewfile}"
+    casks+=("${(@f)$(file_read "${brewfile}" "casks")}") || {
+        printStyled error "Unable to read Brewfile: ${brewfile}"
         return 1
     }
-    formulae+=("${BUFFER[@]}")
 
     # Check each cask status
-    for cask in $casks; do
+    for cask in "${casks[@]}"; do
         brew_is_c_active "${cask}" || return 0
     done
 }
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.helpers/parser.zsh
+# FICHIER /src/.helpers/parser.zsh
 ###############################
-
-# [File parser for tools/config]
-   #   - Reads/writes YAML, JSON and Brewfile formats
-   #   - Handles formulae, casks and modules values
-   #   - Resets values from descriptors
-   #   - Detects file type and applies correct tool
-
-   # Depends on:
-   #   - yq                 → YAML parsing
-   #   - jq                 → JSON parsing
-   #   - gacli.zsh          → for styled error output
-
-   # Used by:
-   #   - brew.zsh           → reads/writes Brewfile
-   #   - update.zsh         → manages config and dependencies
-   #   - modules.zsh        → parses tools.yaml in each module
-
-   # Note: Exposes unified `parser_read`, `parser_write`, `parser_reset` interface
-#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Universal reader: parser_read <file> <key>
-parser_read() {
-    local file="${1}"
-    local key="${2}"
+# PUBLIC - Read a scalar/list value from any file
+# file_read <file> <key>
+file_read() {
+  local file=$1
+  local key=$2
+  local extension=""
 
-    # Reset buffer value
-    BUFFER=()
+  # Check file integrity
+  if [[ ! -f $file ]]; then
+    printStyled error "Unable to find file: ${file}"
+    return 1
+  fi
 
-    # Check arguments
-    if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[parser_read] Expected: <file> <key> (received: \"${file}\" \"${key}\")"
-        return 1
-    fi
-    if [[ ! -f "${file}" ]]; then
-        printStyled error "[parser_read] Unable to find file: ${file}"
-        return 1
-    fi
+  # Check key intergity
+  if [[ -z $key ]]; then
+    printStyled error "Incorrect key: '${key}'"
+    return 1
+  fi
 
-    # Resolve extension
-    local extension="$(_get_extension "${file}")" || return 1
+  # Get extension
+  if ! extension=$(_get_extension $file); then
+    printStyled error "Unable to detect file format: ${file}"
+    return 1
+  fi
 
-    # Use corresponding processor
-    case "${extension}" in
-        yml|yaml)
-            BUFFER=("${(@f)$(yq e ".${key}" "${file}" 2>/dev/null)}") || return 1
-            printStyled debug "[YAML] Read '${file}' '${key}' → '${BUFFER}'"
-            return 0
-            ;;
-        json)
-            BUFFER=("${(@f)$(jq -r ".${key}" "${file}" 2>/dev/null)}") || return 1
-            printStyled debug "[JSON] Read '${file}' '${key}' → '${BUFFER}'"
-            return 0
-            ;;
-        brewfile)
-            _read_brew "${file}" "${key}" || return 1
-            printStyled debug "[BREW] Read '${file}' '${key}' → '${BUFFER}'"
-            return 0
-            ;;
-        *)
-            printStyled error "[parser_read] Unsupported file format: .${extension}"
-            return 1
-            ;;
-    esac
-
-    printStyled error "[parser_read] Failed to read key '${key}' in ${file}"
+  # Dispatch
+  case "$extension" in
+    json)
+      echo "$(_json_read "${file}" "${key}")" || return 1
+      ;;
+    brewfile)
+      echo "$(_brew_read "${file}" "${key}")" || return 1
+      ;;
+    *)
+      printStyled error "Format not supported: ${extension}"
+      return 1
+      ;;
+  esac
 }
 
-# Universal writer: parser_write <file> <key> <value>
-parser_write() {
-    local file="${1}"
-    local key="${2}"
-    local value="${3}"
+# PUBLIC - Write a scalar value into any file
+# file_write <file> <key> <value>
+file_write() {
+  local file=$1
+  local key=$2
+  local value=$3
+  local extension=""
 
-    # Check arguments
-    if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[parser_write] Expected: <file> <key> <value> (received: \"${1}\" \"${2}\" \"${3}\")"
-        return 1
-    fi
-    if [[ ! -f "${file}" ]]; then
-        printStyled error "[parser_write] Unable to find file: ${file}"
-        return 1
-    fi
+  # Check file integrity
+  if [[ ! -f $file ]]; then
+    printStyled error "Unable to find file: ${file}"
+    return 1
+  fi
 
-    # Resolve extension
-    local extension="$(_get_extension "${file}")" || return 1
+  # Check key intergity
+  if [[ -z $key ]]; then
+    printStyled error "Incorrect key: '${key}'"
+    return 1
+  fi
 
-    # Call the correct function depending on file format
-    case "${extension}" in
-        yml|yaml)
-            yq e ".${key} = \"${value}\"" -i "${file}" 2>/dev/null && return 0
-            ;;
-        json)
-            if ! jq ".${key} = \"${value}\"" "${file}" > "${file}.tmp" 2>/dev/null; then
-                printStyled error "[parser_write] Failed to write key '${key}' in ${file}"
-                return 1
-            fi
-            mv "${file}.tmp" "${file}" && return 0
-            ;;
-        brewfile)
-            _write_brew "${file}" "${key}" "${value}" && return 0
-            ;;
-        *)
-            printStyled error "[parser_write] Unsupported file format: .${extension}"; return 1
-            ;;
-    esac
+  # Get extension
+  if ! extension=$(_get_extension $file); then
+    printStyled error "Unable to detect file format: ${file}"
+    return 1
+  fi
 
-    printStyled error "[parser_write] Failed to write key '${key}' = ${value} in ${file}"
+  # Dispatch
+  case "$extension" in
+    json)
+      _json_write "${file}" "${key}" "${value}" || return 1
+      ;;
+    brewfile)
+      _brew_add "${file}" "${key}" "${value}" || return 1
+      ;;
+    *)
+      printStyled error "Format not supported: ${extension}"
+      return 1
+      ;;
+  esac
 }
 
-# Universal reset: parser_reset <file> <key>
-parser_reset() {
-    local file="${1}"
-    local key="${2}"
+# PUBLIC - Reset a list value into any file
+file_reset() {
+  local file=$1
+  local key=$2
+  local extension=""
 
-    # Check arguments
-    if [[ -z "${file}" || -z "${key}" ]]; then
-        printStyled error "[parser_reset] Expected: <file> <key> (received: \"${1}\" \"${2}\")"
-        return 1
-    fi
-    if [[ ! -f "${file}" ]]; then
-        printStyled error "[parser_reset] File not found: ${file}"
-        return 1
-    fi
+  # Check file integrity
+  if [[ ! -f $file ]]; then
+    printStyled error "Unable to find file: ${file}"
+    return 1
+  fi
 
-    # Resolve extension
-    local extension="$(_get_extension "${file}")" || return 1
+  # Check key intergity
+  if [[ -z $key ]]; then
+    printStyled error "Incorrect key: '${key}'"
+    return 1
+  fi
 
-    # Dispatch per type
-    case "${extension}" in
-        yml|yaml)
-            yq e "del(.${key})" -i "${file}" 2>/dev/null || {
-                printStyled error "[parser_reset] Failed to reset key '${key}' in ${file}"
-                return 1
-            }
-            ;;
-        json)
-            jq "del(.${key})" "${file}" > "${file}.tmp" && mv "${file}.tmp" "${file}" || {
-                printStyled error "[parser_reset] Failed to reset key '${key}' in ${file}"
-                return 1
-            }
-            ;;
-        brewfile)
-            _reset_brew "${file}" "${key}" || {
-                printStyled error "[parser_reset] Failed to reset key '${key}' in ${file}"
-                return 1
-            }
-            ;;
-        *)
-            printStyled error "[parser_reset] Unsupported file format: .${extension}"
-            return 1
-            ;;
-    esac
+  # Get extension
+  if ! extension=$(_get_extension $file); then
+    printStyled error "Unable to detect file format: ${file}"
+    return 1
+  fi
+
+  # Dispatch
+  case "$extension" in
+    json)
+      _json_reset "${file}" "${key}" || return 1
+      ;;
+    brewfile)
+      _brew_reset "${file}" "${key}" || return 1
+      ;;
+    *)
+      printStyled error "Format not supported: ${extension}"
+      return 1
+      ;;
+  esac
+}
+
+# PUBLIC - Add a list of values to a list into any file
+file_add() {
+  local file=$1
+  local key=$2
+  shift 2               # Remove the two first args
+  local values=("$@")   # Remaining args are the list of values to add
+  local extension=""
+
+  # Check file integrity
+  if [[ ! -f $file ]]; then
+    printStyled error "Unable to find file: ${file}"
+    return 1
+  fi
+
+  # Check key intergity
+  if [[ -z $key ]]; then
+    printStyled error "Incorrect key: '${key}'"
+    return 1
+  fi
+
+  # Get extension
+  if ! extension=$(_get_extension $file); then
+    printStyled error "Unable to detect file format: ${file}"
+    return 1
+  fi
+
+  # Dispatch
+  case "$extension" in
+    json)
+        for value in "${values[@]}"; do
+            _json_add "${file}" "${key}" "${value}" || return 1
+        done
+        ;;
+    brewfile)
+        for value in "${values[@]}"; do
+            _brew_add "${file}" "${key}" "${value}" || return 1
+        done
+        ;;
+    *)
+      printStyled error "Format not supported: ${extension}"
+      return 1
+      ;;
+  esac
+}
+
+# PUBLIC - Remove a list of values from a list into any file
+file_rm() {
+  local file=$1
+  local key=$2
+  shift 2               # Remove the two first args
+  local values=("$@")   # Remaining args are the list of values to add
+  local extension=""
+
+  # Check file integrity
+  if [[ ! -f $file ]]; then
+    printStyled error "Unable to find file: ${file}"
+    return 1
+  fi
+
+  # Check key intergity
+  if [[ -z $key ]]; then
+    printStyled error "Incorrect key: '${key}'"
+    return 1
+  fi
+
+  # Get extension
+  if ! extension=$(_get_extension $file); then
+    printStyled error "Unable to detect file format: ${file}"
+    return 1
+  fi
+
+  # Dispatch
+  case "$extension" in
+    json)
+        for value in "${values[@]}"; do
+            _json_rm "${file}" "${key}" "${value}" || return 1
+        done
+        ;;
+    brewfile)
+        for value in "${values[@]}"; do
+            _brew_rm "${file}" "${key}" "${value}" || return 1
+        done
+        ;;
+    *)
+      printStyled error "Format not supported: ${extension}"
+      return 1
+      ;;
+  esac
 }
 
 # ────────────────────────────────────────────────────────────────
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-# Return file extension in lowercase (special case for Brewfile)
+# PRIVATE - Return file extension in lowercase (special case for Brewfile)
+# __get_extension <file>
 _get_extension() {
     local file="${1}"
     local file_name="${file##*/}"
@@ -982,107 +938,222 @@ _get_extension() {
     echo "${extension:l}"
 }
 
-# Read values from a Brewfile (formulae or casks)
-_read_brew() {
-    local file="${1}"
-    local key="${2}"
+# ────────────────────────────────────────────────────────────────
+# JSON
+# ────────────────────────────────────────────────────────────────
 
-    case "${key}" in
-        formulae)
-            BUFFER=($(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null)) && return 0
-            ;;
-        casks)
-            BUFFER=($(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)) && return 0
-            ;;
-        *)
-            printStyled error "[parser_read_brew] Unknown key for brewfile: '${key}'"
-            return 1
-            ;;
-    esac
+# PRIVATE - Read scalar/list value from JSON file
+# _json_read <file> <key>
+_json_read() {
+  local file=$1
+  local key=$2
+  local output=()
+
+  # Check if the key exists
+  if ! jq -e "has(\"$key\")" "$file" >/dev/null; then
+    print "${RED}Error: key '${key}' does not exist in ${file}${NONE}" >&2
+    return 1
+  fi
+
+  # Get the value type
+  local type=$(jq -r ".${key} | type" "$file") || {
+    print "${RED}Error: unable to fetch key '${key}' type in ${file}${NONE}" >&2
+    return 1
+  }
+
+  case "$type" in
+    "null")
+      # Key exists but value is null → return empty string
+      echo $output
+      ;;
+    "string")
+      output=("${(Q)$(jq -r ".${key}" "$file")}")
+      echo $output
+      ;;
+    "array")
+      output=("${(@f)$(jq ".${key}[]" "$file")}")
+      echo $output
+      ;;
+    *)
+      print "${RED}Error: unsupported type '${type}' for key '${key}'${NONE}" >&2
+      echo $output
+      return 1
+      ;;
+  esac
 }
 
-# Write value to a Brewfile (append line if not already present)
-_write_brew() {
-    local file="${1}"
-    local key="${2}"
-    local value="${3}"
-    local line=""
+# PRIVATE - Write scalar value into JSON file
+# _json_write <file> <key> <value>
+_json_write() {
+  local file=$1
+  local key=$2
+  local value=$3
 
-    case "${key}" in
-        formula)
-            line="brew \"${value}\""
-            ;;
-        cask)
-            line="cask \"${value}\""
-            ;;
-        *)
-            printStyled error "[parser_write_brew] Unknown key for brewfile: '${key}'"
-            return 1
-            ;;
-    esac
-
-    if ! grep -qF "${line}" "${file}"; then
-        echo "${line}" >> "${file}" || {
-            printStyled error "[parser_write_brew] Failed to append line to ${file}"
-            return 1
-        }
-    fi
+  jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$file" > "${file}.tmp" || return 1
+  mv "${file}.tmp" "${file}" || return 1
 }
 
-# Reset values from a Brewfile (remove matching lines)
-_reset_brew() {
-    local file="${1}"
-    local key="${2}"
-    local tmp_file="$(mktemp)"
+# PRIVATE - Reset list value into JSON file
+# _json_reset <file> <key>
+_json_reset() {
+  local file=$1
+  local key=$2
 
-    case "${key}" in
-        formulae)
-            grep -v '^brew "' "${file}" > "${tmp_file}" || {
-                printStyled error "[parser_reset] Failed to clean formulae from ${file}"
-                rm -f "$tmp_file"
-                return 1
-            }
-            ;;
-        casks)
-            grep -v '^cask "' "${file}" > "${tmp_file}" || {
-                printStyled error "[parser_reset] Failed to clean casks from ${file}"
-                rm -f "$tmp_file"
-                return 1
-            }
-            ;;
-        *)
-            printStyled error "[parser] Unknown key for Brewfile: ${key}"
-            rm -f "$tmp_file"
-            return 1
-            ;;
-    esac
+  jq --arg key "$key" '.[$key] = null' "$file" > "${file}.tmp" || return 1
+  mv "${file}.tmp" "$file" || return 1
+}
 
-    mv "${tmp_file}" "${file}" || {
-        printStyled error "[parser] Failed to overwrite ${file}"
-        rm -f "$tmp_file"
-        return 1
+# PRIVATE - Add value to a list into JSON file
+# _json_add <file> <key> <value>
+_json_add() {
+  local file=$1
+  local key=$2
+  local value=$3
+
+  jq --arg key "$key" --arg value "$value" '.[$key] += [$value]' "$file" > "${file}.tmp" || return 1
+  mv "${file}.tmp" "$file" || return 1
+}
+
+# PRIVATE - Remove value from a list into JSON file
+# _json_rm <file> <key> <value>
+_json_rm() {
+  local file=$1
+  local key=$2
+  local value=$3
+
+  jq --arg key "$key" --arg value "$value" '.[$key] |= map(select(. != $value))' "$file" > "${file}.tmp" || return 1
+  mv "${file}.tmp" "$file" || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# Brewfile
+# ────────────────────────────────────────────────────────────────
+
+
+# PRIVATE - Read values from a Brewfile (formulae or casks)
+# _brew_read <file> <key>
+_brew_read() {
+  local file="${1}"
+  local key="${2}"
+  local output=()
+
+  case "${key}" in
+    formulae)
+      output=("${(@f)$(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      ;;
+    casks)
+      output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      ;;
+    *)
+      printStyled error "Unknown key for brewfile: '${key}'"
+      return 1
+      ;;
+  esac
+
+  echo $output
+}
+
+# PRIVATE - Reset list value into a Brewfile
+# _brew_reset <file> <key>
+_brew_reset() {
+  local file="${1}"
+  local key="${2}"
+  local tmp_file="$(mktemp)"
+
+  case "${key}" in
+      formulae)
+          grep -v '^brew "' "${file}" > "${tmp_file}" || {
+              printStyled error "Failed to clean formulae from ${file}"
+              rm -f "$tmp_file"
+              return 1
+          }
+          ;;
+      casks)
+          grep -v '^cask "' "${file}" > "${tmp_file}" || {
+              printStyled error "Failed to clean casks from ${file}"
+              rm -f "$tmp_file"
+              return 1
+          }
+          ;;
+      *)
+          printStyled error "Unknown key for Brewfile: ${key}"
+          rm -f "$tmp_file"
+          return 1
+          ;;
+  esac
+
+  mv "${tmp_file}" "${file}" || {
+    printStyled error "Failed to overwrite ${file}"
+    rm -f "$tmp_file"
+    return 1
+  }
+}
+
+# PRIVATE - Add value to a list into a Brewfile (append line if not already present)
+# _brew_add <file> <key> <value>
+_brew_add() {
+  local file="${1}"
+  local key="${2}"
+  local value="${3}"
+  local line=""
+
+  case "${key}" in
+    formulae)
+      line="brew \"${value}\""
+      ;;
+    casks)
+      line="cask \"${value}\""
+      ;;
+    *)
+      printStyled error "Unknown key for brewfile: '${key}'"
+      return 1
+      ;;
+  esac
+
+  if ! grep -qF "${line}" "${file}"; then
+    echo "${line}" >> "${file}" || {
+      printStyled error "Failed to append line to ${file}"
+      return 1
     }
+  fi
+}
+
+# PRIVATE - Remove value from a list into a Brewfile
+# _brew_rm <file> <key> <value>
+_brew_rm() {
+  local file=$1
+  local key=$2
+  local value=$3
+
+  local pattern=""
+  case "${key}" in
+    formulae)
+      pattern="^brew \"${value}\"$"
+      ;;
+    casks)
+      pattern="^cask \"${value}\"$"
+      ;;
+    *)
+      printStyled error "Unknown key for brewfile: '${key}'"
+      return 1
+      ;;
+  esac
+
+  grep -v "${pattern}" "$file" > "${file}.tmp" || {
+    printStyled error "Failed to remove line from ${file}"
+    return 1
+  }
+
+  mv "${file}.tmp" "${file}" || {
+    printStyled error "Failed to overwrite ${file} after removal"
+    return 1
+  }
 }
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.helpers/time.zsh
+# FICHIER /src/.helpers/time.zsh
 ###############################
-
-# [Cross-platform time utilities]
-   #   - Gets current timestamp
-   #   - Converts between human date and timestamp
-   #   - Adds days to a given timestamp
-
-   # Depends on:
-   #   - coreutils (gdate)  → ensures compatibility on macOS/Linux
-   #   - gacli.zsh          → for styled error output
-
-   # Used by:
-   #   - update.zsh         → computes next update date
-
-   # Note: Only supports YYYY-MM-DD format for human input/output
-#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -1092,7 +1163,7 @@ _reset_brew() {
 time_get_current() {
     local current_ts
     if ! current_ts="$(gdate +%s)"; then
-        printStyled error "[time] Failed to get current timestamp"
+        printStyled error "Failed to get current timestamp"
         return 1
     fi
     echo "${current_ts}"
@@ -1107,17 +1178,17 @@ time_add_days() {
 
     # Arguments checks
     if [[ -z "${start_ts}" || -z "${add}" ]]; then
-        printStyled error "[time] Expected : <start_ts> <add> (received : ${1} ${2})"
+        printStyled error "Expected : <start_ts> <add> (received : ${1} ${2})"
         return 1
     fi
     if ! [[ "${start_ts}" =~ ^[0-9]+$ && "${add}" =~ ^[0-9]+$ ]]; then
-        printStyled error "[time] Both arguments must be positive integers"
+        printStyled error "Both arguments must be positive integers"
         return 1
     fi
 
     # Dependency check
     if ! command -v gdate >/dev/null 2>&1; then
-        printStyled error "[time] Missing dependency: gdate (from coreutils)"
+        printStyled error "Missing dependency: gdate (from coreutils)"
         return 1
     fi
 
@@ -1129,12 +1200,12 @@ time_add_days() {
 time_to_human() {
     local ts="$1"
     if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
-        printStyled error "[time] Expected a timestamp (received: ${1})"
+        printStyled error "Expected a timestamp (received: ${1})"
         return 1
     fi
 
     if ! gdate -d "@$ts" "+%Y-%m-%d"; then
-        printStyled error "[time] Conversion failed"
+        printStyled error "Conversion failed"
         return 1
     fi
 }
@@ -1145,54 +1216,37 @@ time_from_human() {
 
     # Check format
     if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-        printStyled error "[time] Expected format: YYYY-MM-DD (received: ${1})"
+        printStyled error "Expected format: YYYY-MM-DD (received: ${1})"
         return 1
     fi
 
     # Dependency check
     if ! command -v gdate >/dev/null 2>&1; then
-        printStyled error "[time] Missing dependency: gdate (from coreutils)"
+        printStyled error "Missing dependency: gdate (from coreutils)"
         return 1
     fi
 
     # Convert
     if ! gdate -d "${date_str}" +%s; then
-        printStyled error "[time] Conversion failed"
+        printStyled error "Conversion failed"
         return 1
     fi
 }
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/core/modules.zsh
+# FICHIER /src/.run/modules.zsh
 ###############################
 
 # TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
 #   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
-
-# [Modules manager and loader]
-   #   - Downloads modules recursively
-   #   - Merges modules dependencies
-   #   - Loads and activates modules
-   #   - Registers dynamic CLI commands
-
-   # Depends on:
-   #   - parser.zsh         → reads and writes tools descriptors
-   #   - brew.zsh           → installs missing Homebrew dependencies
-
-   # Used by:
-   #   - gacli.zsh          → loads modules at startup
-   #   - update.zsh         → triggers modules refresh before updates
-
-   # Note: Handles module download conflicts and nested modules
-#
 
 # Github repo containing all available modules
 MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
 
 # Modules signature
 ENTRY_POINT="main.zsh"
-CONFIG_FILE="tools.yaml"
+CONFIG_FILE="tools.json"
 
 # Active modules and commands
 MODULES_INSTALLED=()
@@ -1204,13 +1258,14 @@ MODULES_ACTIV=()
 
 # PUBLIC - Download and merge all modules
 modules_init() {
+    local modules_raw=()
     local modules_to_check=()
     local merged_formulae=()
     local merged_casks=()
 
     # Reset merged file
-    parser_reset "${FILE_TOOLS_MODULES}" formulae || return 1
-    parser_reset "${FILE_TOOLS_MODULES}" casks || return 1
+    file_reset "${FILE_TOOLS_MODULES}" formulae || return 1
+    file_reset "${FILE_TOOLS_MODULES}" casks || return 1
 
     # Get modules list from $DIR_MODS
     setopt local_options nullglob # Avoid errors when DIR_MODS is empty
@@ -1223,10 +1278,10 @@ modules_init() {
     fi
 
     # Get modules list from $FILE_TOOLS_USER
-    parser_read "${FILE_TOOLS_USER}" modules || return 1
+    modules_raw+=("${(@f)$(file_read "${FILE_TOOLS_USER}" modules)}") || return 1
 
-    if [[ ${#BUFFER[@]} -gt 0 ]]; then
-        for module in "${BUFFER[@]}"; do
+    if [[ ${#modules_raw[@]} -gt 0 ]]; then
+        for module in "${modules_raw[@]}"; do
             [[ -z "$module" ]] && continue
             modules_to_check+=("${module}")
         done
@@ -1236,26 +1291,22 @@ modules_init() {
     [[ ${#modules_to_check[@]} = 0 ]] && return 0
 
     # Download modules
-    for module in $modules_to_check; do
+    for module in "${modules_to_check[@]}"; do
         # Download module and nested modules
         _module_download "${module}" || continue
 
-        # Merge formulae dependencies
-        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae || continue
-        merged_formulae+=("${BUFFER[@]}")
-
-        # Merge casks dependencies
-        parser_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks || continue
-        merged_casks+=("${BUFFER[@]}")
+        # Merge dependencies
+        merged_formulae+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}") || continue
+        merged_casks+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}") || continue
     done
 
     # Save merged dependencies
-    parser_write "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
-        printStyled error "[modules] Unable to merge modules dependencies"
+    file_add "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
+        printStyled error "Unable to merge modules dependencies"
         return 1
     }
-    parser_write "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
-        printStyled error "[modules] Unable to merge modules dependencies"
+    file_add "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
         return 1
     }
 }
@@ -1263,33 +1314,35 @@ modules_init() {
 # PRIVATE - Download and extract a module (recursively)
 _module_download() {
     local module="${1}"
+    local config=""
+    local nested_modules=()
 
     # Download module if needed
     if ! _module_is_downloaded "${module}"; then
-        local descriptor_url="${MODULES_LIB}/${module}.yaml"
-        local tmp_descriptor="${TMP_DIR}/${module}.yaml"
+        local descriptor_url="${MODULES_LIB}/${module}.json"
+        local tmp_descriptor="${TMP_DIR}/${module}.json"
+        local module_url=""
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
         curl "${descriptor_url}" > "${tmp_descriptor}" || {
-            printStyled error "[modules] Unable to download descriptor"
+            printStyled error "Unable to download descriptor"
             printStyled error "→ url: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
 
         # Get archive url
-        parser_read "${tmp_descriptor}" module_url || {
-            printStyled error "[modules] Unable to parse descriptor"
-            rm -f "$tmp_descriptor"
+        module_url=$(file_read "${tmp_descriptor}" module_url) || {
+            printStyled error "Unable to parse descriptor"
+            rm -f "${tmp_descriptor}"
             return 1
         }
-        local module_url="${BUFFER[1]}"
-        rm -f "$tmp_descriptor"
+        rm -f "${tmp_descriptor}"
 
         # Download module archive
         local tmp_archive="$(mktemp)"
         if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
-            printStyled error "[modules] Unable to download module archive"
+            printStyled error "Unable to download module archive"
             printStyled error "→ url: ${module_url}"
             rm -f "$tmp_archive"
             return 1
@@ -1297,14 +1350,14 @@ _module_download() {
 
         # Create target directory
         mkdir -p "${DIR_MODS}/${module}" || {
-            printStyled error "[modules] Failed to create module directory: ${DIR_MODS}/${module}"
+            printStyled error "Failed to create module directory: ${DIR_MODS}/${module}"
             rm -f "$tmp_archive"
             return 1
         }
 
         # Extract archive to module directory
         if ! tar -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
-            printStyled error "[modules] Failed to extract archive: ${tmp_archive}"
+            printStyled error "Failed to extract archive: ${tmp_archive}"
             rm -f "$tmp_archive"
             return 1
         fi
@@ -1314,17 +1367,17 @@ _module_download() {
 
         # Check integrity
         _module_is_downloaded "${module}" || {
-            printStyled error "[modules] Unable to recognize module: ${module}"
+            printStyled error "Unable to recognize module: ${module}"
             return 1
         }
     fi
 
     # Download nested modules (recursive)
-    local config="${DIR_MODS}/${module}/${CONFIG_FILE}"
-    parser_read "${config}" modules
-    for nested_module in "${BUFFER[@]}"; do
+    config="${DIR_MODS}/${module}/${CONFIG_FILE}"
+    nested_modules+=("${(@f)$(file_read "${config}" modules)}")
+    for nested_module in "${nested_modules[@]}"; do
         _module_download "${nested_module}" || {
-            printStyled error "[modules] Unable to download nested modules for module: ${module}"
+            printStyled error "Unable to download nested module: ${nested_module}"
             return 1
         }
     done
@@ -1375,7 +1428,7 @@ _module_get_commands() {
 
     # Argument check
     if [[ -z "$file" ]]; then
-        printStyled error "[modules] Expected : <file> (received : $1)"
+        printStyled error "Expected : <file> (received : $1)"
         return 1
     fi
 
@@ -1387,14 +1440,14 @@ _module_get_commands() {
     # Capture and validate output
     local raw_output
     if ! raw_output="$(get_commands)"; then
-        printStyled error "[modules] get_commands failed in ${file}"
+        printStyled error "get_commands failed in ${file}"
         return 1
     fi
 
     local cmd
     for cmd in ${(f)raw_output}; do
         if [[ "$cmd" != *=* ]]; then
-            printStyled warning "[modules] Invalid command format: '$cmd' in ${file}"
+            printStyled warning "Invalid command format: '$cmd' in ${file}"
             printStyled highlight "Expected : 'command=function'"
             continue
         fi
@@ -1406,26 +1459,8 @@ _module_get_commands() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/core/update.zsh
+# FICHIER /src/.run/update.zsh
 ###############################
-
-# [Auto-update and merge system]
-   #   - Loads and saves update config values
-   #   - Checks if update is required (date/tools)
-   #   - Merges tools from core, modules and user
-   #   - Runs Homebrew update and cleanup
-
-   # Depends on:
-   #   - time.zsh           → computes next update timestamps
-   #   - parser.zsh         → reads/writes config and tools files
-   #   - modules.zsh        → ensures modules and dependencies are loaded
-   #   - brew.zsh           → installs and updates Homebrew tools
-
-   # Used by:
-   #   - gacli.zsh          → triggers update check at launch
-
-   # Note: Includes both auto and manual update flows
-#
 
 TODAY=""
 
@@ -1446,27 +1481,24 @@ update_init() {
 
     # Get config values
     _update_get_config || {
-        printStyled error "[update] Unable to load config"
+        printStyled error "Unable to load config"
         return 1
     }
 
     # Merge dependencies
     update_merge_into "${tmp_brewfile}" || {
-        printStyled error "[update] Unable to merge dependencies"
+        printStyled error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Run update if needed
     if [[ $(_update_is_reached) || $(_update_is_required "${tmp_brewfile}") ]]; then
-        _update_run "${tmp_brewfile}" || printStyled warning "[update] Unable to run update"
+        _update_run "${tmp_brewfile}" || printStyled warning "Unable to run update"
     fi
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
-
-    # Display next update status (date or "disabled")
-    _update_display_next
 }
 
 # PRIVATE - Check if the scheduled auto-update date is reached
@@ -1477,7 +1509,7 @@ _update_is_reached() {
 
     # Check if next_update is defined
     if [[ -z "$NEXT_UPDATE" || ! "$NEXT_UPDATE" =~ ^[0-9]+$ ]]; then
-        printStyled warning "[update] Unable to parse next update date → Auto-update disabled"
+        printStyled warning "Unable to parse next update date: '${NEXT_UPDATE}' \n    └→ Auto-update disabled"
         AUTO_UPDATE="false" && NEXT_UPDATE=""
         _update_set_config
         return 1
@@ -1492,17 +1524,18 @@ _update_is_reached() {
 # PRIVATE - Check if any required dependency is missing in the system
 _update_is_required() {
     local brewfile="${1}"
-    local dependencie
+    local dependencies=()
+    local dependencie=""
 
     # Check if formulae are missing
-    parser_read "${brewfile}" formulae
-    for dependencie in "${BUFFER[@]}"; do
+    dependencies=("${(@f)$(file_read "${brewfile}" formulae)}")
+    for dependencie in "${dependencies[@]}"; do
         brew_is_f_active "${dependencie}" || return 0
     done
 
-    # Check if formulae are missing
-    parser_read "${brewfile}" casks
-    for dependencie in "${BUFFER[@]}"; do
+    # Check if casks are missing
+    dependencies=("${(@f)$(file_read "${brewfile}" casks)}")
+    for dependencie in "${dependencies[@]}"; do
         brew_is_c_active "${dependencie}" || return 0
     done
 
@@ -1519,13 +1552,13 @@ _update_manual() {
 
     # Merge all dependencies
     update_merge_into "${tmp_brewfile}" || {
-        printStyled error "[update] Unable to merge dependencies"
+        printStyled error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     _update_run "${tmp_brewfile}" || {
-        printStyled error "[update] Update failed"
+        printStyled error "Update failed"
         rm -f "${tmp_brewfile}"
         return 1
     }
@@ -1534,24 +1567,40 @@ _update_manual() {
 # PUBLIC - Generate temporary merged Brewfile with all dependencies (core + modules + user)
 update_merge_into() {
     local output_brewfile="${1}"
+    local formulae=()
+    local casks=()
 
     # Download missing modules and merge modules dependencies
     modules_init || {
-        printStyled error "[update] Unable to init modules"
+        printStyled error "Unable to init modules"
         return 1
     }
 
     # Create output file if missing
     touch "${output_brewfile}" || {
-        printStyled error "[update] Unable to create merged Brewfile: ${output_brewfile}"
+        printStyled error "Unable to create merged Brewfile: ${output_brewfile}"
         return 1
     }
 
-    for descriptor in $FILES_TOOLS; do
-        parser_read "${descriptor}" formulae || return 1
-        parser_write "${output_brewfile}" formulae "${BUFFER[@]}" || return 1
-        parser_read "${descriptor}" casks || return 1
-        parser_write "${output_brewfile}" casks "${BUFFER[@]}" || return 1
+    for descriptor in "${FILES_TOOLS[@]}"; do
+
+        # Formulae
+        formulae=("${(@f)$(file_read "${descriptor}" formulae)}") || return 1
+        for formula in "${formulae[@]}"; do
+            [[ -z "${formula}" ]] && continue
+            file_add "${output_brewfile}" formulae "${formula}" || {
+                printStyled warning "Unable to write formula: ${formula}"
+            }
+        done
+
+        # Casks
+        casks=("${(@f)$(file_read "${descriptor}" casks)}") || return 1
+        for cask in "${casks[@]}"; do
+            [[ -z "${cask}" ]] && continue
+            file_add "${output_brewfile}" casks "${cask}" || {
+                printStyled warning "Unable to write cask: ${cask}"
+            }
+        done
     done
 }
 
@@ -1559,13 +1608,13 @@ update_merge_into() {
 _update_run() {
     local brewfile="${1}"
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
-    brew_update "${brewfile}" || return 1
+    brew_bundle "${brewfile}" || return 1
 
     # Update variables
     LAST_UPDATE="${TODAY}"
     if [[ $AUTO_UPDATE = true ]]; then
         if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
-            printStyled warning "[update] Failed to compute next update date"
+            printStyled warning "Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
@@ -1590,26 +1639,17 @@ _update_run() {
 _update_get_config() {
 
     # Read values from config file
-    parser_read "${FILE_CONFIG_UPDATE}" "initialized" || return 1
-    INITIALIZED="${BUFFER[1]}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "auto_update" || return 1
-    AUTO_UPDATE="${BUFFER[1]}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "last_update" || return 1
-    LAST_UPDATE="${BUFFER[1]}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "freq_days" || return 1
-    FREQ_DAYS="${BUFFER[1]}" || return 1
-
-    parser_read "${FILE_CONFIG_UPDATE}" "next_update" || return 1
-    NEXT_UPDATE="${BUFFER[1]}" || return 1
+    INITIALIZED="$(file_read "${FILE_CONFIG_UPDATE}" "initialized")" || return 1
+    AUTO_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "auto_update")" || return 1
+    LAST_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "last_update")" || return 1
+    FREQ_DAYS="$(file_read "${FILE_CONFIG_UPDATE}" "freq_days")" || return 1
+    NEXT_UPDATE="$(file_read "${FILE_CONFIG_UPDATE}" "next_update")" || return 1
 
     # Get current date
     TODAY="$(time_get_current)" || return 1
 
     # Init config at first launch
-    if [[ $INITIALIZED = "false" ]]; then
+    if [[ $INITIALIZED != "true" ]]; then
         update_edit_config || return 1
         return 0
     fi
@@ -1627,7 +1667,7 @@ update_edit_config() {
         NEXT_UPDATE=""
     else
         if ! NEXT_UPDATE="$(time_add_days "${TODAY}" "${FREQ_DAYS}")"; then
-            printStyled warning "[update] Failed to compute next update date"
+            printStyled warning "Failed to compute next update date"
             printStyled warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
@@ -1639,16 +1679,18 @@ update_edit_config() {
     # Save
     INITIALIZED="true"
     _update_set_config || return 1
+    _update_display_next
+    echo ""
 }
 
 # PRIVATE - Save current update config values to config file
 _update_set_config() {
 
-    parser_write "${FILE_CONFIG_UPDATE}" "initialized" "${INITIALIZED}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "auto_update" "${AUTO_UPDATE}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "last_update" "${LAST_UPDATE}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "freq_days" "${FREQ_DAYS}" || return 1
-    parser_write "${FILE_CONFIG_UPDATE}" "next_update" "${NEXT_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "initialized" "${INITIALIZED}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "auto_update" "${AUTO_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "last_update" "${LAST_UPDATE}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "freq_days" "${FREQ_DAYS}" || return 1
+    file_write "${FILE_CONFIG_UPDATE}" "next_update" "${NEXT_UPDATE}" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -1657,16 +1699,9 @@ _update_set_config() {
 
 # PRIVATE - Ask user for auto-update frequency (type safe)
 _update_ask_freq() {
-    # Welcome Message
-    print ""
-    print "👋 ${CYAN}Welcome to ${BOLD}${ORANGE}GACLI${NONE}${CYAN}, the CLI that makes your dev life easier!${NONE}"
-    print ""
-    print "${CYAN}Let’s start by choosing the ${BOLD}${ORANGE}update frequency${NONE}${CYAN},${NONE}"
-    print "${CYAN}then I’ll take care of installing all the tools you need${NONE} 💻✨"
-    print ""
 
-    # Question
     while true; do
+        echo ""
         print -n "👉 ${BOLD}How many days between each auto-update? (OFF = 0) ${NONE}"
         read -r FREQ_DAYS
 
@@ -1691,27 +1726,8 @@ _update_display_next() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/gacli.zsh
+# FICHIER /src/gacli.zsh
 ###############################
-
-# [GACLI CLI entry point]
-   #   - Loads core scripts and modules
-   #   - Checks system compatibility and file integrity
-   #   - Enables auto-update mechanism
-   #   - Dispatches commands from CLI
-
-   # Depends on:
-   #   - update.zsh         → handles auto-update and dependency merge
-   #   - modules.zsh        → loads external modules and tools
-   #   - brew.zsh           → checks Homebrew tools status
-   #   - uninstall.zsh      → provides uninstall logic
-
-   # Used by:
-   #   - install.zsh        → sets executable and sources it in shell
-   #   - wrapper (gacli)    → executes this script directly
-
-   # Note: Holds the `main` dispatcher and core system setup logic
-#
 
 # Easter egg display
 if [[ $1 == "" ]]; then
@@ -1741,13 +1757,13 @@ DIR_TMP="${DIR_ROOT}/.tmp"
 DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_RUN}" "${DIR_MODS}" "${DIR_TMP}")
 
 # Config files
-FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.yaml"
+FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.json"
 FILES_CONFIG=("${FILE_CONFIG_UPDATE}")
 
 # Tools files
-FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.yaml"
-FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.yaml"
-FILE_TOOLS_USER="${DIR_ROOT}/tools.yaml"
+FILE_TOOLS_CORE="${DIR_TOOLS}/core.tools.json"
+FILE_TOOLS_MODULES="${DIR_TOOLS}/modules.tools.json"
+FILE_TOOLS_USER="${DIR_TOOLS}/user.tools.json"
 FILES_TOOLS=("${FILE_TOOLS_CORE}" "${FILE_TOOLS_MODULES}" "${FILE_TOOLS_USER}")
 
 # Scripts files
@@ -1764,9 +1780,6 @@ SCRIPTS=( \
 COMMANDS_CORE=("help=help" "config=update_edit_config" "update=update_manual" "uninstall=gacli_uninstall")
 COMMANDS_MODS=()
 
-# Buffer for cross-modules communication (kind of "stdinfo")
-BUFFER=()
-
 # Formatting
 BOLD="\033[1m"
 UNDERLINE="\033[4m"
@@ -1780,6 +1793,10 @@ CYAN='\033[36m'
 ORANGE='\033[38;5;208m'
 GREY='\033[90m'
 NONE='\033[0m'
+COLOR_FORMULAE="${BLUE}"
+COLOR_CASKS="${CYAN}"
+COLOR_MODS="${PURPLE}"
+COLOR_COMMANDS="${ORANGE}"
 
 # Emojis
 EMOJI_SUCCESS="✦"
@@ -1789,8 +1806,8 @@ EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
 EMOJI_WAIT="⏳"
-ICON_ON="${GREEN}⊙${NONE}"
-ICON_OFF="${RED}○${NONE}"
+ICON_ON="⊙"
+ICON_OFF="○"
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -1804,9 +1821,9 @@ main() {
 
     # Load core scripts
     local script
-    for script in $SCRIPTS; do
+    for script in "${SCRIPTS[@]}"; do
         if ! source "${script}"; then
-            printStyled error "[gacli] Unable to load required script: ${script}"
+            printStyled error "Unable to load required script: ${script}"
             abort "3" || return 1
         fi
     done
@@ -1827,7 +1844,7 @@ main() {
 # PRIVATE - Detect the operating system and set the corresponding flags
 _gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
-        printStyled error "[gacli] \$OSTYPE is not set" >&2
+        printStyled error "\$OSTYPE is not set" >&2
         return 1
     fi
 
@@ -1835,7 +1852,7 @@ _gacli_check_system() {
         darwin*) IS_MACOS=true ;;
         linux*)  IS_LINUX=true ;;
         *)
-            printStyled error "[gacli] Unknown OS type: $OSTYPE" >&2
+            printStyled error "Unknown OS type: $OSTYPE" >&2
             return 1
             ;;
     esac
@@ -1847,17 +1864,17 @@ _gacli_check_files() {
     local files=("${FILES_CONFIG[@]}" "${FILES_TOOLS[@]}")
 
     # Check directories integrity
-    for dir in $DIRS; do
+    for dir in "${DIRS[@]}"; do
         mkdir -p "${dir}" || {
-            printStyled error "[gacli] Unable to resolve dir: ${dir}"
+            printStyled error "Unable to resolve dir: ${dir}"
             return 1
         }
     done
 
     # Check files integrity
-    for file in $files; do
+    for file in "${files[@]}"; do
         touch "${file}" || {
-            printStyled error "[gacli] Unable to resolve file: ${file}"
+            printStyled error "Unable to resolve file: ${file}"
             return 1
         }
     done
@@ -1873,11 +1890,12 @@ _gacli_dispatch() {
             print_modules
             print_core_commands
             print_mods_commands
-            print ""
+            echo ""
             ;;
         *)
             # Dynamic commands (declared via get_commands in modules)
-            for cmd in "${COMMANDS_MODS[@]}"; do
+            local commands=("${COMMANDS_CORE[@]}" "${COMMANDS_MODS[@]}")
+            for cmd in "${commands[@]}"; do
                 local command_name="${cmd%%=*}"
                 local function_name="${cmd#*=}"
 
@@ -1889,9 +1907,10 @@ _gacli_dispatch() {
             done
 
             # No command matched
-            printStyled error "[GACLI] Error: unknown command '$1'" >&2
+            printStyled error "Unknown command '$1'" >&2
             modules_print_commands
             return 1
+            ;;
     esac
 }
 
@@ -1937,28 +1956,28 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}❌ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}⚠️  ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
             return
             ;;
         success)
             color=$GREEN
-            final_message="✦ ${raw_message}"
+            final_message="${EMOJI_SUCCESS} ${raw_message}"
             ;;
         info)
             color=$GREY
-            final_message="✧ ${raw_message}"
+            final_message="${EMOJI_INFO} ${raw_message}"
             ;;
         highlight)
             color=$NONE
-            final_message="👉 ${raw_message}"
+            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
             ;;
         debug)
             color=$YELLOW
-            final_message="🔦 ${BOLD}${raw_message}${NONE}"
+            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${YELLOW}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
             ;;
         *)
             color=$NONE
@@ -1973,23 +1992,23 @@ printStyled() {
 # PUBLIC - Diplay tips
 help() {
     print ""
-    printStyled highlight "Formulaes: (more info: https://formulae.brew.sh/formula)"
+    printStyled highlight "${COLOR_FORMULAE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
     print_formulae
 
     print ""
-    printStyled highlight "Casks: (more info: https://formulae.brew.sh/cask/)"
+    printStyled highlight "${COLOR_CASKS}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
     print_casks
 
     print ""
-    printStyled highlight "Modules: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${COLOR_MODS}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
     print_modules
 
     print ""
-    printStyled highlight "Core commands: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${COLOR_COMMANDS}Core commands${GREY}"
     print_core_commands
 
     print ""
-    printStyled highlight "Modules commands: (more info: https://github.com/guillaumeast/gacli)"
+    printStyled highlight "${COLOR_COMMANDS}Modules commands${GREY}"
     print_mods_commands
     print ""
 }
@@ -1997,23 +2016,25 @@ help() {
 # PUBLIC - Print installed status for all formulae defined in tools descriptors
 print_formulae() {
     local tmp_brewfile="${DIR_TMP}/Brewfile"
-    local formula output
+    local formula
+    local output
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
         rm -f "${tmp_brewfile}"
         return 1
     }
-    parser_read "${tmp_brewfile}" formulae || {
+    
+    formulae+=("${(@f)$(file_read "${tmp_brewfile}" formulae)}") || {
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Compute
-    for formula in "${BUFFER[@]}"; do
-        local icon="${ICON_OFF}"
-        brew_is_f_active "${formula}" && icon="${ICON_ON}"
-        output+="${icon} ${ORANGE}$formula${GREY}|${NONE} "
+    for formula in "${formulae[@]}"; do
+        local icon="${GREY}${ICON_OFF}${NONE}"
+        brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
@@ -2026,27 +2047,29 @@ print_formulae() {
 # PUBLIC - Print installed status for all casks defined in tools descriptors
 print_casks() {
     local tmp_brewfile="${DIR_TMP}/Brewfile"
-    local cask output
+    local casks=()
+    local cask=""
+    local output=""
 
     # Get merged casks
     update_merge_into "${tmp_brewfile}" || {
         rm -f "${tmp_brewfile}"
         return 1
     }
-    parser_read "${tmp_brewfile}" casks || {
+    casks=("${(@f)$(file_read "${tmp_brewfile}" casks)}") || {
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Compute
-    for cask in "${BUFFER[@]}"; do
-        local icon="${ICON_OFF}"
-        brew_is_c_active "${cask}" && icon="${ICON_ON}"
-        output+="${icon} ${CYAN}$cask${GREY}|${NONE} "
+    for cask in "${casks[@]}"; do
+        local icon="${GREY}${ICON_OFF}${NONE}"
+        brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
@@ -2057,21 +2080,23 @@ print_modules() {
     local output=""
     local icon
 
-    for module in $MODULES_INSTALLED; do
-        icon="${ICON_OFF}"
-        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${ICON_ON}"
-        output+="${icon} ${GREEN}${module}${NONE} ${GREY}|${NONE} "
+    for module in "${MODULES_INSTALLED[@]}"; do
+        icon="${GREY}${ICON_OFF}${NONE}"
+        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
+        output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
     done
-    print "${output% ${GREY}|${NONE} }"
+    
+    # Display (removing trailing " | ")
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 }
 
 # PUBLIC - Print available built-in GACLI core commands
 print_core_commands() {
     local output
 
-    for cmd in $COMMANDS_CORE; do
+    for cmd in "${COMMANDS_CORE[@]}"; do
         local command_name="${cmd%%=*}"
-        output+="${ICON_ON} ${RED}${command_name} ${GREY}|${NONE} "
+        output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
     print "${output% ${GREY}|${NONE} }"
 }
@@ -2080,11 +2105,11 @@ print_core_commands() {
 print_mods_commands() {
     local output
 
-    for cmd in $COMMANDS_MODS; do
+    for cmd in "${COMMANDS_MODS[@]}"; do
         local command_name="${cmd%%=*}"
-        output+="${ICON_ON} ${GREEN}${command_name} ${GREY}|${NONE} "
+        output+="${GREEN}${ICON_ON} ${COLOR_COMMANDS}${command_name} ${GREY}|${NONE} "
     done
-    print "${output% ${GREY}|${NONE} }"
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -2094,30 +2119,245 @@ print_mods_commands() {
 # Call main with all command args
 main "$@"
 
+#!/usr/bin/env zsh
 ###############################
-# FICHIER /tools.yaml
+# FICHIER /test/parser/test_parser.zsh
 ###############################
+
+# Input and Output
+PARSER="/Users/gui/Repos/gacli/gacli/src/.helpers/parser.zsh"
+
+# JSON files
+D_JSON="/Users/gui/Repos/gacli/gacli/test/parser/json_files"
+F_JSON_READ="${D_JSON}/read.json"
+F_JSON_WRITE_TEMPLATE="${D_JSON}/write_template.json"
+F_JSON_WRITE_TO="${D_JSON}/write_to.json"
+
+# Brewfile files
+D_BREW="/Users/gui/Repos/gacli/gacli/test/parser/brewfiles"
+F_BREW_READ="${D_BREW}/read.Brewfile"
+F_BREW_WRITE_TEMPLATE="${D_BREW}/write_template.Brewfile"
+F_BREW_WRITE_TO="${D_BREW}/write_to.Brewfile"
+
+# Results
+TOTAL=0
+SUCCESS=0
+FAILED=0
 
 # ────────────────────────────────────────────────────────────────
-# Your custom tools ✨
+# Source scripts to test
 # ────────────────────────────────────────────────────────────────
 
-# How does it work?
-# 1. Add or remove any formula, cask or module below
-# 2. Save the file
-# 3. Run `gacli update` to apply changes
+# Source scripts to test
+source "${PARSER}"
 
-# Tip 💡 You can also use:
-#   - `gacli add-form <formula>` / `gacli rm-form <formula>`
-#   - `gacli add-cask <cask>`   / `gacli rm-cask <cask>`
-#   - `gacli add-mod <module>` / `gacli rm-mod <module>`
+test_parser() {
+  print_section "Testing JSON parser..."
+  test_json
 
-formulae:
-  # List your custom HOMEBREW FORMULAE here
+  print_section "Testing Brewfile parser..."
+  test_brew
 
-casks:
-  # List your custom HOMEBREW CASKS here
+  print_section "Testing unified parser..."
+  test_unified
 
-modules:
-  # List your custom GACLI MODULES here
+  print_total || return 1
+}
+
+# Test JSON parser
+test_json() {
+
+  # Test _json_read
+  print "\n👉 ${GREY}Testing read...${NONE}"
+  run_test "_json_read scalar_empty" "$(_json_read "${F_JSON_READ}" "scalar_empty")" ""                         # Should return empty value
+  run_test "_json_read scalar_value" "$(_json_read "${F_JSON_READ}" "scalar_value")" "value 1"                  # Should return "value 1" as a unique value (not "value" "1")
+  run_test "_json_read list_empty" "$(_json_read "${F_JSON_READ}" "list_empty")" ""                         # Should return empty list
+  run_test "_json_read list_value" "$(_json_read "${F_JSON_READ}" "list_value")" "\"value 2\" \"value 3\""  # Should return a list with two values (no less, no more) which are "value 1" and "value 2"
+
+  # Now we assume that _json_read is working as expected
+  # So we'll check further writing functions by reading the output file with _json_read
+
+  # Reset output file
+  cp "${F_JSON_WRITE_TEMPLATE}" "${F_JSON_WRITE_TO}"
+
+  # Test _json_write
+  print "\n👉 ${GREY}Testing write scalar...${NONE}"
+  run_test "_json_write scalar_empty" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_empty" "" && _json_read "${F_JSON_WRITE_TO}" "scalar_empty")" ""
+  run_test "_json_write scalar_value (1/2)" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_value" "tmp value" && _json_read "${F_JSON_WRITE_TO}" "scalar_value")" "tmp value"
+  run_test "_json_write scalar_value (2/2)" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_value" "value 1" && _json_read "${F_JSON_WRITE_TO}" "scalar_value")" "value 1"
+
+  print "\n👉 ${GREY}Testing write list...${NONE}"
+
+  # Test _json_reset
+  run_test "_json_reset list_reset" "$(_json_reset "${F_JSON_WRITE_TO}" "list_reset" && _json_read "${F_JSON_WRITE_TO}" "list_reset")" ""
+
+  # Test _json_add
+  run_test "_json_add list_add (1/2)" "$(_json_add "${F_JSON_WRITE_TO}" "list_add" "value 2" && _json_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\""
+  run_test "_json_add list_add (2/2)" "$(_json_add "${F_JSON_WRITE_TO}" "list_add" "value 3" && _json_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\" \"value 3\""
+
+  # Test _json_rm
+  run_test "_json_rm list_rm (1/2)" "$(_json_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 4" && _json_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 5\" \"old value 6\" \"old value 7\""
+  run_test "_json_rm list_rm (2/2)" "$(_json_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 5" && _json_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 6\" \"old value 7\""
+}
+
+# Test Brewfile parser
+test_brew() {
+
+  # Test _brew_read
+  print "\n👉 ${GREY}Testing read...${NONE}"
+  run_test "_brew_read formulae" "$(_brew_read "${F_BREW_READ}" "formulae")" "\"my formula 1\" \"my formula 2\""
+  run_test "_brew_read casks" "$(_brew_read "${F_BREW_READ}" "casks")" "\"my cask 1\" \"my cask 2\"" 
+
+  # Now we assume that _brew_read is working as expected
+  # So we'll check further writing functions by reading the output file with _brew_read
+
+  # Reset output file
+  cp "${F_BREW_WRITE_TEMPLATE}" "${F_BREW_WRITE_TO}"
+
+  print "\n👉 ${GREY}Testing write...${NONE}"
+
+  # Test _brew_reset
+  run_test "_brew_reset formulae" "$(_brew_reset "${F_BREW_WRITE_TO}" "formulae" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" ""
+  run_test "_brew_reset casks" "$(_brew_reset "${F_BREW_WRITE_TO}" "casks" && _brew_read "${F_BREW_WRITE_TO}" "casks")" ""
+
+  # Test _brew_add
+  run_test "_brew_add formulae (1/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "formulae" "formula 1" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\""
+  run_test "_brew_add formulae (2/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "formulae" "formula 2" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 2\""
+  run_test "_brew_add casks (1/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "casks" "cask 1" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\""
+  run_test "_brew_add casks (2/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "casks" "cask 2" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\" \"cask 2\""
+
+  # Test _brew_rm
+  run_test "_brew_rm formulae" "$(_brew_rm "${F_BREW_WRITE_TO}" "formulae" "formula 1" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 2\""
+  run_test "_brew_rm casks" "$(_brew_rm "${F_BREW_WRITE_TO}" "casks" "cask 1" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 2\""
+}
+
+# Test unified parser
+test_unified() {
+
+  # JSON
+  print "\n👉 ${GREY}Testing JSON support...${NONE}"
+
+  # Test file_read
+  print "\n👉 ${GREY}Testing read...${NONE}"
+  run_test "file_read scalar_empty" "$(file_read "${F_JSON_READ}" "scalar_empty")" ""                     # Should return empty value
+  run_test "file_read scalar_value" "$(file_read "${F_JSON_READ}" "scalar_value")" "value 1"              # Should return "value 1" as a unique value (not "value" "1")
+  run_test "file_read list_empty" "$(file_read "${F_JSON_READ}" "list_empty")" ""                         # Should return empty list
+  run_test "file_read list_value" "$(file_read "${F_JSON_READ}" "list_value")" "\"value 2\" \"value 3\""  # Should return a list with two values (no less, no more) which are "value 1" and "value 2"
+
+  # Now we assume that file_read is working as expected
+  # So we'll check further writing functions by reading the output file with file_read
+
+  # Reset output file
+  cp "${F_JSON_WRITE_TEMPLATE}" "${F_JSON_WRITE_TO}"
+
+  # Test file_write
+  print "\n👉 ${GREY}Testing write scalar...${NONE}"
+  run_test "file_write scalar_empty" "$(file_write "${F_JSON_WRITE_TO}" "scalar_empty" "" && file_read "${F_JSON_WRITE_TO}" "scalar_empty")" ""
+  run_test "file_write scalar_value (1/2)" "$(file_write "${F_JSON_WRITE_TO}" "scalar_value" "tmp value" && file_read "${F_JSON_WRITE_TO}" "scalar_value")" "tmp value"
+  run_test "file_write scalar_value (2/2)" "$(file_write "${F_JSON_WRITE_TO}" "scalar_value" "value 1" && file_read "${F_JSON_WRITE_TO}" "scalar_value")" "value 1"
+
+  print "\n👉 ${GREY}Testing write list...${NONE}"
+
+  # Test file_reset
+  run_test "file_reset list_reset" "$(file_reset "${F_JSON_WRITE_TO}" "list_reset" && file_read "${F_JSON_WRITE_TO}" "list_reset")" ""
+
+  # Test file_add
+  run_test "file_add list_add one" "$(file_add "${F_JSON_WRITE_TO}" "list_add" "value 2" && file_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\""
+  run_test "file_add list_add list" "$(file_add "${F_JSON_WRITE_TO}" "list_add" "value 3" "value 4" && file_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\" \"value 3\" \"value 4\""
+
+  # Test file_rm
+  run_test "file_rm list_rm one" "$(file_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 4" && file_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 5\" \"old value 6\" \"old value 7\""
+  run_test "file_rm list_rm list" "$(file_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 5" "old value 7" && file_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 6\""
+
+  # BREW
+  print "\n👉 ${GREY}Testing Brewfile support...${NONE}"
+
+  # Test file_read
+  print "\n👉 ${GREY}Testing read...${NONE}"
+  run_test "file_read formulae" "$(file_read "${F_BREW_READ}" "formulae")" "\"my formula 1\" \"my formula 2\""
+  run_test "file_read casks" "$(file_read "${F_BREW_READ}" "casks")" "\"my cask 1\" \"my cask 2\"" 
+
+  # Now we assume that file_read is working as expected
+  # So we'll check further writing functions by reading the output file with file_read
+
+  # Reset output file
+  cp "${F_BREW_WRITE_TEMPLATE}" "${F_BREW_WRITE_TO}"
+
+  print "\n👉 ${GREY}Testing write...${NONE}"
+
+  # Test file_reset
+  run_test "file_reset formulae" "$(file_reset "${F_BREW_WRITE_TO}" "formulae" && file_read "${F_BREW_WRITE_TO}" "formulae")" ""
+  run_test "file_reset casks" "$(file_reset "${F_BREW_WRITE_TO}" "casks" && file_read "${F_BREW_WRITE_TO}" "casks")" ""
+
+  # Test file_add
+  run_test "file_add one formula" "$(file_add "${F_BREW_WRITE_TO}" "formulae" "formula 1" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\""
+  run_test "file_add list formulae" "$(file_add "${F_BREW_WRITE_TO}" "formulae" "formula 2" "formula 3" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 2\" \"formula 3\""
+  run_test "file_add one cask" "$(file_add "${F_BREW_WRITE_TO}" "casks" "cask 1" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\""
+  run_test "file_add list casks" "$(file_add "${F_BREW_WRITE_TO}" "casks" "cask 2" "cask 3" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\" \"cask 2\" \"cask 3\""
+
+  # Test file_rm
+  run_test "file_rm one formula" "$(file_rm "${F_BREW_WRITE_TO}" "formulae" "formula 2" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 3\""
+  run_test "file_rm list" "$(file_rm "${F_BREW_WRITE_TO}" "casks" "cask 1" "cask 3" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 2\""
+}
+
+# ────────────────────────────────────────────────────────────────
+# TEST LOGIQUE (don't modify this)
+# ────────────────────────────────────────────────────────────────
+
+# run_test <test_name> <result> <expected_result>
+run_test() {
+  local test_name=$1
+  local result=$2
+  local expected=$3
+
+  # Increment total tests count
+  ((TOTAL++))
+
+  # Compare output with expected result
+  if [[ "$result" == "$expected" ]]; then
+    ((SUCCESS++))
+    print "    ✅ ${GREY}${test_name} → '${GREEN}${result}${GREY}'${NONE}"
+  else
+    ((FAILED++))
+    print "    ❌ ${GREY}${test_name} → '${RED}${result}${GREY}' ≠ '${ORANGE}${expected}${GREY}'${NONE}"
+  fi
+}
+
+print_section() {
+  print -- "${GREY}\n--------------------------------------${NONE}"
+  print "${GREY} → ${1}${NONE}"
+  print -- "${GREY}--------------------------------------${NONE}"
+}
+
+print_total() {
+  local failed_pourcent=$((FAILED * 100 / TOTAL))
+  local success_pourcent=$((SUCCESS * 100 / TOTAL))
+  local message=""
+  local color=$RED
+
+  # Compute message
+  if [[ $failed_pourcent == 0 ]]; then
+    color=$GREEN
+    message="    └→ ✅ ${SUCCESS} TESTS PASSED"
+  else
+    message="    └→ ❌ ${FAILED} TESTS FAILED"
+  fi
+
+  # Display results
+  print -- "${BOLD}${color}\n--------------------------------------${NONE}"
+  print -- "${BOLD}${color}--------------------------------------${NONE}"
+  print "${BOLD}${color} → FINAL RESULT = ${ORANGE}${success_pourcent} %${NONE}"
+  print "${BOLD}${color}${message}${NONE}"
+  print -- "${BOLD}${color}--------------------------------------${NONE}"
+  print -- "${BOLD}${color}--------------------------------------\n${NONE}"
+
+  [[ $failed_pourcent == 0 ]] || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# RUN
+# ────────────────────────────────────────────────────────────────
+
+test_parser
+
 

@@ -1,25 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/core/update.zsh
+# FICHIER /src/logic/update.zsh
 ###############################
-
-# [Auto-update and merge system]
-   #   - Loads and saves update config values
-   #   - Checks if update is required (date/tools)
-   #   - Merges tools from core, modules and user
-   #   - Runs Homebrew update and cleanup
-
-   # Depends on:
-   #   - time.zsh           → computes next update timestamps
-   #   - parser.zsh         → reads/writes config and tools files
-   #   - modules.zsh        → ensures modules and dependencies are loaded
-   #   - brew.zsh           → installs and updates Homebrew tools
-
-   # Used by:
-   #   - gacli.zsh          → triggers update check at launch
-
-   # Note: Includes both auto and manual update flows
-#
 
 TODAY=""
 

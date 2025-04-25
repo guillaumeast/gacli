@@ -1,21 +1,10 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.auto-install/uninstall.zsh
+# FICHIER /src/logic/uninstall.zsh
 ###############################
 
-# [GACLI uninstaller script]
-   #   - Deletes GACLI directory
-   #   - Removes PATH entry from .zshrc
-   #   - Deletes executable wrapper
-
-   # Depends on:
-   #   - gacli.zsh          → for styled outputs
-
-   # Used by:
-   #   - gacli.zsh          → triggered via `gacli uninstall`
-
-   # Note: Wrapper path and zshrc path must be resolved before calling
-#
+# TODO: make it independent (no need of gacli.zsh or other script to run)
+# TODO: make it 100% POSIX → .sh
 
 # Uninstall GACLI: remove all file and cleanup .zshrc
 gacli_uninstall() {

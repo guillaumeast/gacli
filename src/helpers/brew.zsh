@@ -1,23 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.helpers/brew.zsh
+# FICHIER /src/helpers/brew.zsh
 ###############################
-
-# [Homebrew tools manager]
-   #   - Checks if formulae and casks are active
-   #   - Runs brew bundle if needed
-   #   - Installs and configures Homebrew
-
-   # Depends on:
-   #   - parser.zsh         → reads Brewfile content
-   #   - gacli.zsh          → for styled outputs
-
-   # Used by:
-   #   - update.zsh         → updates dependencies from merged Brewfile
-   #   - modules.zsh        → installs tools required by modules
-
-   # Note: Triggers update only if missing tools are detected
-#
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC

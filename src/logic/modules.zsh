@@ -1,27 +1,10 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /.run/core/modules.zsh
+# FICHIER /src/logic/modules.zsh
 ###############################
 
 # TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
 #   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
-
-# [Modules manager and loader]
-   #   - Downloads modules recursively
-   #   - Merges modules dependencies
-   #   - Loads and activates modules
-   #   - Registers dynamic CLI commands
-
-   # Depends on:
-   #   - parser.zsh         → reads and writes tools descriptors
-   #   - brew.zsh           → installs missing Homebrew dependencies
-
-   # Used by:
-   #   - gacli.zsh          → loads modules at startup
-   #   - update.zsh         → triggers modules refresh before updates
-
-   # Note: Handles module download conflicts and nested modules
-#
 
 # Github repo containing all available modules
 MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
