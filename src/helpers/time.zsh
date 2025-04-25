@@ -34,12 +34,6 @@ time_add_days() {
         return 1
     fi
 
-    # Dependency check
-    if ! command -v gdate >/dev/null 2>&1; then
-        printStyled error "Missing dependency: gdate (from coreutils)"
-        return 1
-    fi
-
     # Compute
     echo $((86400 * $add + $start_ts))
 }
@@ -52,7 +46,7 @@ time_to_human() {
         return 1
     fi
 
-    if ! gdate -d "@$ts" "+%Y-%m-%d"; then
+    if ! gdate -u -d "@$ts" "+%Y-%m-%d"; then
         printStyled error "Conversion failed"
         return 1
     fi
@@ -75,7 +69,7 @@ time_from_human() {
     fi
 
     # Convert
-    if ! gdate -d "${date_str}" +%s; then
+    if ! gdate -u -d "${date_str}" +%s; then
         printStyled error "Conversion failed"
         return 1
     fi

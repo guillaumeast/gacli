@@ -1,0 +1,29 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /<path>/<this_file>
+###############################
+
+@setup {
+
+    # Setup env
+    dir_current="$(dirname "${(%):-%N}")"
+    load "${dir_current}/TODO/setup.zsh"        # Env setup script
+    load "${DIR_SRC}/TODO"                      # Script to test
+}
+
+# ────────────────────────────────────────────────────────────────
+# SECTION
+# ────────────────────────────────────────────────────────────────
+
+@test 'TODO' {
+    run TODO
+    assert $state equals 0
+    assert "$output" TODO
+}
+
+@test 'TODO' {
+    run TODO
+    assert $state equals 0
+    assert "$output" TODO
+}
+
