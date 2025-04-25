@@ -1,0 +1,198 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/update.zunit
+###############################
+
+@setup {
+
+    # Setup env
+    load "${DIR_SRC}/helpers/time.zsh"
+    load "${DIR_SRC}/helpers/parser.zsh"
+    load "${DIR_SRC}/helpers/brew.zsh"
+    load "${DIR_SRC}/logic/update.zsh"
+
+    # Fixtures
+    DIR_MODS="${DIR_TESTS}/fixture/modules"
+    MODULE_VALID="valid_module"
+    MODULE_CORRUPTED_ENTRY_POINT="corrupted_entry_point"
+    MODULE_CORRUPTED_TOOLS="corrupted_tools"
+    MODULE_UNINSTALLED="wrong_name"
+    MODULE_DOWNLOAD="sample_module"
+
+    # Load script to test
+    load "${DIR_SRC}/logic/modules.zsh"
+
+    # Shadowing variables
+    MODULES_INSTALLED=()
+    MODULES_ACTIV=()
+    COMMANDS_MODS=()
+
+    # Reset temporary files
+    FAKE_DIR_MODS="${DIR_TESTS}/fixture/modules/.tmp"
+    [[ -d "${FAKE_DIR_MODS}" ]] && rm -r "${FAKE_DIR_MODS}"
+    TMP_DIR="${DIR_MODS}/tmp"
+    mkdir -p "${TMP_DIR}"
+
+    local original="${DIR_SRC}/data/tools/modules.tools.json"
+    FILE_TOOLS_MODULES="${TMP_DIR}/modules.tools.json"
+    cp "${original}" "${FILE_TOOLS_MODULES}"
+
+    original="${DIR_SRC}/data/tools/user.tools.json"
+    FILE_TOOLS_USER="${TMP_DIR}/user.tools.json"
+    cp "${original}" "${FILE_TOOLS_USER}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+# Detect installed modules
+
+@test 'MODULES      → Detect if module is already downloaded        → false (uninstalled)' {
+
+    run _module_is_downloaded "${MODULE_UNINSTALLED}"
+    assert $state equals 1
+}
+
+@test 'MODULES      → Detect if module is already downloaded        → false (corrupted entry point)' {
+
+    run _module_is_downloaded "${MODULE_CORRUPTED_ENTRY_POINT}"
+    assert $state equals 1
+}
+
+@test 'MODULES      → Detect if module is already downloaded        → false (corrupted tools)' {
+
+    run _module_is_downloaded "${MODULE_CORRUPTED_TOOLS}"
+    assert $state equals 1
+}
+
+@test 'MODULES      → Detect if module is already downloaded        → true' {
+
+    run _module_is_downloaded "${MODULE_VALID}"
+    assert $state equals 0
+}
+
+@test 'MODULES      → Fetch module commands' {
+
+    local entry_point="${DIR_MODS}/${MODULE_VALID}/${ENTRY_POINT}"
+    source "${entry_point}"
+
+    _module_get_commands "${entry_point}"
+    assert $? equals 0
+    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
+    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
+}
+
+@test 'MODULES      → Source modules and activate their commands' {
+
+    MODULES_INSTALLED=("valid_module")
+
+    modules_load
+    assert $? equals 0
+    assert "${MODULE_VALID}" in "${MODULES_ACTIV[@]}"
+    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
+    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
+}
+
+# TODO: add nested module test (simply add a new module inside the sample_module dependencies + create cycle to force to handle conflicts)
+@test 'MODULES      → Download module files' {
+
+    # Set fake path
+    DIR_MODS="${FAKE_DIR_MODS}"
+
+    # Download module
+    _module_download "${MODULE_DOWNLOAD}"
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+}
+
+# TODO: further test commands instead of functions (in gacli.zunit ?)
+@test 'MODULES      → Init modules' {
+
+    # Set fake path
+    DIR_MODS="${FAKE_DIR_MODS}"
+
+    # Pre-install (download) module
+    _module_download "${MODULE_DOWNLOAD}"
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+
+    # Init modules
+    modules_init
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+}
+
+# TODO: further test commands instead of functions (in gacli.zunit ?)
+@test 'MODULES      → Resolve the ultimate query        → (via modules/)' {
+
+    # Set fake path
+    DIR_MODS="${FAKE_DIR_MODS}"
+
+    # Pre-install (download) module
+    _module_download "${MODULE_DOWNLOAD}"
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+
+    # Init modules
+    modules_init
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+
+    # Load modules
+    modules_load
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_ACTIV[@]}"
+    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
+    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
+
+    # Test sample_module
+    run asking_questions
+    assert $state equals 0
+    assert $output same_as '...'
+
+    run ultimate_answer
+    assert $state equals 0
+    assert $output same_as "${ULTIMATE_ANSWER}"
+}
+
+# TODO: further test commands instead of functions (in gacli.zunit ?)
+@test 'MODULES      → Resolve the ultimate query        → (via user.tools.json)' {
+
+    # Set fake path
+    DIR_MODS="${FAKE_DIR_MODS}"
+
+    # Declare module
+    file_add "${FILE_TOOLS_USER}" modules "${MODULE_DOWNLOAD}"
+
+    # Init modules
+    modules_init
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+
+    # Load modules
+    modules_load
+    assert $? equals 0
+    assert "${MODULE_DOWNLOAD}" in "${MODULES_ACTIV[@]}"
+    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
+    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
+
+    # Test sample_module
+    run asking_questions
+    assert $state equals 0
+    assert $output same_as '...'
+
+    run ultimate_answer
+    assert $state equals 0
+    assert $output same_as "${ULTIMATE_ANSWER}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # TODO
+}
+
