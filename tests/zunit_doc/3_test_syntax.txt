@@ -1,0 +1,92 @@
+Test Syntax
+Tests in ZUnit have a simple syntax, which is inspired by the BATS framework. You can add as many tests as you like to each test file, and the body of each test can contain any valid ZSH code.
+
+There are only two rules you need to remember whilst writing your tests:
+
+Test names must be unique within a file.
+The shebang #!/usr/bin/env zunit MUST appear at the top of each test file, or ZUnit will not run it.
+#!/usr/bin/env zunit
+
+@test 'My first test' {
+  # Test contents here
+}
+Making Assertions
+ZUnit comes with a powerful assertion library to aid you in writing your tests. The assert helper allows you to make assertions, which fail your test automatically if they are incorrect.
+
+To see the full range of assertion methods available to you, take a look at their documentation.
+
+By default, tests which do not contain any assertions will be marked as risky, and result in an overall failure of the test run. You can disable this functionality by passing ZUnit the --allow-risky option.
+
+#!/usr/bin/env zunit
+
+@test 'Testing assertions' {
+  assert 1 equals 1
+}
+Loading scripts
+Each of your tests is run in isolation, meaning that there is no variable or function leakage between tests. The load helper function will source a script into the test environment for you, allowing you to set up variables and functions etc.
+
+### In my-script.zsh:
+export testing='Tada!'
+
+### In tests/my-script.zunit:
+@test 'Test loading scripts' {
+  load ../my-script
+
+  # The $testing variable is now set here
+  assert "$testing" same_as 'Tada!'
+}
+You can load any absolute or relative file path, and for files ending in .zsh including the extension is optional.
+
+# In the example above, the following are all equivalent
+load ../my-script
+load ../my-script.zsh
+load /path/to/project/my-script
+load /path/to/project/my-script.zsh
+Running commands
+You can run commands within your tests using the run helper. Doing this stops a failing command from ending your test early, and allows you to make assertions on its exit status and output.
+
+The command’s exit code is stored in the $state variable.
+
+The full output of the command is stored in $output.
+
+Each line of the output is also stored in the $lines array, allowing you to run assertions against individual lines.
+
+@test 'Test command output' {
+  # Run the command, including arguments
+  run ls ~/my-dir
+
+  assert $state equals 0
+
+  assert "$output" is_not_empty
+
+  assert "${lines[3]}" equals 'my-third-file'
+}
+Skipping tests
+If you want to skip a test, just use the skip helper method. This will stop execution of the test immediately and output the provided message, without failing the whole test run.
+
+# The test will be skipped if it is run on macOS
+@test 'Test command output' {
+  if [[ $OSTYPE =~ 'darwin.*' ]]; then
+    skip 'Test does not run on macOS'
+  fi
+
+  # Test code here
+}
+Pass a test manually
+If you want to pass a test manually, use the pass helper method. This will stop execution of the test immediately, and mark it as passed.
+
+@test 'Test will pass' {
+  pass
+}
+Fail a test manually
+If you want to fail a test manually, use the fail helper method. This will stop execution of the test immediately, mark it as failed, and print the message passed to it.
+
+@test 'Test will fail' {
+  fail 'Failed'
+}
+Throw an error
+If you want to throw an error manually, use the error helper method. This will stop execution of the test immediately, mark it as errored, and print the error message passed to it.
+
+@test 'Test will error' {
+  error 'Something went wrong'
+}

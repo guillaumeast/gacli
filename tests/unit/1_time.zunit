@@ -1,13 +1,11 @@
 #!/usr/bin/env zunit
 ###############################
-# FICHIER /tests/unit/helpers/time.zunit
+# FICHIER /tests/unit/time.zunit
 ###############################
 
 @setup {
 
     # Setup env
-    dir_current="$(dirname "${(%):-%N}")"
-    load "${dir_current}/../../setup.zsh"
     load "${DIR_SRC}/helpers/time.zsh"
 }
 
@@ -15,25 +13,25 @@
 # TESTS
 # ────────────────────────────────────────────────────────────────
 
-@test 'get current timestamp' {
+@test 'TIME         → Get current timestamp' {
     run time_get_current
     assert $state equals 0
     assert "$output" matches '^[0-9]{10}$'
 }
 
-@test 'add days to timestamp' {
+@test 'TIME         → Add days to timestamp' {
     run time_add_days "1745539200" "2"
     assert $state equals 0
     assert $output equals '1745712000'
 }
 
-@test 'Convert UNIX timestamp to YYYY-MM-DD' {
+@test 'TIME         → Convert UNIX timestamp to YYYY-MM-DD' {
     run time_to_human "1745712000"
     assert $state equals 0
     assert "$output" same_as '2025-04-27'
 }
 
-@test 'Convert YYYY-MM-DD to UNIX timestamp' {
+@test 'TIME         → Convert YYYY-MM-DD to UNIX timestamp' {
     run time_from_human "2025-04-27"
     assert $state equals 0
     assert "$output" same_as '1745712000'

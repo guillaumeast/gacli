@@ -1,0 +1,10 @@
+{
+  "formulae": [
+    "core formula 1",
+    "core formula 2"
+  ],
+  "casks": [
+    "core cask 1",
+    "core cask 2"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "formulae": [
+    "user formula 1",
+    "user formula 2"
+  ],
+  "casks": [
+    "user cask 1",
+    "user cask 2"
+  ]
+}

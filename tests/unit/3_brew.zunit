@@ -1,62 +1,62 @@
 #!/usr/bin/env zunit
 ###############################
-# FICHIER /tests/unit/helpers/brew.zunit
+# FICHIER /tests/unit/brew.zunit
 ###############################
 
 @setup {
 
     # Setup env
-    dir_current="$(dirname "${(%):-%N}")"
-    load "${dir_current}/../../../setup.zsh"
     load "${DIR_SRC}/helpers/parser.zsh"
-    load "${DIR_SRC}/helpers/brew.zsh"
 
     # Fixture
-    FIXTURE_NO_UPDATE_DUE="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/brew/no_update_due.Brewfile"
-    FIXTURE_UPDATE_DUE="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/brew/update_due.Brewfile"
+    FIXTURE_NO_UPDATE_DUE="${DIR_FIXTURE}/brew/no_update_due.Brewfile"
+    FIXTURE_UPDATE_DUE="${DIR_FIXTURE}/brew/update_due.Brewfile"
     brew uninstall --force fortune
     brew uninstall --cask --force caffeine
     # brew install curl
     # brew install visual-studio-code
+
+    # Load script to test
+    load "${DIR_SRC}/helpers/brew.zsh"
 }
 
 # ────────────────────────────────────────────────────────────────
 # TESTS
 # ────────────────────────────────────────────────────────────────
 
-@test 'Detect inactive formula' {
+@test 'BREW         → Detect if formula is active           → false' {
     run brew_is_f_active "wrong formula"
     assert $state equals 1
 }
 
-@test 'Detect active formula' {
+@test 'BREW         → Detect if formula is active           → true' {
     run brew_is_f_active "curl"
     assert $state equals 0
 }
 
-@test 'Detect inactive cask' {
+@test 'BREW         → Detect if cask is active              → false' {
     run brew_is_c_active "wrong cask"
     assert $state equals 1
 }
 
-@test 'Detect active cask' {
+@test 'BREW         → Detect if cask is active              → true' {
     run brew_is_c_active "visual-studio-code"
     assert $state equals 0
 }
 
-@test 'Detect update is due → false' {
+@test 'BREW         → Detect if update is due               → false' {
     run _brew_is_update_due "${FIXTURE_NO_UPDATE_DUE}"
     assert $state equals 0
     assert $output same_as 'false'
 }
 
-@test 'Detect update is due → true' {
+@test 'BREW         → Detect if update is due               → true' {
     run _brew_is_update_due "${FIXTURE_UPDATE_DUE}"
     assert $state equals 0
     assert $output same_as 'true'
 }
 
-@test 'Run brew update, bundle, upgrade, cleanup' {
+@test 'BREW         → Run brew update, bundle, upgrade, cleanup' {
     run brew_bundle "${FIXTURE_UPDATE_DUE}"
     assert $state equals 0
     brew_is_f_active "fortune"
@@ -75,5 +75,7 @@
 @teardown {
     brew uninstall --force fortune
     brew uninstall --cask --force caffeine
+    # brew uninstall --force curl
+    # brew uninstall --cask --force visual-studio-code
 }
 

@@ -1,0 +1,162 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/update.zunit
+###############################
+
+@setup {
+
+    # Setup env
+    load "${DIR_SRC}/helpers/time.zsh"
+    load "${DIR_SRC}/helpers/parser.zsh"
+    load "${DIR_SRC}/helpers/brew.zsh"
+    load "${DIR_SRC}/logic/modules.zsh"
+    brew uninstall --force fortune
+    brew uninstall --cask --force caffeine
+    # brew install curl
+    # brew install visual-studio-code
+
+    # Fixture config
+    CONFIG_UNINITIALIZED="${DIR_FIXTURE}/update/uninitialized.json"
+    CONFIG_DISABLED="${DIR_FIXTURE}/update/disabled.json"
+    CONFIG_ENABLED="${DIR_FIXTURE}/update/enabled.json"
+    CONFIG_OUT="${DIR_FIXTURE}/update/output.json"
+
+    # Fixture dependencies
+    BREW_NO_UPDATE_DUE="${DIR_FIXTURE}/update/no_update_due.Brewfile"
+    BREW_UPDATE_DUE="${DIR_FIXTURE}/update/update_due.Brewfile"
+    BREW_OUT="${DIR_FIXTURE}/update/out.Brewfile"
+
+    # Fixture merged dependencies
+    export FILES_TOOLS=( \ 
+        "${DIR_FIXTURE}/update/tools/core.tools.json" \ 
+        "${DIR_FIXTURE}/update/tools/modules.tools.json" \ 
+        "${DIR_FIXTURE}/update/tools/user.tools.json" \ 
+    )
+
+    # Reset output file
+    echo "" > "${CONFIG_OUT}"
+    echo "" > "${BREW_OUT}"
+
+    # Load script to test
+    load "${DIR_SRC}/logic/update.zsh"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'UPDATE       → Get config values from config file' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
+
+    # Run test
+    run _update_get_config
+    assert $state equals 0
+}
+
+@test 'UPDATE       → Save config values into config file' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_OUT}"
+
+    # Run test
+    run _update_set_config
+    assert $state equals 0
+}
+
+@test 'UPDATE       → Detect if auto-update is due          → false (disabled)' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_DISABLED}"
+    _update_get_config
+
+    # Run test
+    run _update_is_reached
+    assert $state equals 1
+}
+
+@test 'UPDATE       → Detect if auto-update is due          → false (date not reached)' {
+    cp "${CONFIG_ENABLED}" "${CONFIG_OUT}"
+    local today=$(time_get_current)
+    local far=$(time_add_days "${today}" "99")
+    file_write "${CONFIG_OUT}" next_update "${far}"
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_OUT}"
+    _update_get_config
+
+    # Run test
+    run _update_is_reached
+    assert $state equals 1
+}
+
+@test 'UPDATE       → Detect if auto-update is due          → true (enable + date reached)' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
+    _update_get_config
+
+    # Run test
+    run _update_is_reached
+    assert $state equals 0
+}
+
+@test 'UPDATE       → Detect if update is required          → false (all dependencies already installed)' {
+
+    run _update_is_required "${BREW_NO_UPDATE_DUE}"
+    assert $state equals 1
+}
+
+@test 'UPDATE       → Detect if update is required          → true (some dependencies are missing)' {
+
+    run _update_is_required "${BREW_UPDATE_DUE}"
+    assert $state equals 0
+}
+
+@test 'UPDATE       → Merge all dependencies' {
+
+    local in_formulae=()
+    local in_casks=()
+    local out_formulae=()
+    local out_casks=()
+
+    update_merge_into "${BREW_OUT}"
+    # run update_merge_into "${BREW_OUT}"
+    # assert $state equals 0
+
+    # Fetch input dependencies
+    for file in "${FILES_TOOLS[@]}"; do
+        [[ ! -f "${file}" ]] && continue
+        in_formulae+=("${(@f)$(file_read "${file}" formulae)}")
+        in_casks+=("${(@f)$(file_read "${file}" casks)}")
+    done
+
+    # Fetch output dependencies
+    out_formulae+=("${(@f)$(file_read "${BREW_OUT}" formulae)}")
+    out_casks+=("${(@f)$(file_read "${BREW_OUT}" casks)}")
+
+    # Check formulae
+    for formula in "${in_formulae[@]}"; do
+        assert "${formula}" in "${out_formulae[@]}"
+    done
+
+    # Check casks
+    for cask in "${in_casks[@]}"; do
+        assert "${cask}" in "${out_casks[@]}"
+    done
+}
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Reset env
+    brew uninstall --force fortune
+    brew uninstall --cask --force caffeine
+    # brew uninstall --force curl
+    # brew uninstall --cask --force visual-studio-code
+}
+

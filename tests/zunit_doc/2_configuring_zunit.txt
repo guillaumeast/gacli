@@ -1,0 +1,57 @@
+Configuring ZUnit
+Configuring ZUnit is done by editing values in the .zunit.yml file, found at the root of your project. The default configuration is shown to the right.
+
+# Default .zunit.yml contents
+directories:
+  tests: tests
+  output: tests/_output
+  support: tests/_support
+tap: false
+time_limit: 0
+fail_fast: false
+allow_risky: false
+verbose: false
+Options
+directories
+Sets the paths for directories used by ZUnit.
+
+tests sets the directory in which tests are found.
+output sets the directory in which reports will be generated.
+support sets the directory in which support files can be found.
+# The default directory structure created
+# by running `zunit init`
+directories:
+  tests: tests
+  output: tests/_output
+  support: tests/_support
+tap
+Enables TAP compatible output from the test runner. This can be overridden by passing the --tap CLI option.
+
+# Output will be TAP compatible
+tap: true
+time_limit
+If a time_limit is set and greater than 0, your tests will be run within an asynchronous process, and terminated if they run for longer than the specified time. This can be overridden by passing the --time-limit CLI option.
+
+NOTE: Due to the way child processes are handled in earlier versions of ZSH, the time_limit setting is ignored for ZSH versions below 5.1.0. This is necessary because in versions below 5.1.0, the exit state is never returned from the asynchronous process, which would cause tests to hang indefinitely.
+
+# Tests will be terminated if they
+# run for longer than 5 seconds
+time_limit: 5
+fail_fast
+By default, ZUnit will run all tests, and then report the full results at the end of the run. Setting fail_fast to true halts test execution as soon as a failure, error or warning is encountered.
+
+This value can be overriden by passing the --fail-fast CLI option.
+
+# The test run will exit on the first failure
+fail_fast: true
+allow_risky
+By default, if a test does not contain any assertions, it will be marked with a warning, and the run will fail. You can disable this functionality by setting allow_risky to true.
+
+This value can be overriden by passing the --allow-risky CLI option.
+
+# Tests without assertions will not result in failure
+allow_risky: true
+verbose
+If verbose is true, the full output of each test is printed to stdout
+
+verbose: true

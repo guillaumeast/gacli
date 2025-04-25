@@ -1,0 +1,24 @@
+Setting Up a New Project
+Without any configuration, ZUnit finds tests by recursively searching a directory named tests within the folder in which it is executed. To get started without any configuration, create a file named tests/example.zunit containing your first test.
+
+If you’d rather not use a test directory, you can place the files anywhere, and run ZUnit by passing it a file or list of files to execute.
+
+#!/usr/bin/env zunit
+
+@test 'Example test' {
+  assert 'true' same_as 'false'
+}
+Initialising a New Project
+For more advanced usage, ZUnit has a handy init command, which will create ZUnit’s directory structure and generate a .zunit.yml configuration file and an example test for you. Just run zunit init in your project’s root directory.
+
+If you plan to test your project with the Travis CI service, you can generate an example .travis.yml file by running zunit init --travis
+
+You can find a full explanation of all of ZUnit’s configuration options in the configuration docs.
+
+# Directory structure created by `zunit init`
+.zunit.yml
+tests/
+  _output/
+  _support/
+    bootstrap
+  example.zunit

@@ -1,12 +1,12 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /tests/setup.zunit
+# FICHIER /tests/_support/bootstrap.zsh
 ###############################
 
-DIR_CURRENT="$(dirname "${(%):-%N}")"
-DIR_ROOT="${DIR_CURRENT}/.."
-DIR_SRC="${DIR_ROOT}/src"
-DIR_TESTS="${DIR_ROOT}/tests"
+export DIR_ROOT="${PWD}"
+export DIR_SRC="${DIR_ROOT}/src"
+export DIR_TESTS="${DIR_ROOT}/tests"
+export DIR_FIXTURE="${DIR_TESTS}/fixture"
 
 # ────────────────────────────────────────────────────────────────
 # I/O formatting (from main.zsh)

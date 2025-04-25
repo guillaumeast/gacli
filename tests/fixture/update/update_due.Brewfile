@@ -1,0 +1,2 @@
+brew "fortune"
+cask "caffeine"

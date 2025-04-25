@@ -107,43 +107,48 @@ _update_manual() {
 
 # PUBLIC - Generate temporary merged Brewfile with all dependencies (core + modules + user)
 update_merge_into() {
-    local output_brewfile="${1}"
+
+    # Variables
+    local output_brewfile="$1"
+    local descriptor=""
     local formulae=()
     local casks=()
 
-    # Download missing modules and merge modules dependencies
-    modules_init || {
-        printStyled error "Unable to init modules"
+    # Check arguments
+    if [[ -z "${output_brewfile}" ]]; then
+        printStyled error "Expected : <output_brewfile> (received : ${1})"
         return 1
-    }
+    fi
 
-    # Create output file if missing
-    touch "${output_brewfile}" || {
+    # Reset merged file
+    echo "" > "${output_brewfile}" || {
         printStyled error "Unable to create merged Brewfile: ${output_brewfile}"
         return 1
     }
 
+    # Merge content
     for descriptor in "${FILES_TOOLS[@]}"; do
+        [[ ! -f "${descriptor}" ]] && continue
+        formulae=("${(@f)$(file_read "${descriptor}" formulae)}")
+        casks=("${(@f)$(file_read "${descriptor}" casks)}")
 
-        # Formulae
-        formulae=("${(@f)$(file_read "${descriptor}" formulae)}") || return 1
-        for formula in "${formulae[@]}"; do
-            [[ -z "${formula}" ]] && continue
-            file_add "${output_brewfile}" formulae "${formula}" || {
-                printStyled warning "Unable to write formula: ${formula}"
-            }
-        done
+        # Intro
+        {
+            echo ""
+            echo "############################################"
+            echo "# Dependencies from ${descriptor}:"
+            echo ""
+        } >> "${output_brewfile}" || printStyled warning "Unable to write into: ${output_brewfile}"
 
-        # Casks
-        casks=("${(@f)$(file_read "${descriptor}" casks)}") || return 1
-        for cask in "${casks[@]}"; do
-            [[ -z "${cask}" ]] && continue
-            file_add "${output_brewfile}" casks "${cask}" || {
-                printStyled warning "Unable to write cask: ${cask}"
-            }
-        done
+        # Content
+        file_add "${output_brewfile}" formulae "${formulae[@]}"
+        file_add "${output_brewfile}" casks "${casks[@]}"
+
+        # Final line
+        echo "" >> "${output_brewfile}"
     done
 }
+
 
 # PRIVATE - Execute the update process and save new status in config file
 _update_run() {
@@ -164,8 +169,6 @@ _update_run() {
 
     # Save
     _update_set_config
-
-    # Update 
 
     # Display result
     printStyled success "Updated 🚀"
