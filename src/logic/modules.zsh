@@ -121,7 +121,7 @@ _module_download() {
         }
 
         # Extract archive to module directory
-        if ! tar -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
+        if ! tar --strip-components=1 -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
             printStyled error "Failed to extract archive: ${tmp_archive}"
             rm -f "$tmp_archive"
             return 1
@@ -141,6 +141,7 @@ _module_download() {
     config="${DIR_MODS}/${module}/${CONFIG_FILE}"
     nested_modules+=("${(@f)$(file_read "${config}" modules)}")
     for nested_module in "${nested_modules[@]}"; do
+        [[ -z "${nested_module}" || "${nested_module}" == "" ]] && continue
         _module_download "${nested_module}" || {
             printStyled error "Unable to download nested module: ${nested_module}"
             return 1
@@ -172,14 +173,17 @@ _module_is_downloaded() {
 
 # PUBLIC - Source installed modules and activate their commands
 modules_load() {
-
-    local module
+    
+    local module=""
+    local entry_point=""
     for module in "${MODULES_INSTALLED[@]}"; do
-        source "${module}" || {
+        entry_point="${DIR_MODS}/${module}/${ENTRY_POINT}"
+        [[ ! -f "${entry_point}" ]] && continue
+        source "${entry_point}" || {
             printStyled warning "Unable to load module: ${module}"
             continue
         }
-        _module_get_commands "${module}" || {
+        _module_get_commands "${entry_point}" || {
             printStyled warning "Unable to fetch module commands: ${module}"
             continue
         }
@@ -204,21 +208,21 @@ _module_get_commands() {
 
     # Capture and validate output
     local raw_output
-    if ! raw_output="$(get_commands)"; then
+    raw_output=("${(@f)$(get_commands | tr -d '\r')}")
+    if (( $? != 0 )); then
         printStyled error "get_commands failed in ${file}"
         return 1
     fi
 
-    local cmd
-    for cmd in ${(f)raw_output}; do
-        if [[ "$cmd" != *=* ]]; then
+    for cmd in "${raw_output[@]}"; do
+        [[ $cmd == *=* ]] || {
             printStyled warning "Invalid command format: '$cmd' in ${file}"
-            printStyled highlight "Expected : 'command=function'"
             continue
-        fi
+        }
         COMMANDS_MODS+=("$cmd")
     done
 
     unfunction get_commands
 }
+
 

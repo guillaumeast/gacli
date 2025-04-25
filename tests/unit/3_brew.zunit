@@ -7,10 +7,6 @@
 
     # Setup env
     load "${DIR_SRC}/helpers/parser.zsh"
-
-    # Fixture
-    FIXTURE_NO_UPDATE_DUE="${DIR_FIXTURE}/brew/no_update_due.Brewfile"
-    FIXTURE_UPDATE_DUE="${DIR_FIXTURE}/brew/update_due.Brewfile"
     brew uninstall --force fortune
     brew uninstall --cask --force caffeine
     # brew install curl
@@ -18,6 +14,10 @@
 
     # Load script to test
     load "${DIR_SRC}/helpers/brew.zsh"
+
+    # Fixture
+    FIXTURE_NO_UPDATE_DUE="${DIR_FIXTURE}/brew/no_update_due.Brewfile"
+    FIXTURE_UPDATE_DUE="${DIR_FIXTURE}/brew/update_due.Brewfile"
 }
 
 # ────────────────────────────────────────────────────────────────

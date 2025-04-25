@@ -45,8 +45,8 @@ SCRIPTS=( \
     "${DIR_ROOT}/helpers/time.zsh" \
     "${DIR_ROOT}/helpers/parser.zsh" \
     "${DIR_ROOT}/helpers/brew.zsh" \
-    "${DIR_ROOT}/logic/modules.zsh" \
     "${DIR_ROOT}/logic/update.zsh" \
+    "${DIR_ROOT}/logic/modules.zsh" \
     "${DIR_ROOT}/logic/uninstall.zsh" \
 )
 

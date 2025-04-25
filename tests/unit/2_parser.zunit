@@ -5,6 +5,9 @@
 
 @setup {
 
+    # Load script to test
+    load "${DIR_SRC}/helpers/parser.zsh"
+
     # Fixtures
     FIXTURE_JSON="${DIR_FIXTURE}/parser/fixture.json"
     FIXTURE_BREW="${DIR_FIXTURE}/parser/fixture.Brewfile"
@@ -18,9 +21,6 @@
     mkdir -p "${DIR_FIXTURE}/parser/output"
     cp "${FIXTURE_JSON}" "${F_JSON_OUT}"
     cp "${FIXTURE_BREW}" "${F_BREW_OUT}"
-
-    # Load script to test
-    load "${DIR_SRC}/helpers/parser.zsh"
 }
 
 # ────────────────────────────────────────────────────────────────
