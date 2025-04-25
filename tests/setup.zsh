@@ -89,3 +89,4 @@ printStyled() {
     # Display
     print "${color}$final_message${NONE}"
 }
+

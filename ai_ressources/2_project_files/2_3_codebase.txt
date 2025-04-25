@@ -14,12 +14,15 @@ brew "jq"           # JSON PARSER → Required by "yq"
 # FICHIER /src/.auto-install/install.sh
 ###############################
 
-# Run it automaticaly: `` (TODO)
+# Run it automaticaly:
+# TODO: curl (local + Docker image with curl / wget + VM macOS)
 
-# Run it manually (TODO):
-    # docker run --name "test" -v "/Users/gui/Repos/docker/shared:/shared" -it "ubuntu" "sh"
-    # . ./shared/install.sh
-#
+# Run it manually:
+# Move this file to your local shared folder (volume) then run:
+# docker run --rm -v "/Users/gui/Repos/docker/shared:/shared" -it ubuntu sh -c ". /shared/install.sh; exec zsh"
+
+# TODO: Télécharger uniquement le dossier "gacli/src" et le fichier "gacli/installer/Brewfile"
+# TODO: Après l'install → supprimer les fichiers "install.sh" et Brewfile
 
 # Options
 FORCE_MODE="false"
@@ -36,7 +39,7 @@ ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
 
 # GACLI paths
 DIR=".gacli"
-ENTRY_POINT="gacli.zsh"
+ENTRY_POINT="main.zsh"
 ZSHRC=".zshrc"
 
 # WRAPPER
@@ -477,78 +480,7 @@ main "$@"
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/.auto-install/uninstall.zsh
-###############################
-
-# Uninstall GACLI: remove all file and cleanup .zshrc
-gacli_uninstall() {
-    printStyled info "Uninstalling... ⏳"
-
-    # Variables
-    local zshrc_file="$HOME/.zshrc"
-    local config_file="${CONFIG}"
-
-    # Remove GACLI lines from .zshrc
-    print ""
-    printStyled info "Updating .zshrc file... ⏳"
-    if [[ -f "${zshrc_file}" ]]; then
-        cp "${zshrc_file}" "${zshrc_file}.bak" || {
-            printStyled error "Failed to backup zshrc file"
-            return 1
-        }
-
-        # Remove all GACLI lines (header + source + alias)
-        grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
-            printStyled error "Failed to parse zshrc file"
-            return 1
-        }
-
-
-        mv "${zshrc_file}.tmp" "$zshrc_file" || {
-            printStyled error "Failed to update zshrc file"
-            return 1
-        }
-
-    else
-        printStyled warning ".zshrc file not found ($zshrc_file)"
-    fi
-    printStyled success "Updated"
-
-    # Remove GACLI wrapper
-    print ""
-    printStyled info "Removing wrapper... ⏳"
-    local wrapper_path="${HOME}/.local/bin/gacli"
-    if [[ -f "${wrapper_path}" ]]; then
-        rm -f "${wrapper_path}" || {
-            printStyled warning "Failed to delete wrapper ${wrapper_path}"
-        }
-    fi
-    printStyled success "Removed"
-
-    # Delete GACLI directory
-    print ""
-    printStyled info "Deleting GACLI files... ⏳"
-    if [[ -d "${GACLI_DIR}" ]]; then
-        rm -rf "${GACLI_DIR}" || {
-            printStyled error "Failed to delete directory ${GACLI_DIR}"
-            return 1
-        }
-    else
-        printStyled error "Unable to find GACLI directory: ${GACLI_DIR}"
-        return 1
-    fi
-    printStyled success "Deleted"
-
-    print ""
-    printStyled success "Uninstall complete ✅"
-    print ""
-    printStyled highlight "Restart your terminal"
-    print ""
-}
-
-#!/usr/bin/env zsh
-###############################
-# FICHIER /src/.helpers/brew.zsh
+# FICHIER /src/helpers/brew.zsh
 ###############################
 
 # ────────────────────────────────────────────────────────────────
@@ -703,7 +635,7 @@ _brew_is_update_due() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/.helpers/parser.zsh
+# FICHIER /src/helpers/parser.zsh
 ###############################
 
 # ────────────────────────────────────────────────────────────────
@@ -1111,6 +1043,10 @@ _brew_add() {
   esac
 
   if ! grep -qF "${line}" "${file}"; then
+    # Ensure newline at EOF before appending
+    [[ $(tail -c1 "${file}") != "" ]] && echo >> "${file}"
+
+    # Append value
     echo "${line}" >> "${file}" || {
       printStyled error "Failed to append line to ${file}"
       return 1
@@ -1128,10 +1064,10 @@ _brew_rm() {
   local pattern=""
   case "${key}" in
     formulae)
-      pattern="^brew \"${value}\"$"
+      pattern="^brew \"${value}\""
       ;;
     casks)
-      pattern="^cask \"${value}\"$"
+      pattern="^cask \"${value}\""
       ;;
     *)
       printStyled error "Unknown key for brewfile: '${key}'"
@@ -1152,7 +1088,7 @@ _brew_rm() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/.helpers/time.zsh
+# FICHIER /src/helpers/time.zsh
 ###############################
 
 # ────────────────────────────────────────────────────────────────
@@ -1235,7 +1171,7 @@ time_from_human() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/.run/modules.zsh
+# FICHIER /src/logic/modules.zsh
 ###############################
 
 # TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
@@ -1459,7 +1395,81 @@ _module_get_commands() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/.run/update.zsh
+# FICHIER /src/logic/uninstall.zsh
+###############################
+
+# TODO: make it independent (no need of gacli.zsh or other script to run)
+# TODO: make it 100% POSIX → .sh
+
+# Uninstall GACLI: remove all file and cleanup .zshrc
+gacli_uninstall() {
+    printStyled info "Uninstalling... ⏳"
+
+    # Variables
+    local zshrc_file="$HOME/.zshrc"
+    local config_file="${CONFIG}"
+
+    # Remove GACLI lines from .zshrc
+    print ""
+    printStyled info "Updating .zshrc file... ⏳"
+    if [[ -f "${zshrc_file}" ]]; then
+        cp "${zshrc_file}" "${zshrc_file}.bak" || {
+            printStyled error "Failed to backup zshrc file"
+            return 1
+        }
+
+        # Remove all GACLI lines (header + source + alias)
+        grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
+            printStyled error "Failed to parse zshrc file"
+            return 1
+        }
+
+
+        mv "${zshrc_file}.tmp" "$zshrc_file" || {
+            printStyled error "Failed to update zshrc file"
+            return 1
+        }
+
+    else
+        printStyled warning ".zshrc file not found ($zshrc_file)"
+    fi
+    printStyled success "Updated"
+
+    # Remove GACLI wrapper
+    print ""
+    printStyled info "Removing wrapper... ⏳"
+    local wrapper_path="${HOME}/.local/bin/gacli"
+    if [[ -f "${wrapper_path}" ]]; then
+        rm -f "${wrapper_path}" || {
+            printStyled warning "Failed to delete wrapper ${wrapper_path}"
+        }
+    fi
+    printStyled success "Removed"
+
+    # Delete GACLI directory
+    print ""
+    printStyled info "Deleting GACLI files... ⏳"
+    if [[ -d "${GACLI_DIR}" ]]; then
+        rm -rf "${GACLI_DIR}" || {
+            printStyled error "Failed to delete directory ${GACLI_DIR}"
+            return 1
+        }
+    else
+        printStyled error "Unable to find GACLI directory: ${GACLI_DIR}"
+        return 1
+    fi
+    printStyled success "Deleted"
+
+    print ""
+    printStyled success "Uninstall complete ✅"
+    print ""
+    printStyled highlight "Restart your terminal"
+    print ""
+}
+
+#!/usr/bin/env zsh
+###############################
+# FICHIER /src/logic/update.zsh
 ###############################
 
 TODAY=""
@@ -1726,7 +1736,7 @@ _update_display_next() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/gacli.zsh
+# FICHIER /src/main.zsh
 ###############################
 
 # Easter egg display
@@ -1747,14 +1757,14 @@ fi
 
 # Directories
 DIR_ROOT="${HOME}/.gacli"
-DIR_DATA="${DIR_ROOT}/.data"
+DIR_DATA="${DIR_ROOT}/data"
 DIR_CONFIG="${DIR_DATA}/config"
 DIR_TOOLS="${DIR_DATA}/tools"
-DIR_HELPERS="${DIR_ROOT}/.helpers"
-DIR_RUN="${DIR_ROOT}/.run"
+DIR_HELPERS="${DIR_ROOT}/helpers"
+DIR_LOGIC="${DIR_ROOT}/logic"
 DIR_MODS="${DIR_ROOT}/modules"
 DIR_TMP="${DIR_ROOT}/.tmp"
-DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_RUN}" "${DIR_MODS}" "${DIR_TMP}")
+DIRS=("${DIR_ROOT}" "${DIR_DATA}" "${DIR_CONFIG}" "${DIR_TOOLS}" "${DIR_HELPERS}" "${DIR_LOGIC}" "${DIR_MODS}" "${DIR_TMP}")
 
 # Config files
 FILE_CONFIG_UPDATE="${DIR_CONFIG}/update.config.json"
@@ -1768,12 +1778,12 @@ FILES_TOOLS=("${FILE_TOOLS_CORE}" "${FILE_TOOLS_MODULES}" "${FILE_TOOLS_USER}")
 
 # Scripts files
 SCRIPTS=( \
-    "${DIR_ROOT}/.helpers/time.zsh" \
-    "${DIR_ROOT}/.helpers/parser.zsh" \
-    "${DIR_ROOT}/.helpers/brew.zsh" \
-    "${DIR_ROOT}/.run/modules.zsh" \
-    "${DIR_ROOT}/.run/update.zsh" \
-    "${DIR_ROOT}/.auto-install/uninstall.zsh" \
+    "${DIR_ROOT}/helpers/time.zsh" \
+    "${DIR_ROOT}/helpers/parser.zsh" \
+    "${DIR_ROOT}/helpers/brew.zsh" \
+    "${DIR_ROOT}/logic/modules.zsh" \
+    "${DIR_ROOT}/logic/update.zsh" \
+    "${DIR_ROOT}/logic/uninstall.zsh" \
 )
 
 # Available commands
@@ -2121,243 +2131,308 @@ main "$@"
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /test/parser/test_parser.zsh
+# FICHIER /tests/setup.zunit
 ###############################
 
-# Input and Output
-PARSER="/Users/gui/Repos/gacli/gacli/src/.helpers/parser.zsh"
-
-# JSON files
-D_JSON="/Users/gui/Repos/gacli/gacli/test/parser/json_files"
-F_JSON_READ="${D_JSON}/read.json"
-F_JSON_WRITE_TEMPLATE="${D_JSON}/write_template.json"
-F_JSON_WRITE_TO="${D_JSON}/write_to.json"
-
-# Brewfile files
-D_BREW="/Users/gui/Repos/gacli/gacli/test/parser/brewfiles"
-F_BREW_READ="${D_BREW}/read.Brewfile"
-F_BREW_WRITE_TEMPLATE="${D_BREW}/write_template.Brewfile"
-F_BREW_WRITE_TO="${D_BREW}/write_to.Brewfile"
-
-# Results
-TOTAL=0
-SUCCESS=0
-FAILED=0
+DIR_CURRENT="$(dirname "${(%):-%N}")"
+DIR_ROOT="${DIR_CURRENT}/.."
+DIR_SRC="${DIR_ROOT}/src"
+DIR_TESTS="${DIR_ROOT}/tests"
 
 # ────────────────────────────────────────────────────────────────
-# Source scripts to test
+# I/O formatting (from main.zsh)
 # ────────────────────────────────────────────────────────────────
 
-# Source scripts to test
-source "${PARSER}"
+# Formatting
+BOLD="\033[1m"
+UNDERLINE="\033[4m"
+BLACK='\033[30m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+PURPLE='\033[35m'
+CYAN='\033[36m'
+ORANGE='\033[38;5;208m'
+GREY='\033[90m'
+NONE='\033[0m'
+COLOR_FORMULAE="${BLUE}"
+COLOR_CASKS="${CYAN}"
+COLOR_MODS="${PURPLE}"
+COLOR_COMMANDS="${ORANGE}"
 
-test_parser() {
-  print_section "Testing JSON parser..."
-  test_json
+# Emojis
+EMOJI_SUCCESS="✦"
+EMOJI_WARN="⚠️"
+EMOJI_ERR="❌"
+EMOJI_INFO="✧"
+EMOJI_HIGHLIGHT="👉"
+EMOJI_DEBUG="🔎"
+EMOJI_WAIT="⏳"
+ICON_ON="⊙"
+ICON_OFF="○"
 
-  print_section "Testing Brewfile parser..."
-  test_brew
+printStyled() {
+    # Variables
+    local style=$1
+    local raw_message=$2
+    local final_message=""
+    local color=$NONE
 
-  print_section "Testing unified parser..."
-  test_unified
+    # Argument check
+    if [[ -z "$style" || -z "$raw_message" ]]; then
+        echo "❌ [printStyled] Expected: <style> <message>"
+        return 1
+    fi
 
-  print_total || return 1
+    # Formatting
+    case "$style" in
+        error)
+            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
+            return
+            ;;
+        warning)
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
+            return
+            ;;
+        success)
+            color=$GREEN
+            final_message="${EMOJI_SUCCESS} ${raw_message}"
+            ;;
+        info)
+            color=$GREY
+            final_message="${EMOJI_INFO} ${raw_message}"
+            ;;
+        highlight)
+            color=$NONE
+            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
+            ;;
+        debug)
+            color=$YELLOW
+            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${YELLOW}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
+            ;;
+        *)
+            color=$NONE
+            final_message="${raw_message}"
+            ;;
+    esac
+
+    # Display
+    print "${color}$final_message${NONE}"
 }
 
-# Test JSON parser
-test_json() {
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/helpers/parser/parser.zunit
+###############################
 
-  # Test _json_read
-  print "\n👉 ${GREY}Testing read...${NONE}"
-  run_test "_json_read scalar_empty" "$(_json_read "${F_JSON_READ}" "scalar_empty")" ""                         # Should return empty value
-  run_test "_json_read scalar_value" "$(_json_read "${F_JSON_READ}" "scalar_value")" "value 1"                  # Should return "value 1" as a unique value (not "value" "1")
-  run_test "_json_read list_empty" "$(_json_read "${F_JSON_READ}" "list_empty")" ""                         # Should return empty list
-  run_test "_json_read list_value" "$(_json_read "${F_JSON_READ}" "list_value")" "\"value 2\" \"value 3\""  # Should return a list with two values (no less, no more) which are "value 1" and "value 2"
+@setup {
 
-  # Now we assume that _json_read is working as expected
-  # So we'll check further writing functions by reading the output file with _json_read
+    # Setup env
+    dir_current="$(dirname "${(%):-%N}")"
+    load "${dir_current}/../../../setup.zsh"
+    load "${DIR_SRC}/helpers/parser.zsh"
 
-  # Reset output file
-  cp "${F_JSON_WRITE_TEMPLATE}" "${F_JSON_WRITE_TO}"
+    # TODO: fix dynamic paths
 
-  # Test _json_write
-  print "\n👉 ${GREY}Testing write scalar...${NONE}"
-  run_test "_json_write scalar_empty" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_empty" "" && _json_read "${F_JSON_WRITE_TO}" "scalar_empty")" ""
-  run_test "_json_write scalar_value (1/2)" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_value" "tmp value" && _json_read "${F_JSON_WRITE_TO}" "scalar_value")" "tmp value"
-  run_test "_json_write scalar_value (2/2)" "$(_json_write "${F_JSON_WRITE_TO}" "scalar_value" "value 1" && _json_read "${F_JSON_WRITE_TO}" "scalar_value")" "value 1"
+    # Fixtures
+    FIXTURE_JSON="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/fixture.json"
+    FIXTURE_BREW="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/Brewfile"
+    EMPTY_BREW="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/empty.Brewfile"
 
-  print "\n👉 ${GREY}Testing write list...${NONE}"
+    # Output files
+    F_JSON_OUT="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output/output.json"
+    F_BREW_OUT="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output/Brewfile"
 
-  # Test _json_reset
-  run_test "_json_reset list_reset" "$(_json_reset "${F_JSON_WRITE_TO}" "list_reset" && _json_read "${F_JSON_WRITE_TO}" "list_reset")" ""
-
-  # Test _json_add
-  run_test "_json_add list_add (1/2)" "$(_json_add "${F_JSON_WRITE_TO}" "list_add" "value 2" && _json_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\""
-  run_test "_json_add list_add (2/2)" "$(_json_add "${F_JSON_WRITE_TO}" "list_add" "value 3" && _json_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\" \"value 3\""
-
-  # Test _json_rm
-  run_test "_json_rm list_rm (1/2)" "$(_json_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 4" && _json_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 5\" \"old value 6\" \"old value 7\""
-  run_test "_json_rm list_rm (2/2)" "$(_json_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 5" && _json_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 6\" \"old value 7\""
-}
-
-# Test Brewfile parser
-test_brew() {
-
-  # Test _brew_read
-  print "\n👉 ${GREY}Testing read...${NONE}"
-  run_test "_brew_read formulae" "$(_brew_read "${F_BREW_READ}" "formulae")" "\"my formula 1\" \"my formula 2\""
-  run_test "_brew_read casks" "$(_brew_read "${F_BREW_READ}" "casks")" "\"my cask 1\" \"my cask 2\"" 
-
-  # Now we assume that _brew_read is working as expected
-  # So we'll check further writing functions by reading the output file with _brew_read
-
-  # Reset output file
-  cp "${F_BREW_WRITE_TEMPLATE}" "${F_BREW_WRITE_TO}"
-
-  print "\n👉 ${GREY}Testing write...${NONE}"
-
-  # Test _brew_reset
-  run_test "_brew_reset formulae" "$(_brew_reset "${F_BREW_WRITE_TO}" "formulae" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" ""
-  run_test "_brew_reset casks" "$(_brew_reset "${F_BREW_WRITE_TO}" "casks" && _brew_read "${F_BREW_WRITE_TO}" "casks")" ""
-
-  # Test _brew_add
-  run_test "_brew_add formulae (1/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "formulae" "formula 1" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\""
-  run_test "_brew_add formulae (2/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "formulae" "formula 2" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 2\""
-  run_test "_brew_add casks (1/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "casks" "cask 1" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\""
-  run_test "_brew_add casks (2/2)" "$(_brew_add "${F_BREW_WRITE_TO}" "casks" "cask 2" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\" \"cask 2\""
-
-  # Test _brew_rm
-  run_test "_brew_rm formulae" "$(_brew_rm "${F_BREW_WRITE_TO}" "formulae" "formula 1" && _brew_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 2\""
-  run_test "_brew_rm casks" "$(_brew_rm "${F_BREW_WRITE_TO}" "casks" "cask 1" && _brew_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 2\""
-}
-
-# Test unified parser
-test_unified() {
-
-  # JSON
-  print "\n👉 ${GREY}Testing JSON support...${NONE}"
-
-  # Test file_read
-  print "\n👉 ${GREY}Testing read...${NONE}"
-  run_test "file_read scalar_empty" "$(file_read "${F_JSON_READ}" "scalar_empty")" ""                     # Should return empty value
-  run_test "file_read scalar_value" "$(file_read "${F_JSON_READ}" "scalar_value")" "value 1"              # Should return "value 1" as a unique value (not "value" "1")
-  run_test "file_read list_empty" "$(file_read "${F_JSON_READ}" "list_empty")" ""                         # Should return empty list
-  run_test "file_read list_value" "$(file_read "${F_JSON_READ}" "list_value")" "\"value 2\" \"value 3\""  # Should return a list with two values (no less, no more) which are "value 1" and "value 2"
-
-  # Now we assume that file_read is working as expected
-  # So we'll check further writing functions by reading the output file with file_read
-
-  # Reset output file
-  cp "${F_JSON_WRITE_TEMPLATE}" "${F_JSON_WRITE_TO}"
-
-  # Test file_write
-  print "\n👉 ${GREY}Testing write scalar...${NONE}"
-  run_test "file_write scalar_empty" "$(file_write "${F_JSON_WRITE_TO}" "scalar_empty" "" && file_read "${F_JSON_WRITE_TO}" "scalar_empty")" ""
-  run_test "file_write scalar_value (1/2)" "$(file_write "${F_JSON_WRITE_TO}" "scalar_value" "tmp value" && file_read "${F_JSON_WRITE_TO}" "scalar_value")" "tmp value"
-  run_test "file_write scalar_value (2/2)" "$(file_write "${F_JSON_WRITE_TO}" "scalar_value" "value 1" && file_read "${F_JSON_WRITE_TO}" "scalar_value")" "value 1"
-
-  print "\n👉 ${GREY}Testing write list...${NONE}"
-
-  # Test file_reset
-  run_test "file_reset list_reset" "$(file_reset "${F_JSON_WRITE_TO}" "list_reset" && file_read "${F_JSON_WRITE_TO}" "list_reset")" ""
-
-  # Test file_add
-  run_test "file_add list_add one" "$(file_add "${F_JSON_WRITE_TO}" "list_add" "value 2" && file_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\""
-  run_test "file_add list_add list" "$(file_add "${F_JSON_WRITE_TO}" "list_add" "value 3" "value 4" && file_read "${F_JSON_WRITE_TO}" "list_add")" "\"value 2\" \"value 3\" \"value 4\""
-
-  # Test file_rm
-  run_test "file_rm list_rm one" "$(file_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 4" && file_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 5\" \"old value 6\" \"old value 7\""
-  run_test "file_rm list_rm list" "$(file_rm "${F_JSON_WRITE_TO}" "list_rm" "old value 5" "old value 7" && file_read "${F_JSON_WRITE_TO}" "list_rm")" "\"old value 6\""
-
-  # BREW
-  print "\n👉 ${GREY}Testing Brewfile support...${NONE}"
-
-  # Test file_read
-  print "\n👉 ${GREY}Testing read...${NONE}"
-  run_test "file_read formulae" "$(file_read "${F_BREW_READ}" "formulae")" "\"my formula 1\" \"my formula 2\""
-  run_test "file_read casks" "$(file_read "${F_BREW_READ}" "casks")" "\"my cask 1\" \"my cask 2\"" 
-
-  # Now we assume that file_read is working as expected
-  # So we'll check further writing functions by reading the output file with file_read
-
-  # Reset output file
-  cp "${F_BREW_WRITE_TEMPLATE}" "${F_BREW_WRITE_TO}"
-
-  print "\n👉 ${GREY}Testing write...${NONE}"
-
-  # Test file_reset
-  run_test "file_reset formulae" "$(file_reset "${F_BREW_WRITE_TO}" "formulae" && file_read "${F_BREW_WRITE_TO}" "formulae")" ""
-  run_test "file_reset casks" "$(file_reset "${F_BREW_WRITE_TO}" "casks" && file_read "${F_BREW_WRITE_TO}" "casks")" ""
-
-  # Test file_add
-  run_test "file_add one formula" "$(file_add "${F_BREW_WRITE_TO}" "formulae" "formula 1" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\""
-  run_test "file_add list formulae" "$(file_add "${F_BREW_WRITE_TO}" "formulae" "formula 2" "formula 3" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 2\" \"formula 3\""
-  run_test "file_add one cask" "$(file_add "${F_BREW_WRITE_TO}" "casks" "cask 1" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\""
-  run_test "file_add list casks" "$(file_add "${F_BREW_WRITE_TO}" "casks" "cask 2" "cask 3" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 1\" \"cask 2\" \"cask 3\""
-
-  # Test file_rm
-  run_test "file_rm one formula" "$(file_rm "${F_BREW_WRITE_TO}" "formulae" "formula 2" && file_read "${F_BREW_WRITE_TO}" "formulae")" "\"formula 1\" \"formula 3\""
-  run_test "file_rm list" "$(file_rm "${F_BREW_WRITE_TO}" "casks" "cask 1" "cask 3" && file_read "${F_BREW_WRITE_TO}" "casks")" "\"cask 2\""
+    # Reset output files
+    mkdir -p "/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output"
+    cp "${FIXTURE_JSON}" "${F_JSON_OUT}"
+    cp "${FIXTURE_BREW}" "${F_BREW_OUT}"
 }
 
 # ────────────────────────────────────────────────────────────────
-# TEST LOGIQUE (don't modify this)
+# JSON PARSER
 # ────────────────────────────────────────────────────────────────
 
-# run_test <test_name> <result> <expected_result>
-run_test() {
-  local test_name=$1
-  local result=$2
-  local expected=$3
-
-  # Increment total tests count
-  ((TOTAL++))
-
-  # Compare output with expected result
-  if [[ "$result" == "$expected" ]]; then
-    ((SUCCESS++))
-    print "    ✅ ${GREY}${test_name} → '${GREEN}${result}${GREY}'${NONE}"
-  else
-    ((FAILED++))
-    print "    ❌ ${GREY}${test_name} → '${RED}${result}${GREY}' ≠ '${ORANGE}${expected}${GREY}'${NONE}"
-  fi
+@test 'JSON - read scalar       0 value' {
+    run file_read "${FIXTURE_JSON}" scalar_empty
+    assert $state equals 0
+    assert "$output" is_empty
 }
 
-print_section() {
-  print -- "${GREY}\n--------------------------------------${NONE}"
-  print "${GREY} → ${1}${NONE}"
-  print -- "${GREY}--------------------------------------${NONE}"
+@test 'JSON - read scalar       1 value' {
+    run file_read "${FIXTURE_JSON}" scalar_value
+    assert $state equals 0
+    assert "$output" same_as 'old value 1'
 }
 
-print_total() {
-  local failed_pourcent=$((FAILED * 100 / TOTAL))
-  local success_pourcent=$((SUCCESS * 100 / TOTAL))
-  local message=""
-  local color=$RED
+@test 'JSON - read list         0 value' {
+    run file_read "${FIXTURE_JSON}" list_0
+    assert $state equals 0
+    assert "$output" is_empty
+}
 
-  # Compute message
-  if [[ $failed_pourcent == 0 ]]; then
-    color=$GREEN
-    message="    └→ ✅ ${SUCCESS} TESTS PASSED"
-  else
-    message="    └→ ❌ ${FAILED} TESTS FAILED"
-  fi
+@test 'JSON - read list         2 values' {
+    run file_read "${FIXTURE_JSON}" list_2
+    assert $state equals 0
+    assert "$output" same_as '"old value 1" "old value 2"'
+}
 
-  # Display results
-  print -- "${BOLD}${color}\n--------------------------------------${NONE}"
-  print -- "${BOLD}${color}--------------------------------------${NONE}"
-  print "${BOLD}${color} → FINAL RESULT = ${ORANGE}${success_pourcent} %${NONE}"
-  print "${BOLD}${color}${message}${NONE}"
-  print -- "${BOLD}${color}--------------------------------------${NONE}"
-  print -- "${BOLD}${color}--------------------------------------\n${NONE}"
+# Now we assume that file_read is working as expected
+# So we'll check further writing functions by reading the output file with file_read
 
-  [[ $failed_pourcent == 0 ]] || return 1
+# Scalar
+
+@test 'JSON - write scalar      0 value     → 1 value' {
+    file_write "${F_JSON_OUT}" "scalar_empty" "value 1"
+    run file_read "${F_JSON_OUT}" "scalar_empty"
+    assert $state equals 0
+    assert "$output" same_as 'value 1'
+}
+
+@test 'JSON - write scalar      1 value     → 1 value' {
+    file_write "${F_JSON_OUT}" "scalar_value" "value 1"
+    run file_read "${F_JSON_OUT}" "scalar_value"
+    assert $state equals 0
+    assert "$output" same_as 'value 1'
+}
+
+@test 'JSON - write scalar      1 value     → 0 value' {
+    file_write "${F_JSON_OUT}" "scalar_value" ""
+    run file_read "${F_JSON_OUT}" "scalar_value"
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+# Lists
+
+@test 'JSON - reset list        2 values    → 0 value' {
+    file_reset "${F_JSON_OUT}" "list_2"
+    run file_read "${F_JSON_OUT}" "list_2"
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'JSON - add one item      0 value     → 1 value' {
+    file_add "${F_JSON_OUT}" "list_0" "new value"
+    run file_read "${F_JSON_OUT}" "list_0"
+    assert $state equals 0
+    assert "$output" same_as '"new value"'
+}
+
+@test 'JSON - add two items     2 values    → 4 values' {
+    file_add "${F_JSON_OUT}" "list_2" "new value 1" "new value 2"
+    run file_read "${F_JSON_OUT}" "list_2"
+    assert $state equals 0
+    assert "$output" same_as '"old value 1" "old value 2" "new value 1" "new value 2"'
+}
+
+@test 'JSON - remove one item   1 value     → 0 value' {
+    file_rm "${F_JSON_OUT}" "list_1" "old value 1"
+    run file_read "${F_JSON_OUT}" "list_1"
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'JSON - remove two items  3 value     → 1 value' {
+    file_rm "${F_JSON_OUT}" "list_3" "old value 1" "old value 3"
+    run file_read "${F_JSON_OUT}" "list_3"
+    assert $state equals 0
+    assert "$output" same_as '"old value 2"'
 }
 
 # ────────────────────────────────────────────────────────────────
-# RUN
+# BREWFILE PARSER
 # ────────────────────────────────────────────────────────────────
 
-test_parser
+@test 'BREW - read formula      0 value' {
+    run file_read "${EMPTY_BREW}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+}
 
+@test 'BREW - read casks        0 value' {
+    run file_read "${EMPTY_BREW}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'BREW - read formulae     2 values' {
+    run file_read "${FIXTURE_BREW}" formulae
+    assert $state equals 0
+    assert "$output" same_as '"old formula 1" "old formula 2"'
+}
+
+@test 'BREW - read casks        2 values' {
+    run file_read "${FIXTURE_BREW}" casks
+    assert $state equals 0
+    assert "$output" same_as '"old cask 1" "old cask 2"'
+}
+
+# Now we assume that file_read is working as expected
+# So we'll check further writing functions by reading the output file with file_read
+
+# Scalar
+
+@test 'BREW - write formula     2 values    → 3 values' {
+    file_write "${F_BREW_OUT}" formulae "new formula 1"
+    run file_read "${F_BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" same_as '"old formula 1" "old formula 2" "new formula 1"'
+}
+
+@test 'BREW - write cask        2 values    → 3 values' {
+    file_write "${F_BREW_OUT}" casks "new cask 1"
+    run file_read "${F_BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" same_as '"old cask 1" "old cask 2" "new cask 1"'
+}
+
+# Reset
+
+@test 'BREW - reset formulae    2 values    → 0 value' {
+    file_reset "${F_BREW_OUT}" formulae
+    run file_read "${F_BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'BREW - reset casks       2 values    → 0 value' {
+    file_reset "${F_BREW_OUT}" casks
+    run file_read "${F_BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+# Add
+
+@test 'BREW - add formulae      2 values    → 4 values' {
+    file_add "${F_BREW_OUT}" formulae "new formula 1" "new formula 2"
+    run file_read "${F_BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" same_as '"old formula 1" "old formula 2" "new formula 1" "new formula 2"'
+}
+
+@test 'BREW - write casks       2 values    → 4 values' {
+    file_add "${F_BREW_OUT}" casks "new cask 1" "new cask 2"
+    run file_read "${F_BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" same_as '"old cask 1" "old cask 2" "new cask 1" "new cask 2"'
+}
+
+# Remove
+
+@test 'BREW - remove formulae   2 values    → 0 value' {
+    file_rm "${F_BREW_OUT}" formulae "old formula 1" "old formula 2"
+    run file_read "${F_BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'BREW - remove casks      2 values    → 0 value' {
+    file_rm "${F_BREW_OUT}" casks "old cask 1" "old cask 2"
+    run file_read "${F_BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+}
 
