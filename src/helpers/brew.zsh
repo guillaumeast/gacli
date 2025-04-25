@@ -10,8 +10,10 @@
 # Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
 brew_bundle() {
     local brewfile="${1}"
+    local update_is_due=""
 
-    _brew_is_update_due "${1}" || return 0
+    update_is_due="$(_brew_is_update_due "${1}")"
+    [[ "$update_is_due" == "false" ]] && return 0
 
     # Loading mesage
     print ""
@@ -138,7 +140,10 @@ _brew_is_update_due() {
 
     # Check each formula status
     for formula in "${formulae[@]}"; do
-        brew_is_f_active "${formula}" || return 0
+        if ! brew_is_f_active "${formula}"; then
+            echo "true"
+            return 0
+        fi
     done
 
     # Get casks from $brewfile
@@ -149,7 +154,13 @@ _brew_is_update_due() {
 
     # Check each cask status
     for cask in "${casks[@]}"; do
-        brew_is_c_active "${cask}" || return 0
+        if ! brew_is_c_active "${cask}"; then
+            echo "true"
+            return 0
+        fi
     done
+
+    # All formulae and casks are already activ
+    echo "false"
 }
 

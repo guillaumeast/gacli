@@ -268,8 +268,8 @@ _json_read() {
       echo $output
       ;;
     "array")
-      output=("${(@f)$(jq ".${key}[]" "$file")}")
-      echo $output
+      output=("${(@f)$(jq -r ".${key}[]" "$file")}")
+      printf '%s\n' "${output[@]}"
       ;;
     *)
       print "${RED}Error: unsupported type '${type}' for key '${key}'${NONE}" >&2
@@ -336,10 +336,10 @@ _brew_read() {
 
   case "${key}" in
     formulae)
-      output=("${(@f)$(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      output=("${(@f)$(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null)}")
       ;;
     casks)
-      output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)}")
       ;;
     *)
       printStyled error "Unknown key for brewfile: '${key}'"
@@ -347,7 +347,7 @@ _brew_read() {
       ;;
   esac
 
-  echo $output
+  printf '%s\n' "${output[@]}"
 }
 
 # PRIVATE - Reset list value into a Brewfile
