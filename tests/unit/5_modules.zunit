@@ -44,42 +44,24 @@
 # TESTS
 # ────────────────────────────────────────────────────────────────
 
-@test 'MODULES      → Detect if module is already downloaded        → false (uninstalled)' {
+@test 'MODULES      → Detect if module is installed' {
 
     # Set fake path
     DIR_MODS="${DIR_MODS_SAMPLES}"
 
-    # Check
+    # Check → false (uninstalled)
     run _module_is_downloaded "${MODULE_UNINSTALLED}"
     assert $state equals 1
-}
 
-@test 'MODULES      → Detect if module is already downloaded        → false (corrupted entry point)' {
-
-    # Set fake path
-    DIR_MODS="${DIR_MODS_SAMPLES}"
-
-    # Check
+    # Check → false (corrupted entry point)
     run _module_is_downloaded "${MODULE_CORRUPTED_ENTRY_POINT}"
     assert $state equals 1
-}
 
-@test 'MODULES      → Detect if module is already downloaded        → false (corrupted tools)' {
-
-    # Set fake path
-    DIR_MODS="${DIR_MODS_SAMPLES}"
-
-    # Check
+    # Check → false (corrupted tools)
     run _module_is_downloaded "${MODULE_CORRUPTED_TOOLS}"
     assert $state equals 1
-}
 
-@test 'MODULES      → Detect if module is already downloaded        → true' {
-
-    # Set fake path
-    DIR_MODS="${DIR_MODS_SAMPLES}"
-
-    # Check
+    # Check → true
     run _module_is_downloaded "${MODULE_VALID}"
     assert $state equals 0
 }
@@ -93,7 +75,7 @@
     assert "${MODULE_NESTED}" in $MODULES_INSTALLED
 }
     
-@test 'MODULES      → Init modules                                  → (via modules/)' {
+@test 'MODULES      → Init modules                          → (via modules/)' {
 
     # Pre-install (download) module
     _module_download "${MODULE_VALID}"
@@ -136,7 +118,7 @@
     done
 }
 
-@test 'MODULES      → Init modules                                  → (via user.tools.json)' {
+@test 'MODULES      → Init modules                          → (via user.tools.json)' {
 
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
@@ -192,7 +174,7 @@
     assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
 }
 
-@test 'MODULES      → Resolve the ultimate query                    → (via user.tools.json)' {
+@test 'MODULES      → Resolve the ultimate query            → (via user.tools.json)' {
 
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
