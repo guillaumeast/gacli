@@ -1,9 +1,16 @@
 {
   "formulae": [
+    "busted",
+    "dish",
     "fortune"
   ],
   "casks": [
+    "hiddenbar",
+    "tablecruncher",
     "caffeine"
   ],
-  "modules": []
+  "modules": [
+    "",
+    "sample_nested_module"
+  ]
 }

@@ -3,9 +3,6 @@
 # FICHIER /src/logic/modules.zsh
 ###############################
 
-# TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
-#   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
-
 # Github repo containing all available modules
 MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
 
@@ -25,12 +22,11 @@ MODULES_ACTIV=()
 modules_init() {
     local modules_raw=()
     local modules_to_check=()
-    local merged_formulae=()
-    local merged_casks=()
 
     # Reset merged file
     file_reset "${FILE_TOOLS_MODULES}" formulae || return 1
     file_reset "${FILE_TOOLS_MODULES}" casks || return 1
+    file_reset "${FILE_TOOLS_MODULES}" modules || return 1
 
     # Get modules list from $DIR_MODS
     setopt local_options nullglob # Avoid errors when DIR_MODS is empty
@@ -44,7 +40,6 @@ modules_init() {
 
     # Get modules list from $FILE_TOOLS_USER
     modules_raw+=("${(@f)$(file_read "${FILE_TOOLS_USER}" modules)}") || return 1
-
     if [[ ${#modules_raw[@]} -gt 0 ]]; then
         for module in "${modules_raw[@]}"; do
             [[ -z "$module" ]] && continue
@@ -55,32 +50,17 @@ modules_init() {
     # Modules are optional
     [[ ${#modules_to_check[@]} = 0 ]] && return 0
 
-    # Download modules
+    # Download modules and merge dependencies (recursively)
     for module in "${modules_to_check[@]}"; do
-        # Download module and nested modules
         _module_download "${module}" || continue
-
-        # Merge dependencies
-        merged_formulae+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}") || continue
-        merged_casks+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}") || continue
     done
-
-    # Save merged dependencies
-    file_add "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
-        printStyled error "Unable to merge modules dependencies"
-        return 1
-    }
-    file_add "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
-        printStyled error "Unable to merge modules dependencies"
-        return 1
-    }
 }
 
-# PRIVATE - Download and extract a module (recursively)
+# PRIVATE - Download a module and merge dependencies (recursively)
 _module_download() {
     local module="${1}"
     local config=""
-    local nested_modules=()
+    local list=()
 
     # Download module if needed
     if ! _module_is_downloaded "${module}"; then
@@ -90,19 +70,37 @@ _module_download() {
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
         curl "${descriptor_url}" > "${tmp_descriptor}" || {
-            printStyled error "Unable to download descriptor"
+            printStyled error "Unable to download descriptor of: ${module}"
             printStyled error "→ url: ${descriptor_url}"
+            printStyled error "Check module descriptor at: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+
+        # Check descriptor integrity
+        [[ -f "${tmp_descriptor}" ]] || {
+            printStyled error "Unable to download descriptor of: ${module}"
+            printStyled error "→ url: ${descriptor_url}"
+            printStyled error "Check module descriptor at: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
 
         # Get archive url
         module_url=$(file_read "${tmp_descriptor}" module_url) || {
-            printStyled error "Unable to parse descriptor"
+            printStyled error "Unable to parse descriptor of: ${module}"
             rm -f "${tmp_descriptor}"
             return 1
         }
         rm -f "${tmp_descriptor}"
+
+        # Check url integrity
+        [[ -n "${module_url}" ]] || {
+            printStyled error "Unable to extract url of: ${module}"
+            printStyled error "→ Check module descriptor at: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
 
         # Download module archive
         local tmp_archive="$(mktemp)"
@@ -139,17 +137,36 @@ _module_download() {
 
     # Download nested modules (recursive)
     config="${DIR_MODS}/${module}/${CONFIG_FILE}"
-    nested_modules+=("${(@f)$(file_read "${config}" modules)}")
-    for nested_module in "${nested_modules[@]}"; do
-        [[ -z "${nested_module}" || "${nested_module}" == "" ]] && continue
-        _module_download "${nested_module}" || {
-            printStyled error "Unable to download nested module: ${nested_module}"
-            return 1
-        }
+    list=("${(@f)$(file_read "${config}" modules)}")
+    for nested_module in "${list[@]}"; do
+        [[ -z "${nested_module}" ]] && continue
+        if ! _module_is_downloaded "${nested_module}"; then
+            _module_download "${nested_module}" || {
+                printStyled error "Unable to download nested module: ${nested_module}"
+                return 1
+            }
+        fi
     done
 
     # Add to installed modules variable
     MODULES_INSTALLED+=("${module}")
+
+    # Merge dependencies
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}")
+    file_add "${FILE_TOOLS_MODULES}" formulae "${list[@]}" || {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}")
+    file_add "${FILE_TOOLS_MODULES}" casks "${list[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" modules)}")
+    file_add "${FILE_TOOLS_MODULES}" modules "${list[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
 }
 
 # PRIVATE - Check if a module is correctly installed
@@ -191,38 +208,48 @@ modules_load() {
     done
 }
 
-# PRIVATE - Extract dynamic commands from a module via get_commands
+# PRIVATE - Extract dynamic commands list from a module via get_commands
 _module_get_commands() {
     local file="$1"
+    local commands=()
 
     # Argument check
-    if [[ -z "$file" ]]; then
-        printStyled error "Expected : <file> (received : $1)"
+    if [[ ! -f "$file" ]]; then
+        printStyled error "Incorrect file : ${1}"
         return 1
     fi
 
-    # get_commands is optional
+    # Clear hash table (before)
+    if typeset -f get_commands >/dev/null; then
+        unfunction get_commands
+    fi
+
+    # Source module file (TODO: do it in a subshell to avoid double sourcing issues ?)
+    source "${file}"
+    if (( $? != 0 )); then
+        printStyled error "Failed to load file : ${1}"
+        return 1
+    fi
+
+    # Check if get_commands is implemented
     if ! typeset -f get_commands >/dev/null; then
-        return 0
+        return 1
     fi
 
     # Capture and validate output
-    local raw_output
-    raw_output=("${(@f)$(get_commands | tr -d '\r')}")
+    commands=("${(@f)$(get_commands)}")
     if (( $? != 0 )); then
-        printStyled error "get_commands failed in ${file}"
+        unfunction get_commands
         return 1
+    else
+        unfunction get_commands
     fi
 
-    for cmd in "${raw_output[@]}"; do
-        [[ $cmd == *=* ]] || {
-            printStyled warning "Invalid command format: '$cmd' in ${file}"
-            continue
-        }
-        COMMANDS_MODS+=("$cmd")
+    # Return commands
+    local cmd=""
+    for cmd in "${commands[@]}"; do
+        [[ -n "$cmd" && $cmd == *=* ]] || continue
+        COMMANDS_MODS+=("${cmd}")
     done
-
-    unfunction get_commands
 }
-
 

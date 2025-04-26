@@ -1,9 +1,9 @@
-# 🧩 sample_module
+# 🧩 sample_nested_module
 
 **[`GACLI`](https://github.com/guillaumeast/gacli) module → Example and test module**
 
-🖨️ This `module` serves as a template for creating new `GACLI` modules.  
-🧪 It is also used as a sandbox for writing unit tests and validating CLI behaviors.
+🖨️ This `module` is used to test `GACLI` nested modules implementation.  
+🧪 It is only used as a sandbox for writing unit tests and validating CLI behaviors.
 
 ---
 
@@ -22,5 +22,5 @@ Clone or reference this module in your own module's `tools.json` file
 or just add it with `GACLI`:
 
 ```bash
-gacli install sample_module
+gacli install sample_nested_module
 ```

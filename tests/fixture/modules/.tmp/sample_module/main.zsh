@@ -2,10 +2,16 @@
 
 # Keep it secret
 export ULTIMATE_ANSWER=42
+local commands=(
+  "being_curious=asking_questions"
+  "ultimate_question=ultimate_answer"
+)
 
 get_commands() {
-  echo "being_curious=asking_questions"
-  echo "ultimate_question=ultimate_answer"
+    local cmd=""
+    for cmd in $commands; do
+        echo $cmd
+    done
 }
 
 asking_questions() {

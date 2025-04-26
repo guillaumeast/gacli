@@ -1,6 +1,6 @@
 #!/usr/bin/env zunit
 ###############################
-# FICHIER /tests/unit/update.zunit
+# FICHIER /tests/unit/modules.zunit
 ###############################
 
 @setup {
@@ -13,11 +13,11 @@
 
     # Fixtures
     DIR_MODS="${DIR_TESTS}/fixture/modules"
-    MODULE_VALID="valid_module"
+    MODULE_VALID="sample_module"
+    MODULE_NESTED="sample_nested_module"
     MODULE_CORRUPTED_ENTRY_POINT="corrupted_entry_point"
     MODULE_CORRUPTED_TOOLS="corrupted_tools"
     MODULE_UNINSTALLED="wrong_name"
-    MODULE_DOWNLOAD="sample_module"
 
     # Load script to test
     load "${DIR_SRC}/logic/modules.zsh"
@@ -46,8 +46,6 @@
 # TESTS
 # ────────────────────────────────────────────────────────────────
 
-# Detect installed modules
-
 @test 'MODULES      → Detect if module is already downloaded        → false (uninstalled)' {
 
     run _module_is_downloaded "${MODULE_UNINSTALLED}"
@@ -72,110 +70,142 @@
     assert $state equals 0
 }
 
-@test 'MODULES      → Fetch module commands' {
-
-    local entry_point="${DIR_MODS}/${MODULE_VALID}/${ENTRY_POINT}"
-    source "${entry_point}"
-
-    _module_get_commands "${entry_point}"
-    assert $? equals 0
-    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
-    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
-}
-
-@test 'MODULES      → Source modules and activate their commands' {
-
-    MODULES_INSTALLED=("valid_module")
-
-    modules_load
-    assert $? equals 0
-    assert "${MODULE_VALID}" in "${MODULES_ACTIV[@]}"
-    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
-    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
-}
-
-# TODO: add nested module test (simply add a new module inside the sample_module dependencies + create cycle to force to handle conflicts)
 @test 'MODULES      → Download module files' {
 
     # Set fake path
     DIR_MODS="${FAKE_DIR_MODS}"
 
     # Download module
-    _module_download "${MODULE_DOWNLOAD}"
+    _module_download "${MODULE_VALID}"
     assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
 }
-
-# TODO: further test commands instead of functions (in gacli.zunit ?)
-@test 'MODULES      → Init modules' {
+    
+@test 'MODULES      → Init modules                                  → (via modules/)' {
 
     # Set fake path
     DIR_MODS="${FAKE_DIR_MODS}"
 
     # Pre-install (download) module
-    _module_download "${MODULE_DOWNLOAD}"
-    assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+    _module_download "${MODULE_VALID}"
 
     # Init modules
     modules_init
     assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
+
+    # Check merged dependencies
+    local merged_modules=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" modules)}")
+    local merged_formulae=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" formulae)}")
+    local merged_casks=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" casks)}")
+    local module=""
+    local tools=""
+    local item=""
+    local list=()
+    for module in $MODULES_INSTALLED; do
+
+        tools="${DIR_MODS}/${module}/${CONFIG_FILE}"
+
+        # Check nested modules
+        list=("${(@f)$(file_read "${tools}" modules)}")
+        for item in $list; do
+            assert "${item}" in $merged_modules
+        done
+
+        # Check formulae
+        list=("${(@f)$(file_read "${tools}" formulae)}")
+        for item in $list; do
+            assert "${item}" in $merged_formulae
+        done
+
+        # Check casks
+        list=("${(@f)$(file_read "${tools}" casks)}")
+        for item in $list; do
+            assert "${item}" in $merged_casks
+        done
+    done
 }
 
-# TODO: further test commands instead of functions (in gacli.zunit ?)
-@test 'MODULES      → Resolve the ultimate query        → (via modules/)' {
-
-    # Set fake path
-    DIR_MODS="${FAKE_DIR_MODS}"
-
-    # Pre-install (download) module
-    _module_download "${MODULE_DOWNLOAD}"
-    assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
-
-    # Init modules
-    modules_init
-    assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
-
-    # Load modules
-    modules_load
-    assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_ACTIV[@]}"
-    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
-    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
-
-    # Test sample_module
-    run asking_questions
-    assert $state equals 0
-    assert $output same_as '...'
-
-    run ultimate_answer
-    assert $state equals 0
-    assert $output same_as "${ULTIMATE_ANSWER}"
-}
-
-# TODO: further test commands instead of functions (in gacli.zunit ?)
-@test 'MODULES      → Resolve the ultimate query        → (via user.tools.json)' {
+@test 'MODULES      → Init modules                                  → (via user.tools.json)' {
 
     # Set fake path
     DIR_MODS="${FAKE_DIR_MODS}"
 
     # Declare module
-    file_add "${FILE_TOOLS_USER}" modules "${MODULE_DOWNLOAD}"
+    file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
 
     # Init modules
     modules_init
     assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_INSTALLED[@]}"
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
+
+    # Check merged dependencies
+    local merged_modules=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" modules)}")
+    local merged_formulae=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" formulae)}")
+    local merged_casks=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" casks)}")
+    local module=""
+    local tools=""
+    local item=""
+    local list=()
+    for module in $MODULES_INSTALLED; do
+
+        tools="${DIR_MODS}/${module}/${CONFIG_FILE}"
+
+        # Check nested modules
+        list=("${(@f)$(file_read "${tools}" modules)}")
+        for item in $list; do
+            assert "${item}" in $merged_modules
+        done
+
+        # Check formulae
+        list=("${(@f)$(file_read "${tools}" formulae)}")
+        for item in $list; do
+            assert "${item}" in $merged_formulae
+        done
+
+        # Check casks
+        list=("${(@f)$(file_read "${tools}" casks)}")
+        for item in $list; do
+            assert "${item}" in $merged_casks
+        done
+    done
+}
+
+@test 'MODULES      → Fetch module commands' {
+
+    local entry_point="${DIR_MODS}/${MODULE_VALID}/${ENTRY_POINT}"
+    local COMMANDS_MODS=()
+
+    _module_get_commands "${entry_point}"
+    assert $? equals 0
+
+    assert "${#COMMANDS_MODS[@]}" equals 2
+    assert 'being_curious=asking_questions' in $COMMANDS_MODS
+    assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
+}
+
+@test 'MODULES      → Resolve the ultimate query                    → (via user.tools.json)' {
+
+    # Set fake path
+    DIR_MODS="${FAKE_DIR_MODS}"
+
+    # Declare module
+    file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
+
+    # Init modules
+    modules_init
 
     # Load modules
     modules_load
     assert $? equals 0
-    assert "${MODULE_DOWNLOAD}" in "${MODULES_ACTIV[@]}"
-    assert 'being_curious=asking_questions' in "${COMMANDS_MODS[@]}"
-    assert 'ultimate_question=ultimate_answer' in "${COMMANDS_MODS[@]}"
+    assert "${MODULE_VALID}" in $MODULES_ACTIV
+    assert "${MODULE_NESTED}" in $MODULES_ACTIV
+    assert 'being_curious=asking_questions' in $COMMANDS_MODS
+    assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
+    assert 'nested_command=nested_function' in $COMMANDS_MODS
 
     # Test sample_module
     run asking_questions
@@ -185,14 +215,10 @@
     run ultimate_answer
     assert $state equals 0
     assert $output same_as "${ULTIMATE_ANSWER}"
-}
 
-# ────────────────────────────────────────────────────────────────
-# CLEANUP
-# ────────────────────────────────────────────────────────────────
-
-@teardown {
-
-    # TODO
+    # Test nested module
+    run nested_function
+    assert $state equals 0
+    assert $output same_as 'nested answer'
 }
 
