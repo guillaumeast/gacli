@@ -65,7 +65,7 @@ _module_download() {
     # Download module if needed
     if ! _module_is_downloaded "${module}"; then
         local descriptor_url="${MODULES_LIB}/${module}.json"
-        local tmp_descriptor="${TMP_DIR}/${module}.json"
+        local tmp_descriptor="${DIR_TMP}/${module}.json"
         local module_url=""
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)

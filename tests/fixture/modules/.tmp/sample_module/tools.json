@@ -1,5 +1,0 @@
-{
-  "formulae": ["fortune"],
-  "casks": ["caffeine"],
-  "modules": ["sample_nested_module"]
-}

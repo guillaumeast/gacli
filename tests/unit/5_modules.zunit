@@ -12,34 +12,32 @@
     load "${DIR_SRC}/logic/update.zsh"
 
     # Fixtures
-    DIR_MODS="${DIR_TESTS}/fixture/modules"
-    MODULE_VALID="sample_module"
-    MODULE_NESTED="sample_nested_module"
+    DIR_MODS_SAMPLES="${DIR_TESTS}/fixture/modules/"
     MODULE_CORRUPTED_ENTRY_POINT="corrupted_entry_point"
     MODULE_CORRUPTED_TOOLS="corrupted_tools"
     MODULE_UNINSTALLED="wrong_name"
+    MODULE_VALID="sample_module"
+    MODULE_NESTED="sample_nested_module"
 
     # Load script to test
     load "${DIR_SRC}/logic/modules.zsh"
 
     # Shadowing variables
+    DIR_TEST_TMP="${DIR_TESTS}/fixture/modules/.tmp"
+    DIR_MODS="${DIR_TEST_TMP}/modules"
+    DIR_TMP="${DIR_TEST_TMP}/tools"
+    FILE_TOOLS_MODULES="${DIR_TMP}/modules.tools.json"
+    FILE_TOOLS_USER="${DIR_TMP}/user.tools.json"
     MODULES_INSTALLED=()
     MODULES_ACTIV=()
     COMMANDS_MODS=()
 
     # Reset temporary files
-    FAKE_DIR_MODS="${DIR_TESTS}/fixture/modules/.tmp"
-    [[ -d "${FAKE_DIR_MODS}" ]] && rm -r "${FAKE_DIR_MODS}"
-    TMP_DIR="${DIR_MODS}/tmp"
-    mkdir -p "${TMP_DIR}"
-
-    local original="${DIR_SRC}/data/tools/modules.tools.json"
-    FILE_TOOLS_MODULES="${TMP_DIR}/modules.tools.json"
-    cp "${original}" "${FILE_TOOLS_MODULES}"
-
-    original="${DIR_SRC}/data/tools/user.tools.json"
-    FILE_TOOLS_USER="${TMP_DIR}/user.tools.json"
-    cp "${original}" "${FILE_TOOLS_USER}"
+    [[ -d "${DIR_TEST_TMP}" ]] && rm -r "${DIR_TEST_TMP}"
+    mkdir -p "${DIR_MODS}"
+    mkdir -p "${DIR_TMP}"
+    cp "${DIR_SRC}/data/tools/modules.tools.json" "${FILE_TOOLS_MODULES}"
+    cp "${DIR_SRC}/data/tools/user.tools.json" "${FILE_TOOLS_USER}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -48,32 +46,45 @@
 
 @test 'MODULES      → Detect if module is already downloaded        → false (uninstalled)' {
 
+    # Set fake path
+    DIR_MODS="${DIR_MODS_SAMPLES}"
+
+    # Check
     run _module_is_downloaded "${MODULE_UNINSTALLED}"
     assert $state equals 1
 }
 
 @test 'MODULES      → Detect if module is already downloaded        → false (corrupted entry point)' {
 
+    # Set fake path
+    DIR_MODS="${DIR_MODS_SAMPLES}"
+
+    # Check
     run _module_is_downloaded "${MODULE_CORRUPTED_ENTRY_POINT}"
     assert $state equals 1
 }
 
 @test 'MODULES      → Detect if module is already downloaded        → false (corrupted tools)' {
 
+    # Set fake path
+    DIR_MODS="${DIR_MODS_SAMPLES}"
+
+    # Check
     run _module_is_downloaded "${MODULE_CORRUPTED_TOOLS}"
     assert $state equals 1
 }
 
 @test 'MODULES      → Detect if module is already downloaded        → true' {
 
+    # Set fake path
+    DIR_MODS="${DIR_MODS_SAMPLES}"
+
+    # Check
     run _module_is_downloaded "${MODULE_VALID}"
     assert $state equals 0
 }
 
 @test 'MODULES      → Download module files' {
-
-    # Set fake path
-    DIR_MODS="${FAKE_DIR_MODS}"
 
     # Download module
     _module_download "${MODULE_VALID}"
@@ -83,9 +94,6 @@
 }
     
 @test 'MODULES      → Init modules                                  → (via modules/)' {
-
-    # Set fake path
-    DIR_MODS="${FAKE_DIR_MODS}"
 
     # Pre-install (download) module
     _module_download "${MODULE_VALID}"
@@ -130,9 +138,6 @@
 
 @test 'MODULES      → Init modules                                  → (via user.tools.json)' {
 
-    # Set fake path
-    DIR_MODS="${FAKE_DIR_MODS}"
-
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
 
@@ -176,7 +181,7 @@
 
 @test 'MODULES      → Fetch module commands' {
 
-    local entry_point="${DIR_MODS}/${MODULE_VALID}/${ENTRY_POINT}"
+    local entry_point="${DIR_MODS_SAMPLES}/${MODULE_VALID}/${ENTRY_POINT}"
     local COMMANDS_MODS=()
 
     _module_get_commands "${entry_point}"
@@ -188,9 +193,6 @@
 }
 
 @test 'MODULES      → Resolve the ultimate query                    → (via user.tools.json)' {
-
-    # Set fake path
-    DIR_MODS="${FAKE_DIR_MODS}"
 
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
@@ -220,5 +222,11 @@
     run nested_function
     assert $state equals 0
     assert $output same_as 'nested answer'
+}
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_TEST_TMP}" ]] && rm -r "${DIR_TEST_TMP}"
 }
 

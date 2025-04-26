@@ -1,8 +1,0 @@
-{
-  "name": "sample_nested_module",
-  "version": "1.0.0",
-  "stable": "true",
-  "description": "Useful to test nested modules inmplementation",
-  "repo_url": "https://github.com/guillaumeast/sample_nested_module",
-  "module_url": "https://github.com/guillaumeast/sample_nested_module/archive/refs/heads/master.tar.gz"
-}

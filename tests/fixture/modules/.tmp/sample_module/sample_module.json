@@ -1,8 +1,0 @@
-{
-  "name": "sample_module",
-  "version": "1.0.0",
-  "stable": "true",
-  "description": "Useful to better understand life",
-  "repo_url": "https://github.com/guillaumeast/sample_module",
-  "module_url": "https://github.com/guillaumeast/sample_module/archive/refs/heads/master.tar.gz"
-}
