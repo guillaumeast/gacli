@@ -319,7 +319,7 @@ print_formulae() {
         [[ -z $formula || "$formula" == "" ]] && continue
         local icon="${RED}${ICON_OFF}${NONE}"
         local color=$RED
-        brew_is_f_active "${formula}" || {
+        brew_is_f_active "${formula}" && {
             icon="${GREEN}${ICON_ON}${NONE}"
             color=$COLOR_FORMULAE
         }
@@ -357,7 +357,7 @@ print_casks() {
         [[ -z $cask || "$cask" == "" ]] && continue
         local icon="${RED}${ICON_OFF}${NONE}"
         local color=$RED
-        brew_is_c_active "${cask}" || {
+        brew_is_c_active "${cask}" && {
             icon="${GREEN}${ICON_ON}${NONE}"
             color=$COLOR_CASKS
         }
@@ -382,7 +382,7 @@ print_modules() {
         [[ -z $module || "$module" == "" ]] && continue
         local icon="${RED}${ICON_OFF}${NONE}"
         local color=$RED
-        [[ " $MODULES_ACTIV " == *" $module "* ]] || {
+        [[ " $MODULES_ACTIV " == *" $module "* ]] && {
             icon="${GREEN}${ICON_ON}${NONE}"
             color=$COLOR_MODS
         }
