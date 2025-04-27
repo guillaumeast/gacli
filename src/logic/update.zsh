@@ -7,9 +7,9 @@ TODAY=""
 
 # Config
 INITIALIZED=""
+LAST_UPDATE=""
 AUTO_UPDATE=""
 FREQ_DAYS=""
-LAST_UPDATE=""
 NEXT_UPDATE=""
 
 # ────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ update_init() {
 
     # Run update if needed
     if [[ $(_update_is_reached) || $(_update_is_required "${tmp_brewfile}") ]]; then
-        _update_run "${tmp_brewfile}" || printStyled warning "Unable to run update"
+        _update_run_from "${tmp_brewfile}" || printStyled warning "Unable to run update"
     fi
 
     # Delete temporary Brewfile
@@ -98,7 +98,7 @@ _update_manual() {
         return 1
     }
 
-    _update_run "${tmp_brewfile}" || {
+    _update_run_from "${tmp_brewfile}" || {
         printStyled error "Update failed"
         rm -f "${tmp_brewfile}"
         return 1
@@ -149,9 +149,8 @@ update_merge_into() {
     done
 }
 
-
 # PRIVATE - Execute the update process and save new status in config file
-_update_run() {
+_update_run_from() {
     local brewfile="${1}"
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
     brew_bundle "${brewfile}" || return 1

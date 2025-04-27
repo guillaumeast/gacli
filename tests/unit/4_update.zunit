@@ -5,38 +5,37 @@
 
 @setup {
 
-    # Setup env
+    # Load helpers
     load "${DIR_SRC}/helpers/time.zsh"
     load "${DIR_SRC}/helpers/parser.zsh"
     load "${DIR_SRC}/helpers/brew.zsh"
-    brew uninstall --force fortune
-    brew uninstall --cask --force caffeine
-    # brew install curl
-    # brew install visual-studio-code
 
     # Load script to test
     load "${DIR_SRC}/logic/update.zsh"
 
-    # Fixture config
-    CONFIG_UNINITIALIZED="${DIR_FIXTURE}/update/uninitialized.json"
-    CONFIG_DISABLED="${DIR_FIXTURE}/update/disabled.json"
-    CONFIG_ENABLED="${DIR_FIXTURE}/update/enabled.json"
-    CONFIG_OUT="${DIR_FIXTURE}/update/output.json"
-
-    # Fixture dependencies
-    BREW_NO_UPDATE_DUE="${DIR_FIXTURE}/update/no_update_due.Brewfile"
-    BREW_UPDATE_DUE="${DIR_FIXTURE}/update/update_due.Brewfile"
-    BREW_OUT="${DIR_FIXTURE}/update/out.Brewfile"
-
-    # Fixture merged dependencies
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/update"
     export FILES_TOOLS=( \ 
-        "${DIR_FIXTURE}/update/tools/core.tools.json" \ 
-        "${DIR_FIXTURE}/update/tools/modules.tools.json" \ 
-        "${DIR_FIXTURE}/update/tools/user.tools.json" \ 
+        "${DIR_FIXTURE}/tools/core.tools.json" \ 
+        "${DIR_FIXTURE}/tools/modules.tools.json" \ 
+        "${DIR_FIXTURE}/tools/user.tools.json" \ 
     )
 
-    # Reset output file
-    echo "" > "${CONFIG_OUT}"
+    # Fixture
+    CONFIG_UNINITIALIZED="${DIR_FIXTURE}/config/uninitialized.json"
+    CONFIG_DISABLED="${DIR_FIXTURE}/config/disabled.json"
+    CONFIG_ENABLED="${DIR_FIXTURE}/config/enabled.json"
+    BREW_TEST="${DIR_FIXTURE}/test.Brewfile"
+
+    # Output files
+    DIR_TMP="${DIR_FIXTURE}/.tmp"
+    CONFIG_OUT="${DIR_TMP}/config_output.json"
+    BREW_OUT="${DIR_TMP}/merged_output.Brewfile"
+
+    # Reset temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+    cp "${CONFIG_UNINITIALIZED}" "${CONFIG_OUT}"
     echo "" > "${BREW_OUT}"
 }
 
@@ -50,8 +49,17 @@
     FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
 
     # Run test
-    run _update_get_config
-    assert $state equals 0
+    _update_get_config
+    assert $? equals 0
+
+    # Check variables
+    today="$(time_get_current)"
+    assert $TODAY same_as "$today"
+    assert $INITIALIZED same_as 'true'
+    assert $LAST_UPDATE same_as '1745000000'
+    assert $AUTO_UPDATE same_as 'true'
+    assert $FREQ_DAYS same_as '2'
+    assert $NEXT_UPDATE same_as '1745000001'
 }
 
 @test 'UPDATE       → Save config values into config file' {
@@ -59,61 +67,68 @@
     # Shadow env variable for config file path
     FILE_CONFIG_UPDATE="${CONFIG_OUT}"
 
+    # Setup variables
+    INITIALIZED="true"
+    LAST_UPDATE="007"
+    AUTO_UPDATE="true"
+    FREQ_DAYS="999"
+    NEXT_UPDATE="42"
+
     # Run test
-    run _update_set_config
-    assert $state equals 0
+    _update_set_config
+    assert $? equals 0
+
+    # Check output file
+    assert "$(file_read "${CONFIG_OUT}" initialized)" same_as $INITIALIZED
+    assert "$(file_read "${CONFIG_OUT}" last_update)" same_as $LAST_UPDATE
+    assert "$(file_read "${CONFIG_OUT}" auto_update)" same_as $AUTO_UPDATE
+    assert "$(file_read "${CONFIG_OUT}" freq_days)" same_as $FREQ_DAYS
+    assert "$(file_read "${CONFIG_OUT}" next_update)" same_as $NEXT_UPDATE
 }
 
-@test 'UPDATE       → Detect if auto-update is due          → false (disabled)' {
+@test 'UPDATE       → Detect if auto-update is due' {
 
-    # Shadow env variable for config file path
+    # → false (disabled)
     FILE_CONFIG_UPDATE="${CONFIG_DISABLED}"
     _update_get_config
-
-    # Run test
     run _update_is_reached
     assert $state equals 1
-}
 
-@test 'UPDATE       → Detect if auto-update is due          → false (date not reached)' {
-    cp "${CONFIG_ENABLED}" "${CONFIG_OUT}"
-    local today=$(time_get_current)
-    local far=$(time_add_days "${today}" "99")
-    file_write "${CONFIG_OUT}" next_update "${far}"
-
-    # Shadow env variable for config file path
+    # → false (date not reached)
     FILE_CONFIG_UPDATE="${CONFIG_OUT}"
+    cp "${CONFIG_ENABLED}" "${CONFIG_OUT}"
+    file_write "${CONFIG_OUT}" next_update "$(time_add_days "$(time_get_current)" "99")"
     _update_get_config
-
-    # Run test
     run _update_is_reached
     assert $state equals 1
-}
 
-@test 'UPDATE       → Detect if auto-update is due          → true (enable + date reached)' {
-
-    # Shadow env variable for config file path
+    # → true (enable + date reached)
     FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
     _update_get_config
-
-    # Run test
     run _update_is_reached
     assert $state equals 0
 }
 
-@test 'UPDATE       → Detect if update is required          → false (all dependencies already installed)' {
+@test 'UPDATE       → Detect if update is required' {
 
-    run _update_is_required "${BREW_NO_UPDATE_DUE}"
+    # → false (all dependencies already installed)
+    brew install fortune
+    brew install busted
+    brew install caffeine
+    brew install tablecruncher
+    run _update_is_required "${BREW_TEST}"
     assert $state equals 1
-}
 
-@test 'UPDATE       → Detect if update is required          → true (some dependencies are missing)' {
-
-    run _update_is_required "${BREW_UPDATE_DUE}"
+    # → true (some dependencies are missing)
+    brew uninstall --force busted
+    brew uninstall --cask --force tablecruncher
+    run _update_is_required "${BREW_TEST}"
     assert $state equals 0
+    brew uninstall --force fortune
+    brew uninstall --cask --force caffeine
 }
 
-@test 'UPDATE       → Merge all dependencies' {
+@test 'UPDATE       → Merge dependencies' {
 
     local in_formulae=()
     local in_casks=()
@@ -121,8 +136,7 @@
     local out_casks=()
 
     update_merge_into "${BREW_OUT}"
-    # run update_merge_into "${BREW_OUT}"
-    # assert $state equals 0
+    assert $? equals 0
 
     # Fetch input dependencies
     for file in "${FILES_TOOLS[@]}"; do
@@ -152,10 +166,7 @@
 
 @teardown {
 
-    # Reset env
-    brew uninstall --force fortune
-    brew uninstall --cask --force caffeine
-    # brew uninstall --force curl
-    # brew uninstall --cask --force visual-studio-code
+    # Delete temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
 }
 

@@ -5,77 +5,67 @@
 
 @setup {
 
-    # Setup env
+    # Load helpers
     load "${DIR_SRC}/helpers/parser.zsh"
-    brew uninstall --force fortune
-    brew uninstall --cask --force caffeine
-    # brew install curl
-    # brew install visual-studio-code
 
     # Load script to test
     load "${DIR_SRC}/helpers/brew.zsh"
 
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/brew"
+
     # Fixture
-    FIXTURE_NO_UPDATE_DUE="${DIR_FIXTURE}/brew/no_update_due.Brewfile"
-    FIXTURE_UPDATE_DUE="${DIR_FIXTURE}/brew/update_due.Brewfile"
+    BREWFILE="${DIR_FIXTURE}/test.Brewfile"
 }
 
 # ────────────────────────────────────────────────────────────────
 # TESTS
 # ────────────────────────────────────────────────────────────────
 
-@test 'BREW         → Detect if formula is active           → false' {
-    run brew_is_f_active "wrong formula"
+@test 'BREW         → Detect if formula is active' {
+    
+    # → false
+    brew uninstall --force fortune
+    run brew_is_f_active "fortune"
     assert $state equals 1
-}
 
-@test 'BREW         → Detect if formula is active           → true' {
-    run brew_is_f_active "curl"
+    # → true
+    brew install fortune
+    run brew_is_f_active "fortune"
     assert $state equals 0
+    brew uninstall --force fortune
 }
 
-@test 'BREW         → Detect if cask is active              → false' {
+@test 'BREW         → Detect if cask is active' {
+    
+    # → false
+    brew uninstall --cask --force tablecruncher
     run brew_is_c_active "wrong cask"
     assert $state equals 1
-}
 
-@test 'BREW         → Detect if cask is active              → true' {
-    run brew_is_c_active "visual-studio-code"
+    # → true
+    brew install tablecruncher
+    run brew_is_c_active "tablecruncher"
     assert $state equals 0
-}
-
-@test 'BREW         → Detect if update is due               → false' {
-    run _brew_is_update_due "${FIXTURE_NO_UPDATE_DUE}"
-    assert $state equals 0
-    assert $output same_as 'false'
-}
-
-@test 'BREW         → Detect if update is due               → true' {
-    run _brew_is_update_due "${FIXTURE_UPDATE_DUE}"
-    assert $state equals 0
-    assert $output same_as 'true'
+    brew uninstall --cask --force tablecruncher
 }
 
 @test 'BREW         → Run brew update, bundle, upgrade, cleanup' {
-    run brew_bundle "${FIXTURE_UPDATE_DUE}"
+
+    # Reset brew setup
+    brew uninstall --force fortune
+    brew uninstall --cask --force tablecruncher
+
+    # Test
+    run brew_bundle "${BREWFILE}"
     assert $state equals 0
     brew_is_f_active "fortune"
     assert $? equals 0
-    run brew_is_c_active "caffeine"
+    run brew_is_c_active "tablecruncher"
     assert $? equals 0
-}
 
-# Test later (don't uninstall it on my local machine !)
-# _brew_install
-
-# ────────────────────────────────────────────────────────────────
-# CLEANUP
-# ────────────────────────────────────────────────────────────────
-
-@teardown {
+    # Reset brew setup
     brew uninstall --force fortune
-    brew uninstall --cask --force caffeine
-    # brew uninstall --force curl
-    # brew uninstall --cask --force visual-studio-code
+    brew uninstall --cask --force tablecruncher
 }
 

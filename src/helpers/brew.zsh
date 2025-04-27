@@ -7,13 +7,15 @@
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
+# PUBLIC - Run Homebrew update, bundle, upgrade and cleanup
 brew_bundle() {
     local brewfile="${1}"
-    local update_is_due=""
 
-    update_is_due="$(_brew_is_update_due "${1}")"
-    [[ "$update_is_due" == "false" ]] && return 0
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
+        return 1
+    }
 
     # Loading mesage
     print ""
@@ -42,44 +44,48 @@ brew_bundle() {
     fi
 }
 
-# Check if given formula is active
+# PUBLIC - Check if given formula is active
 brew_is_f_active() {
+
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
+        return 1
+    }
+
     local formula="${1}"
     [[ "$formula" = "coreutils" ]] && formula="gdate"
 
-    if command -v $formula >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
+    command -v $formula >/dev/null 2>&1 || return 1
 }
 
-# Check if given cask is active
+# PUBLIC - Check if given cask is active
 brew_is_c_active() {
     local cask="${1}"
+
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
+        return 1
+    }
 
     # "my-cask-name" → "My Cask Name.app"
     local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
 
     # Check .app folders first for speed, fallback to brew if missing
-    if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
-        return 0
-    elif brew list --cask "$cask" >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
+    [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]] && return 0
+    brew list --cask "$cask" >/dev/null 2>&1 || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-# Install Homebrew
+# PRIVATE - Install Homebrew
 _brew_install() {
 
     # Check if Homebrew is already installed
-    if command -v brew >/dev/null 2>&1; then
+    if command -v brew > /dev/null 2>&1; then
         return 0
     fi
     printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
@@ -118,49 +124,5 @@ _brew_install() {
     if ! hash -r; then
         printStyled warning "Failed to refresh shell hash table"
     fi
-}
-
-# Check if at least one formula or cask from given Brewfile is not active
-_brew_is_update_due() {
-    local brewfile="${1}"
-    local formulae=()
-    local casks=()
-
-    # Arg check
-    [[ -f "${brewfile}" ]] || {
-        printStyled error "Expected: <brewfile> (received: ${brewfile})"
-        return 1
-    }
-
-    # Get formulae from $brewfile
-    formulae+=("${(@f)$(file_read "${brewfile}" "formulae")}") || {
-        printStyled error "Unable to read Brewfile: ${brewfile}"
-        return 1
-    }
-
-    # Check each formula status
-    for formula in "${formulae[@]}"; do
-        if ! brew_is_f_active "${formula}"; then
-            echo "true"
-            return 0
-        fi
-    done
-
-    # Get casks from $brewfile
-    casks+=("${(@f)$(file_read "${brewfile}" "casks")}") || {
-        printStyled error "Unable to read Brewfile: ${brewfile}"
-        return 1
-    }
-
-    # Check each cask status
-    for cask in "${casks[@]}"; do
-        if ! brew_is_c_active "${cask}"; then
-            echo "true"
-            return 0
-        fi
-    done
-
-    # All formulae and casks are already activ
-    echo "false"
 }
 

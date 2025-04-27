@@ -9,94 +9,92 @@
     load "${DIR_SRC}/helpers/parser.zsh"
 
     # Fixtures
-    FIXTURE_JSON="${DIR_FIXTURE}/parser/fixture.json"
-    FIXTURE_BREW="${DIR_FIXTURE}/parser/fixture.Brewfile"
-    EMPTY_BREW="${DIR_FIXTURE}/parser/empty.Brewfile"
+    DIR_FIXTURE="${DIR_FIXTURE}/parser"
+    JSON_FIXTURE="${DIR_FIXTURE}/fixture.json"
+    BREW_FIXTURE="${DIR_FIXTURE}/fixture.Brewfile"
+    BREW_EMPTY="${DIR_FIXTURE}/empty.Brewfile"
 
     # Output files
-    F_JSON_OUT="${DIR_FIXTURE}/parser/output/output.json"
-    F_BREW_OUT="${DIR_FIXTURE}/parser/output/Brewfile"
+    DIR_TMP="${DIR_FIXTURE}/.tmp"
+    JSON_OUT="${DIR_TMP}/output.json"
+    BREW_OUT="${DIR_TMP}/Brewfile"
 
     # Reset output files
-    mkdir -p "${DIR_FIXTURE}/parser/output"
-    cp "${FIXTURE_JSON}" "${F_JSON_OUT}"
-    cp "${FIXTURE_BREW}" "${F_BREW_OUT}"
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+    cp "${JSON_FIXTURE}" "${JSON_OUT}"
+    cp "${BREW_FIXTURE}" "${BREW_OUT}"
 }
 
 # ────────────────────────────────────────────────────────────────
-# JSON PARSER
+# TEST JSON FILES
 # ────────────────────────────────────────────────────────────────
 
-@test 'PARSER       → JSON - read scalar       0 value' {
-    run file_read "${FIXTURE_JSON}" scalar_empty
+@test 'PARSER       → JSON → read' {
+
+    # → 0 value (scalar)
+    run file_read "${JSON_FIXTURE}" scalar_empty
     assert $state equals 0
     assert "$output" is_empty
-}
 
-@test 'PARSER       → JSON - read scalar       1 value' {
-    run file_read "${FIXTURE_JSON}" scalar_value
+    # → 1 value (scalar)
+    run file_read "${JSON_FIXTURE}" scalar_value
     assert $state equals 0
     assert "$output" same_as 'old value 1'
-}
 
-@test 'PARSER       → JSON - read list         0 value' {
-    run file_read "${FIXTURE_JSON}" list_0
+    # → 0 value (list)
+    run file_read "${JSON_FIXTURE}" list_0
     assert $state equals 0
     assert "$output" is_empty
-}
 
-@test 'PARSER       → JSON - read list         2 values' {
-    run file_read "${FIXTURE_JSON}" list_2
+    # → 2 values (list)
+    run file_read "${JSON_FIXTURE}" list_2
     assert $state equals 0
     assert "${lines[1]}" same_as 'old value 1'
     assert "${lines[2]}" same_as 'old value 2'
 }
 
-# Now we assume that file_read is working as expected
-# So we'll check further writing functions by reading the output file with file_read
+@test 'PARSER       → JSON → write' {
 
-# Scalar
-
-@test 'PARSER       → JSON - write scalar      0 value      → 1 value' {
-    file_write "${F_JSON_OUT}" "scalar_empty" "value 1"
-    run file_read "${F_JSON_OUT}" "scalar_empty"
+    # → 0 value → 1 value (scalar)
+    file_write "${JSON_OUT}" "scalar_empty" "value 1"
+    run file_read "${JSON_OUT}" "scalar_empty"
     assert $state equals 0
     assert "$output" same_as 'value 1'
-}
 
-@test 'PARSER       → JSON - write scalar      1 value      → 1 value' {
-    file_write "${F_JSON_OUT}" "scalar_value" "value 1"
-    run file_read "${F_JSON_OUT}" "scalar_value"
+    # → 1 value → 1 value (scalar)
+    file_write "${JSON_OUT}" "scalar_value" "value 1"
+    run file_read "${JSON_OUT}" "scalar_value"
     assert $state equals 0
     assert "$output" same_as 'value 1'
-}
 
-@test 'PARSER       → JSON - write scalar      1 value      → 0 value' {
-    file_write "${F_JSON_OUT}" "scalar_value" ""
-    run file_read "${F_JSON_OUT}" "scalar_value"
+    # → 1 value → 0 value (scalar)
+    file_write "${JSON_OUT}" "scalar_value" ""
+    run file_read "${JSON_OUT}" "scalar_value"
     assert $state equals 0
     assert "$output" is_empty
 }
 
-# Lists
+@test 'PARSER       → JSON → reset' {
 
-@test 'PARSER       → JSON - reset list        2 values     → 0 value' {
-    file_reset "${F_JSON_OUT}" "list_2"
-    run file_read "${F_JSON_OUT}" "list_2"
+    # → 2 values → 0 value
+    file_reset "${JSON_OUT}" "list_2"
+    run file_read "${JSON_OUT}" "list_2"
     assert $state equals 0
     assert "$output" is_empty
 }
 
-@test 'PARSER       → JSON - add one item      0 value      → 1 value' {
-    file_add "${F_JSON_OUT}" "list_0" "new value"
-    run file_read "${F_JSON_OUT}" "list_0"
+@test 'PARSER       → JSON → add' {
+
+    # → 0 value → 1 value
+    file_add "${JSON_OUT}" "list_0" "new value"
+    run file_read "${JSON_OUT}" "list_0"
     assert $state equals 0
     assert "$output" same_as 'new value'
-}
 
-@test 'PARSER       → JSON - add two items     2 values     → 4 values' {
-    file_add "${F_JSON_OUT}" "list_2" "new value 1" "new value 2"
-    run file_read "${F_JSON_OUT}" "list_2"
+    # → 2 values → 4 values
+    file_add "${JSON_OUT}" "list_2" "new value 1" "new value 2"
+    run file_read "${JSON_OUT}" "list_2"
     assert $state equals 0
     assert "${lines[1]}" same_as 'old value 1'
     assert "${lines[2]}" same_as 'old value 2'
@@ -104,104 +102,98 @@
     assert "${lines[4]}" same_as 'new value 2'
 }
 
-@test 'PARSER       → JSON - remove one item   1 value      → 0 value' {
-    file_rm "${F_JSON_OUT}" "list_1" "old value 1"
-    run file_read "${F_JSON_OUT}" "list_1"
+@test 'PARSER       → JSON → rm' {
+
+    # → 1 value → 0 value
+    file_rm "${JSON_OUT}" "list_1" "old value 1"
+    run file_read "${JSON_OUT}" "list_1"
     assert $state equals 0
     assert "$output" is_empty
-}
 
-@test 'PARSER       → JSON - remove two items  3 value      → 1 value' {
-    file_rm "${F_JSON_OUT}" "list_3" "old value 1" "old value 3"
-    run file_read "${F_JSON_OUT}" "list_3"
+    # → 3 values → 1 value
+    file_rm "${JSON_OUT}" "list_3" "old value 1" "old value 3"
+    run file_read "${JSON_OUT}" "list_3"
     assert $state equals 0
     assert "$output" same_as 'old value 2'
 }
 
 # ────────────────────────────────────────────────────────────────
-# BREWFILE PARSER
+# TEST BREWFILES
 # ────────────────────────────────────────────────────────────────
 
-@test 'PARSER       → BREW - read formula      0 value' {
-    run file_read "${EMPTY_BREW}" formulae
+@test 'PARSER       → BREW → read' {
+
+    # → 0 value (formulae)
+    run file_read "${BREW_EMPTY}" formulae
     assert $state equals 0
     assert "$output" is_empty
-}
 
-@test 'PARSER       → BREW - read casks        0 value' {
-    run file_read "${EMPTY_BREW}" casks
+    # → 0 value (casks)
+    run file_read "${BREW_EMPTY}" casks
     assert $state equals 0
     assert "$output" is_empty
-}
 
-@test 'PARSER       → BREW - read formulae     2 values' {
-    run file_read "${FIXTURE_BREW}" formulae
+    # → 2 values (formulae)
+    run file_read "${BREW_FIXTURE}" formulae
     assert $state equals 0
     assert "${lines[1]}" same_as 'old formula 1'
     assert "${lines[2]}" same_as 'old formula 2'
-}
 
-@test 'PARSER       → BREW - read casks        2 values' {
-    run file_read "${FIXTURE_BREW}" casks
+    # → 2 values (casks)
+    run file_read "${BREW_FIXTURE}" casks
     assert $state equals 0
     assert "${lines[1]}" same_as 'old cask 1'
     assert "${lines[2]}" same_as 'old cask 2'
 }
 
-# Now we assume that file_read is working as expected
-# So we'll check further writing functions by reading the output file with file_read
+@test 'PARSER       → BREW → write' {
 
-# Scalar
-
-@test 'PARSER       → BREW - write formula     2 values     → 3 values' {
-    file_write "${F_BREW_OUT}" formulae "new formula 1"
-    run file_read "${F_BREW_OUT}" formulae
+    # → 2 values → 3 values (formulae)
+    file_write "${BREW_OUT}" formulae "new formula 1"
+    run file_read "${BREW_OUT}" formulae
     assert $state equals 0
     assert "${lines[1]}" same_as 'old formula 1'
     assert "${lines[2]}" same_as 'old formula 2'
     assert "${lines[3]}" same_as 'new formula 1'
-}
 
-@test 'PARSER       → BREW - write cask        2 values     → 3 values' {
-    file_write "${F_BREW_OUT}" casks "new cask 1"
-    run file_read "${F_BREW_OUT}" casks
+    # → 2 values → 3 values (casks)
+    file_write "${BREW_OUT}" casks "new cask 1"
+    run file_read "${BREW_OUT}" casks
     assert $state equals 0
     assert "${lines[1]}" same_as 'old cask 1'
     assert "${lines[2]}" same_as 'old cask 2'
     assert "${lines[3]}" same_as 'new cask 1'
 }
 
-# Reset
+@test 'PARSER       → BREW → reset' {
 
-@test 'PARSER       → BREW - reset formulae    2 values     → 0 value' {
-    file_reset "${F_BREW_OUT}" formulae
-    run file_read "${F_BREW_OUT}" formulae
+    # → 2 values → 0 value (formulae)
+    file_reset "${BREW_OUT}" formulae
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values → 0 value (casks)
+    file_reset "${BREW_OUT}" casks
+    run file_read "${BREW_OUT}" casks
     assert $state equals 0
     assert "$output" is_empty
 }
 
-@test 'PARSER       → BREW - reset casks       2 values     → 0 value' {
-    file_reset "${F_BREW_OUT}" casks
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" is_empty
-}
+@test 'PARSER       → BREW → add' {
 
-# Add
-
-@test 'PARSER       → BREW - add formulae      2 values     → 4 values' {
-    file_add "${F_BREW_OUT}" formulae "new formula 1" "new formula 2"
-    run file_read "${F_BREW_OUT}" formulae
+    # → 2 values → 4 values (formulae)
+    file_add "${BREW_OUT}" formulae "new formula 1" "new formula 2"
+    run file_read "${BREW_OUT}" formulae
     assert $state equals 0
     assert "${lines[1]}" same_as 'old formula 1'
     assert "${lines[2]}" same_as 'old formula 2'
     assert "${lines[3]}" same_as 'new formula 1'
     assert "${lines[4]}" same_as 'new formula 2'
-}
 
-@test 'PARSER       → BREW - add casks         2 values     → 4 values' {
-    file_add "${F_BREW_OUT}" casks "new cask 1" "new cask 2"
-    run file_read "${F_BREW_OUT}" casks
+    # → 2 values → 4 values (casks)
+    file_add "${BREW_OUT}" casks "new cask 1" "new cask 2"
+    run file_read "${BREW_OUT}" casks
     assert $state equals 0
     assert "${lines[1]}" same_as 'old cask 1'
     assert "${lines[2]}" same_as 'old cask 2'
@@ -209,19 +201,28 @@
     assert "${lines[4]}" same_as 'new cask 2'
 }
 
-# Remove
+@test 'PARSER       → BREW → rm' {
 
-@test 'PARSER       → BREW - remove formulae   2 values     → 0 value' {
-    file_rm "${F_BREW_OUT}" formulae "old formula 1" "old formula 2"
-    run file_read "${F_BREW_OUT}" formulae
+    # → 2 values → 0 values (formulae)
+    file_rm "${BREW_OUT}" formulae "old formula 1" "old formula 2"
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values → 0 values (casks)
+    file_rm "${BREW_OUT}" casks "old cask 1" "old cask 2"
+    run file_read "${BREW_OUT}" casks
     assert $state equals 0
     assert "$output" is_empty
 }
 
-@test 'PARSER       → BREW - remove casks      2 values     → 0 value' {
-    file_rm "${F_BREW_OUT}" casks "old cask 1" "old cask 2"
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" is_empty
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
 }
 

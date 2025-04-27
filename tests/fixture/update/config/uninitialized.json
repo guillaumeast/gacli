@@ -1,7 +1,7 @@
 {
   "initialized": false,
-  "auto_update": false,
   "last_update": null,
+  "auto_update": false,
   "freq_days": null,
   "next_update": null
 }

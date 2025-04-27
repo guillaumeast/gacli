@@ -5,7 +5,7 @@
 
 @setup {
 
-    # Setup env
+    # Load script to test
     load "${DIR_SRC}/helpers/time.zsh"
 }
 

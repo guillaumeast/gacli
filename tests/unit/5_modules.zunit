@@ -5,32 +5,34 @@
 
 @setup {
 
-    # Setup env
+    # Load helpers
     load "${DIR_SRC}/helpers/time.zsh"
     load "${DIR_SRC}/helpers/parser.zsh"
     load "${DIR_SRC}/helpers/brew.zsh"
-    load "${DIR_SRC}/logic/update.zsh"
+
+    # Load script to test
+    load "${DIR_SRC}/logic/modules.zsh"
+
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/modules"
+    MODULES_INSTALLED=()
+    MODULES_ACTIV=()
+    COMMANDS_MODS=()
 
     # Fixtures
-    DIR_MODS_SAMPLES="${DIR_TESTS}/fixture/modules/"
+    DIR_MODS_SAMPLES="${DIR_FIXTURE}"
     MODULE_CORRUPTED_ENTRY_POINT="corrupted_entry_point"
     MODULE_CORRUPTED_TOOLS="corrupted_tools"
     MODULE_UNINSTALLED="wrong_name"
     MODULE_VALID="sample_module"
     MODULE_NESTED="sample_nested_module"
 
-    # Load script to test
-    load "${DIR_SRC}/logic/modules.zsh"
-
-    # Shadowing variables
-    DIR_TEST_TMP="${DIR_TESTS}/fixture/modules/.tmp"
+    # Output files
+    DIR_TEST_TMP="${DIR_FIXTURE}/.tmp"
     DIR_MODS="${DIR_TEST_TMP}/modules"
     DIR_TMP="${DIR_TEST_TMP}/tools"
     FILE_TOOLS_MODULES="${DIR_TMP}/modules.tools.json"
     FILE_TOOLS_USER="${DIR_TMP}/user.tools.json"
-    MODULES_INSTALLED=()
-    MODULES_ACTIV=()
-    COMMANDS_MODS=()
 
     # Reset temporary files
     [[ -d "${DIR_TEST_TMP}" ]] && rm -r "${DIR_TEST_TMP}"
@@ -75,7 +77,7 @@
     assert "${MODULE_NESTED}" in $MODULES_INSTALLED
 }
     
-@test 'MODULES      → Init modules                          → (via modules/)' {
+@test 'MODULES      → Init modules                  → (via modules/)' {
 
     # Pre-install (download) module
     _module_download "${MODULE_VALID}"
@@ -118,7 +120,7 @@
     done
 }
 
-@test 'MODULES      → Init modules                          → (via user.tools.json)' {
+@test 'MODULES      → Init modules                  → (via user.tools.json)' {
 
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
@@ -174,7 +176,7 @@
     assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
 }
 
-@test 'MODULES      → Resolve the ultimate query            → (via user.tools.json)' {
+@test 'MODULES      → Resolve the ultimate query    → (via user.tools.json)' {
 
     # Declare module
     file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
@@ -205,6 +207,10 @@
     assert $state equals 0
     assert $output same_as 'nested answer'
 }
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
 
 @teardown {
 
