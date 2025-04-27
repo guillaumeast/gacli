@@ -318,8 +318,12 @@ print_formulae() {
         formula="${formula%"${formula##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $formula || "$formula" == "" ]] && continue
         local icon="${RED}${ICON_OFF}${NONE}"
-        brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
+        local color=$RED
+        brew_is_f_active "${formula}" || {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_FORMULAE
+        }
+        output+="${icon} ${color}$formula ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
@@ -352,8 +356,12 @@ print_casks() {
         cask="${cask%"${cask##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $cask || "$cask" == "" ]] && continue
         local icon="${RED}${ICON_OFF}${NONE}"
-        brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
+        local color=$RED
+        brew_is_c_active "${cask}" || {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_CASKS
+        }
+        output+="${icon} ${color}$cask ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
@@ -372,9 +380,13 @@ print_modules() {
         module="${module#"${module%%[![:space:]]*}"}"  # Trim leading spaces
         module="${module%"${module##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $module || "$module" == "" ]] && continue
-        icon="${RED}${ICON_OFF}${NONE}"
-        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
+        local icon="${RED}${ICON_OFF}${NONE}"
+        local color=$RED
+        [[ " $MODULES_ACTIV " == *" $module "* ]] || {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_MODS
+        }
+        output+="${icon} ${color}$module ${GREY}|${NONE} "
     done
     
     # Display (removing trailing " | ")
