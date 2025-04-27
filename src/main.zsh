@@ -274,23 +274,23 @@ printStyled() {
 # PUBLIC - Diplay tips
 help() {
     print ""
-    printStyled highlight "${COLOR_FORMULAE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
+    print "${GREY}→ Formulaes → https://formulae.brew.sh/formula ${NONE}"
     print_formulae
 
     print ""
-    printStyled highlight "${COLOR_CASKS}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
+    print "${GREY}→ Casks → https://formulae.brew.sh/cask/ ${NONE}"
     print_casks
 
     print ""
-    printStyled highlight "${COLOR_MODS}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
+    print "${GREY}→ Modules → https://github.com/guillaumeast/gacli ${NONE}"
     print_modules
 
     print ""
-    printStyled highlight "${COLOR_COMMANDS}Core commands${GREY}"
+    print "${GREY}→ Core commands${NONE}"
     print_core_commands
 
     print ""
-    printStyled highlight "${COLOR_COMMANDS}Modules commands${GREY}"
+    print "${GREY}→ Modules commands${NONE}"
     print_mods_commands
     print ""
 }
@@ -314,6 +314,9 @@ print_formulae() {
 
     # Compute
     for formula in "${formulae[@]}"; do
+        formula="${formula#"${formula%%[![:space:]]*}"}"  # Trim leading spaces
+        formula="${formula%"${formula##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $formula || "$formula" == "" ]] && continue
         local icon="${GREY}${ICON_OFF}${NONE}"
         brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
@@ -345,6 +348,9 @@ print_casks() {
 
     # Compute
     for cask in "${casks[@]}"; do
+        cask="${cask#"${cask%%[![:space:]]*}"}"  # Trim leading spaces
+        cask="${cask%"${cask##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $cask || "$cask" == "" ]] && continue
         local icon="${GREY}${ICON_OFF}${NONE}"
         brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
@@ -363,6 +369,9 @@ print_modules() {
     local icon
 
     for module in "${MODULES_INSTALLED[@]}"; do
+        module="${module#"${module%%[![:space:]]*}"}"  # Trim leading spaces
+        module="${module%"${module##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $module || "$module" == "" ]] && continue
         icon="${GREY}${ICON_OFF}${NONE}"
         [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
