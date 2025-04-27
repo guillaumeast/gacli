@@ -317,7 +317,7 @@ print_formulae() {
         formula="${formula#"${formula%%[![:space:]]*}"}"  # Trim leading spaces
         formula="${formula%"${formula##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $formula || "$formula" == "" ]] && continue
-        local icon="${GREY}${ICON_OFF}${NONE}"
+        local icon="${RED}${ICON_OFF}${NONE}"
         brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
     done
@@ -351,7 +351,7 @@ print_casks() {
         cask="${cask#"${cask%%[![:space:]]*}"}"  # Trim leading spaces
         cask="${cask%"${cask##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $cask || "$cask" == "" ]] && continue
-        local icon="${GREY}${ICON_OFF}${NONE}"
+        local icon="${RED}${ICON_OFF}${NONE}"
         brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
     done
@@ -372,7 +372,7 @@ print_modules() {
         module="${module#"${module%%[![:space:]]*}"}"  # Trim leading spaces
         module="${module%"${module##*[![:space:]]}"}"  # Trim trailing spaces
         [[ -z $module || "$module" == "" ]] && continue
-        icon="${GREY}${ICON_OFF}${NONE}"
+        icon="${RED}${ICON_OFF}${NONE}"
         [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
         output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
     done
