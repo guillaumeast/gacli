@@ -4,7 +4,6 @@
     "zsh",
     "curl",
     "coreutils",
-    "yq",
     "jq"
   ],
   "casks": []
