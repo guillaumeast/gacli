@@ -73,9 +73,9 @@ COLOR_MODS="${PURPLE}"
 COLOR_COMMANDS="${ORANGE}"
 
 # Emojis
-EMOJI_SUCCESS="✦"
+EMOJI_SUCCESS="✓"
 EMOJI_WARN="⚠️"
-EMOJI_ERR="❌"
+EMOJI_ERR="🛑"
 EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
@@ -89,6 +89,14 @@ ICON_OFF="○"
 
 # Main function
 main() {
+
+    # Check gacli install
+    if ! command -v gacli > /dev/null 2>&1; then
+        printStyled error "gacli command not found"
+        printStyled highlight "Try to restart your terminal or run: exec zsh"
+        return 1
+    fi
+
     # Check env compatibility and files integrity
     _gacli_check_system || abort "1" || return 1
     _gacli_check_files || abort "2" || return 1
@@ -230,11 +238,11 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}${EMOJI_ERR} [${RED}${funcstack[2]}${GREY}] → ${RED}${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN} [${ORANGE}${funcstack[2]}${GREY}] → ${ORANGE}${raw_message}${NONE}" >&2
             return
             ;;
         success)

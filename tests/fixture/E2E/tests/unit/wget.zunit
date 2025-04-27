@@ -1,0 +1,15 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/fixture/E2E/tests/wget.zunit
+###############################
+
+@test 'E22              → Linux             → Wget' {
+
+    # Install GACLI
+    wget -qO- "${INSTALLER_URL}"
+    assert $? equals 0
+    
+    # Run tests
+    run_tests
+    assert $? equals 0
+}

@@ -3,10 +3,64 @@
 # FICHIER /tests/_support/bootstrap.zsh
 ###############################
 
-export DIR_ROOT="${PWD}"
-export DIR_SRC="${DIR_ROOT}/src"
-export DIR_TESTS="${DIR_ROOT}/tests"
-export DIR_FIXTURE="${DIR_TESTS}/fixture"
+export DIR_SHARED="${PWD}"
+export INSTALLER_URL="https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/dev/installer/install.sh"
+export INSTALLER_PATH="${DIR_SHARED}/install.sh"
+
+# Tests to run inside each container
+run_tests() {
+
+    local commands=(
+        help
+        config
+        update
+        uninstall
+    )
+    local cmd
+
+    # Check commands count (update tests if you implement new core command)
+    assert "${#COMMANDS_CORE[@]}" equals 4
+
+    # Check help command
+    run gacli help
+    assert $state equals 0
+
+    # Check config command
+    run gacli config
+    assert $state equals 0
+
+    # Check update command
+    run gacli update
+    assert $state equals 0
+
+    # Install sample_module
+    run gacli install sample_module
+    assert $state equals 0
+
+    # Check module commands
+    assert "${#COMMANDS_MODS[@]}" equals 3
+    
+    # Test sample_module
+    run gacli asking_questions
+    assert $state equals 0
+    assert $output same_as '...'
+
+    run gacli ultimate_answer
+    assert $state equals 0
+    assert $output same_as "${ULTIMATE_ANSWER}"
+
+    # Test nested module
+    run gacli nested_function
+    assert $state equals 0
+    assert $output same_as 'nested answer'
+
+    # Check uninstall GACLI
+    run gacli uninstall
+    assert $state equals 0
+    # TODO: check files are deleted
+    # TODO: check .zshrc is clean
+    # TODO: check symlink are deleted
+}
 
 # ────────────────────────────────────────────────────────────────
 # I/O formatting (from main.zsh)
@@ -89,6 +143,4 @@ printStyled() {
     # Display
     print "${color}$final_message${NONE}"
 }
-
-[[ ! -d "./.git" ]] && printStyled error "Please run tests from repo root folder"
 

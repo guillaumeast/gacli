@@ -1,0 +1,15 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/fixture/E2E/tests/manual.zunit
+###############################
+
+@test 'E22              → Linux             → Manual' {
+
+    # Install GACLI
+    sh "${INSTALLER_PATH}"
+    assert $? equals 0
+    
+    # Run tests
+    run_tests
+    assert $? equals 0
+}

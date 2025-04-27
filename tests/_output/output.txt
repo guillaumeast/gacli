@@ -1,0 +1,35 @@
+TAP version 13
+ok 1 - TIME         → Get current timestamp
+ok 2 - TIME         → Add days to timestamp
+ok 3 - TIME         → Convert UNIX timestamp to YYYY-MM-DD
+ok 4 - TIME         → Convert YYYY-MM-DD to UNIX timestamp
+ok 5 - PARSER       → JSON → read
+ok 6 - PARSER       → JSON → write
+ok 7 - PARSER       → JSON → reset
+ok 8 - PARSER       → JSON → add
+ok 9 - PARSER       → JSON → rm
+ok 10 - PARSER       → BREW → read
+ok 11 - PARSER       → BREW → write
+ok 12 - PARSER       → BREW → reset
+ok 13 - PARSER       → BREW → add
+ok 14 - PARSER       → BREW → rm
+ok 15 - BREW         → Detect if formula is active
+ok 16 - BREW         → Detect if cask is active
+ok 17 - BREW         → Run brew update, bundle, upgrade, cleanup
+ok 18 - UPDATE       → Get config values from config file
+ok 19 - UPDATE       → Save config values into config file
+ok 20 - UPDATE       → Detect if auto-update is due
+ok 21 - UPDATE       → Detect if update is required
+ok 22 - UPDATE       → Merge dependencies
+ok 23 - MODULES      → Detect if module is installed
+ok 24 - MODULES      → Download module files
+ok 25 - MODULES      → Init modules                  → (via modules/)
+ok 26 - MODULES      → Init modules                  → (via user.tools.json)
+ok 27 - MODULES      → Fetch module commands
+ok 28 - MODULES      → Resolve the ultimate query    → (via user.tools.json)
+not ok 29 - Failure: E22              → Linux             → Manual
+  ---
+  message: cp: /install.sh: Read-only file system
+  severity: fail
+  ...
+Bail out!

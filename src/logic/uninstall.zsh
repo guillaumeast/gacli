@@ -3,16 +3,12 @@
 # FICHIER /src/logic/uninstall.zsh
 ###############################
 
-# TODO: make it independent (no need of gacli.zsh or other script to run)
-# TODO: make it 100% POSIX → .sh
-
 # Uninstall GACLI: remove all file and cleanup .zshrc
 gacli_uninstall() {
     printStyled info "Uninstalling... ⏳"
 
     # Variables
     local zshrc_file="$HOME/.zshrc"
-    local config_file="${CONFIG}"
 
     # Remove GACLI lines from .zshrc
     print ""

@@ -3,6 +3,8 @@
 # FICHIER /tests/unit/modules.zunit
 ###############################
 
+# TODO: auto download latest sample_module
+
 @setup {
 
     # Load helpers

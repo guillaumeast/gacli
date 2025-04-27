@@ -1,17 +1,10 @@
 #!/usr/bin/env sh
 ###############################
-# FICHIER /src/.auto-install/install.sh
+# FICHIER /installer/install.sh
 ###############################
 
-# Run it automaticaly:
-# TODO: curl (local + Docker image with curl / wget + VM macOS)
-
-# Run it manually:
 # Move this file to your local shared folder (volume) then run:
-# docker run --rm -v "/Users/gui/Repos/docker/shared:/shared" -it ubuntu sh -c ". /shared/install.sh; exec zsh"
-
-# TODO: Télécharger uniquement le dossier "gacli/src" et le fichier "gacli/installer/Brewfile"
-# TODO: Après l'install → supprimer les fichiers "install.sh" et Brewfile
+# docker run --rm -v "<local_folder_path>:<virtual_folder_path>" -it <image> sh -c ". <virtual_folder_path>/install.sh"
 
 # Options
 FORCE_MODE="false"
@@ -22,18 +15,23 @@ IS_LINUX=false
 SHELL_PATH=""
 SHELL_NAME=""
 
-# GACLI urls
-REPO="https://github.com/guillaumeast/gacli"
-ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
+# Urls
+URL_REPO="https://github.com/guillaumeast/gacli"
+URL_ARCHIVE="${URL_REPO}/archive/refs/heads/dev.tar.gz"
 
-# GACLI paths
-DIR=".gacli"
-ENTRY_POINT="main.zsh"
-ZSHRC=".zshrc"
+# Paths
+DIR_GACLI=".gacli"
+FILE_ENTRY_POINT="${DIR_GACLI}/main.zsh"
+FILE_ZSHRC=".zshrc"
+
+# Temporary files
+DIR_TMP=".gacli_tmp"
+DIR_TMP_SRC="${DIR_TMP}/src"
+BREWFILE_TMP="${DIR_TMP}/installer/Brewfile"
 
 # WRAPPER
 SYM_DIR=".local/bin"
-SYMLINK="gacli"
+SYMLINK="${SYM_DIR}/gacli"
 
 # Colors
 RED="$(printf '\033[31m')"
@@ -46,37 +44,42 @@ NONE="$(printf '\033[0m')"
 BOLD="$(printf '\033[1m')"
 
 # Emojis
-EMOJI_SUCCESS="✦"
-EMOJI_WARN="⚠️ "
-EMOJI_ERR="❌"
+EMOJI_SUCCESS="✓"
+EMOJI_WARN="⚠️"
+EMOJI_ERR="🛑"
 EMOJI_INFO="✧"
+EMOJI_TBD="⚐"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
-EMOJI_WAIT="⏳"
+EMOJI_WAIT="$(printf '\n\033[90m✧ ⏳\033[0m')"
 
 # ────────────────────────────────────────────────────────────────
 # PSEUDO-CODE
 # ────────────────────────────────────────────────────────────────
 
 # install.sh
-# |→ ✅ init_style                → Enable emojis if system can handle it + welcome message
-# |→ ✅ init_style                → Standardize output formatting
-# |
-# |→ ✅ parse_args                → Inits global variables referring to given args
-# |→ ✅ resolve_paths             → Resolve relative paths to absolute paths
-# |→ ✅ check_env                 → Detect environment: OS, default shell and privilege
-# |
-# |→ ✅ install_brew_deps         → Install Homebrew dependencies with current package manager
-# |→ ✅ install_brew              → Install Homebrew
-# |→ ✅ install_zsh               → Ensure ZSH is the default shell
-# |
-# |→ ✅ download_gacli            → Download GACLI files from Github
-# |→ ✅ install_gacli_deps        → Install GACLI dependencies from "${DIR}/.auto-install/Brewfile"
-# |→ ✅ make_executable           → Ensure GACLI entry point is executable
-# |→ ✅ create_wrapper            → Generate a small shell script to launch GACLI reliably across shells
-# |→ ✅ update_zshrc              → Append GACLI to PATH and source its entry point in ~/.zshrc
-# |
-# |→ ✅ auto_launch               → Launch GACLI
+    # |→ ✅ init_style                → Enable emojis if system can handle it + welcome message
+    # |→ ✅ init_style                → Standardize output formatting
+    # |
+    # |→ ✅ parse_args                → Inits global variables referring to given args
+    # |→ ✅ resolve_paths             → Resolve relative paths to absolute paths
+    # |→ ✅ check_env                 → Detect environment: OS, default shell and privilege
+    # |
+    # |→ ✅ install_brew_deps         → Install Homebrew dependencies with current package manager
+    # |→ ✅ install_brew              → Install Homebrew
+    # |→ ✅ install_zsh               → Ensure ZSH is the default shell
+    # |
+    # |→ ✅ download_gacli            → Download GACLI files from Github
+    # |→ ✅ install_gacli_deps        → Install GACLI dependencies from BREWFILE_TMP
+    # |→ ✅ make_executable           → Ensure GACLI entry point is executable
+    # |→ ✅ create_wrapper            → Generate a small shell script to launch GACLI reliably across shells
+    # |→ ✅ update_zshrc              → Append GACLI to PATH and source its entry point in ~/.zshrc
+    # |
+    # |→ ✅ auto_launch               → Launch GACLI
+#
+
+# TODO: make zsh default shell
+# TODO: add more package managers (apt-get, ziper...)
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -98,23 +101,14 @@ main() {
     printStyled highlight "Installing package manager: Homebrew..."
     install_brew    || return 4
 
-    # echo ""
-    # printStyled highlight "Installing shell: zsh..."
-    # TODO: fix install_zsh     || return 5
-
     echo ""
-    printStyled highlight "Downloading GACLI ${GREY}→${CYAN} ${DIR}${GREY}...${NONE}"
-    download_gacli  || return 6
-
-    echo ""
-    printStyled highlight "Installing GACLI dependencies... ${EMOJI_WAIT}"
-    install_gacli_deps    || return 7
-
-    echo ""
-    printStyled highlight "Installing GACLI CLI..."
-    make_executable || return 8
-    create_wrapper  || return 9
-    update_zshrc    || return 10
+    printStyled highlight "Installing GACLI ${GREY}→${CYAN} ${DIR_GACLI}${GREY}...${NONE}"
+    download_gacli  || return 5
+    install_gacli_deps    || return 6
+    make_executable || return 7
+    create_wrapper  || return 8
+    update_zshrc    || return 9
+    cleanup         || return 10
 
     auto_launch     || return 11
 }
@@ -134,35 +128,44 @@ init_style() {
     printf "%s\n" ""
 }
 
-# Centralised formatter to colour‑code and prefix log messages by severity
+# Centralised formatter to colour‑code and emoji log messages by severity
 printStyled() {
     style=$1
     msg=$2
-    color=$NONE
-    case "$style" in
+    color_text=$GREY
+    color_emoji=$GREY
+    case "${style}" in
         error)
-            printf "%s\n" "${RED}${BOLD}${EMOJI_ERR} ${msg}${NONE}" >&2
+            printf "%s\n" "${EMOJI_ERR} ${RED}${BOLD}${msg}${NONE}" >&2
             return ;;
         warning)
-            printf "%s\n" "${YELLOW}${BOLD}${EMOJI_WARN} ${msg}${NONE}" >&2
+            printf "%s\n" "${EMOJI_WARN}  ${YELLOW}${BOLD}${msg}${NONE}" >&2
             return ;;
         success)
-            color=$GREEN
-            prefix=$EMOJI_SUCCESS
+            color_text=$GREY
+            color_emoji=$GREEN
+            emoji=$EMOJI_SUCCESS
             ;;
         info)
-            color=$GREY
-            prefix=$EMOJI_INFO
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_INFO
+            ;;
+        info_tbd)
+            color_text=$GREY
+            color_emoji=$ORANGE
+            emoji=$EMOJI_TBD
             ;;
         highlight)
-            color=$NONE
-            prefix=$EMOJI_HIGHLIGHT
+            color_text=$NONE
+            color_emoji=$NONE
+            emoji=$EMOJI_HIGHLIGHT
             ;;
         *)
-            prefix=""
+            emoji=""
             ;;
     esac
-    printf "%s\n" "${color}${prefix} ${msg}${NONE}"
+    printf "%s\n" "${color_emoji}${emoji} ${color_text}${msg}${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -172,67 +175,89 @@ printStyled() {
 # Parses CLI options (currently only --force) and sets corresponding flags
 parse_args() {
     for arg in "$@"; do
-        case "$arg" in
+        case "${arg}" in
             --force)
                 FORCE_MODE="true"
                 ;;
             *)
-                printStyled error "Expected : --force (received : $arg)"
+                printStyled error "Expected : --force (received : ${arg})"
                 return 1
                 ;;
         esac
     done
-    printStyled info "Arguments: ${GREEN}parsed${NONE}"
+    printStyled success "Arguments: ${GREEN}parsed${NONE}"
 }
 
-# Expands user‑relative paths, ensures .zshrc exists, and defines wrapper targets
+# Expands user‑relative paths, ensures .zshrc exists, and defines wrapper installers
 resolve_paths() {
-    [ -n "$HOME" ] || { printStyled error "\$HOME not set"; return 1; }
 
-    DIR="$HOME/$DIR"
-    ENTRY_POINT="$DIR/$ENTRY_POINT"
-    ZSHRC="$HOME/$ZSHRC"
-    SYM_DIR="$HOME/$SYM_DIR"
-    SYMLINK="$SYM_DIR/$SYMLINK"
-    printStyled info "Paths: ${GREEN}resolved${NONE}"
+    # Ensure $HOME is set
+    [ -n "${HOME}" ] || { printStyled error "\$HOME not set"; return 1; }
+
+    # Main paths
+    DIR_GACLI="${HOME}/${DIR_GACLI}"
+    FILE_ENTRY_POINT="${HOME}/${FILE_ENTRY_POINT}"
+    FILE_ZSHRC="${HOME}/${FILE_ZSHRC}"
+
+    # Symlink paths
+    SYM_DIR="${HOME}/${SYM_DIR}"
+    SYMLINK="${HOME}/${SYMLINK}"
+
+    # Temporary paths
+    DIR_TMP="${HOME}/${DIR_TMP}"
+    DIR_TMP_SRC="${HOME}/${DIR_TMP_SRC}"
+    BREWFILE_TMP="${HOME}/${BREWFILE_TMP}"
+
+    # Reset temporary files
+    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+
+    # Log
+    printStyled success "Paths: ${GREEN}resolved${NONE}"
 }
 
 # Detects OS, default shell and privilege
 check_env() {
+
     # Detect OS via uname
     ud=$(uname -s)
-    case "$ud" in
+    case "${ud}" in
         Darwin) IS_MACOS=true ;;
         Linux)  IS_LINUX=true ;;
-        *)      printStyled error "Unsupported OS: $ud"; return 1 ;;
+        *)      printStyled error "Unsupported OS: ${ud}"; return 1 ;;
     esac
-    printStyled info "OS detected: ${GREEN}$ud${NONE}"
+    printStyled success "OS detected: ${GREEN}${ud}${NONE}"
 
     # Detect default shell
     SHELL_PATH=${SHELL:-$(command -v sh)}
     SHELL_NAME=$(basename "$SHELL_PATH")
-    if [ $SHELL_NAME = "zsh" ]; then
+    local style=""
+    local color=""
+    if [ ${SHELL_NAME} = "zsh" ]; then
+        style="success"
         color="${GREEN}"
-    elif [ -n "$SHELL_NAME" ]; then
+    elif [ -n "${SHELL_NAME}" ]; then
+        style="info_tbd"
         color="${ORANGE}"
     else
+        style="info"
         color="${RED}"
         SHELL_NAME="unknwon"
     fi
-    printStyled info "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
+    printStyled "${style}" "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
 
     # — Privilege escalation setup —
     if [ "$(id -u)" -ne 0 ]; then
         if command -v sudo >/dev/null 2>&1; then
             SUDO="sudo"
-            printStyled info "Privilege: ${GREEN}sudo enabled${NONE}"
+            printStyled success "Privilege: ${GREEN}sudo enabled${NONE}"
         else
             SUDO=""
-            printStyled info "Privilege: ${ORANGE}No sudo detected → non-root installs may fail${NONE}"
+            printStyled info_tbd "Privilege: ${ORANGE}No sudo detected${GREY} → non-root installs may fail${NONE}"
         fi
     else
         SUDO=""
-        printStyled info "Privilege: ${GREEN}root${NONE}"
+        printStyled success "Privilege: ${GREEN}root${NONE}"
     fi
 }
 
@@ -253,18 +278,18 @@ install_brew() {
     install_brew_deps
 
     # Install
-    printStyled info "Installing ${ORANGE}Homebrew${GREY}... ${EMOJI_WAIT}"
+    printStyled info "Downloading Homebrew... ${EMOJI_WAIT}"
     yes '' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null 2>&1
+    printStyled success "Downloaded: ${GREEN}Homebrew${NONE}"
     
     # Setup Linux env
     if [ "$IS_LINUX" = true ]; then
         files="/root/.profile /root/.kshrc /root/.bashrc /root/.zshrc /root/.dashrc /root/.tcshrc /root/.cshrc"
-        printStyled info "Configuring ${ORANGE}Linux${GREY}..."
 
         # Add Homebrew to all source files
-        for file in $files; do
-            echo >> "$file"
-            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$file"
+        for file in ${file}s; do
+            echo >> "${file}"
+            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "${file}"
         done
 
         # Add Homebrew to current session
@@ -274,16 +299,17 @@ install_brew() {
         if ! command -v gcc >/dev/null 2>&1; then
             brew install gcc >/dev/null 2>&1
         fi
+        printStyled success "Configured: ${GREEN}Linuxbrew${GREY}"
     fi
 
     # Check install
     if ! command -v brew >/dev/null 2>&1; then
-        printStyled error "Unable to install ${GREEN}Homebrew${NONE}"
+        printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
         return 1
     fi
     
     # Success
-    printStyled info "Installed: ${GREEN}Homebrew${NONE}"
+    printStyled success "Installed: ${GREEN}Homebrew${NONE}"
 }
 
 # Installs Homebrew dependencies
@@ -291,160 +317,175 @@ install_brew_deps() {
     
     # Depending on current package manager
     if command -v apt >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}apt${NONE}"
+        printStyled info_tbd "Current package manager: ${ORANGE}apt${NONE}"
         printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO apt-get update -y >/dev/null 2>&1
         $SUDO apt-get install -y build-essential procps curl file git bash >/dev/null 2>&1
     elif command -v dnf >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}dnf${NONE}"
+        printStyled info_tbd "Current package manager: ${ORANGE}dnf${NONE}"
         printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO dnf groupinstall -y "Development Tools" >/dev/null 2>&1
         $SUDO dnf install -y procps-ng file bash >/dev/null 2>&1
     elif command -v pacman >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}pacman${NONE}"
+        printStyled info_tbd "Current package manager: ${ORANGE}pacman${NONE}"
         printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO pacman -Sy --noconfirm base-devel procps-ng curl file git bash >/dev/null 2>&1
     elif command -v yum >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}yum${NONE}"
+        printStyled info_tbd "Current package manager: ${ORANGE}yum${NONE}"
         printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
         $SUDO yum groupinstall 'Development Tools' >/dev/null 2>&1
         $SUDO yum install -y procps-ng curl file git bash >/dev/null 2>&1
     else
-        printStyled warning "No supported package manager found"
-    fi
-}
-
-# Install zsh (if needed) and make it the user’s default login shell
-install_zsh() {
-    printStyled info "Trying to install zsh..."
-
-    target_shell=$(command -v zsh)
-    [ -z "$target_shell" ] && {
-        printStyled error "zsh not found in PATH"
+        printStyled error "No supported package manager found"
         return 1
-    }
-
-    # Ajoute zsh dans /etc/shells si besoin
-    if [ -n "$SUDO" ] && [ -w /etc/shells ] && ! grep -q "$target_shell" /etc/shells 2>/dev/null; then
-        echo "$target_shell" | $SUDO tee -a /etc/shells >/dev/null
     fi
 
-    # Détermine le shell actuel
-    current_shell=$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f7)
-    [ -z "$current_shell" ] && current_shell="$SHELL"
-
-    if [ "$current_shell" = "$target_shell" ]; then
-        printStyled success "Default shell already ${GREEN}zsh${NONE}"
-        return 0
-    fi
-
-    printStyled info "Switching default shell to ${ORANGE}zsh${GREY}..."
-    
-    # Ne tente pas de changer dans un conteneur Docker
-    if grep -qa 'docker\|lxc' /proc/1/cgroup 2>/dev/null; then
-        printStyled warning "Running in a container → skipping chsh"
-        return 0
-    fi
-
-    if command -v chsh >/dev/null 2>&1; then
-        if [ -n "$SUDO" ]; then
-            $SUDO chsh -s "$target_shell" "$(id -un)" >/dev/null 2>&1
-        else
-            chsh -s "$target_shell" >/dev/null 2>&1
-        fi
-        printStyled success "Default shell changed: ${GREEN}zsh${NONE}"
-    else
-        printStyled warning "chsh not available → cannot change default shell"
-    fi
+    # Success
+    printStyled success "Installed: ${GREEN}Homebrew dependencies${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
 # INSTALL GACLI
 # ────────────────────────────────────────────────────────────────
 
-# Retrieves GACLI source (curl, wget or git) into the target directory, honouring --force
+# Retrieves GACLI source (curl, wget or git) into the installer directory, honouring --force
 download_gacli() {
 
-    # Create destination folder
-    [ ! -d "$DIR" ] || {
-        [ "$FORCE_MODE" = "true" ] && { rm -rf "$DIR"; } || {
-            printStyled error "$DIR already exists (--force to overwrite)"
-            return 1
-        }
-    }
-    mkdir -p "$DIR" || { printStyled error "Unable to create $DIR"; return 1; }
+    # Log
+    printStyled info "Downloading GACLI... ${EMOJI_WAIT}"
 
-    # Download → TODO: only download src folder !
-    if curl -fsSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 >/dev/null 2>&1; then
-        printStyled success "Downloaded"
-        return 0
-    else
-        printStyled warning "Download failed"
+    # Delete previous install if --force, else abort
+    if [ -d "${DIR_GACLI}" ]; then
+        if [ "${FORCE_MODE}"="true" ]; then
+            rm -rf "${DIR_GACLI}"
+        else
+            printStyled error "Gacli already installed. Use --force to overwrite"
+            return 1
+        fi
     fi
+
+    # Download all repo in tmp folder
+    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 >/dev/null 2>&1 || {
+        printStyled error "Download failed"
+        return 1
+    }
+
+    # Copy source files
+    mv "${DIR_TMP_SRC}" "${DIR_GACLI}" || {
+        printStyled error "Unable to move files into: ${DIR_GACLI}"
+        return 1
+    }
+
+    printStyled success "Downloaded: ${GREEN}GACLI${NONE}"
 }
 
-# Runs brew bundle on the downloaded Brewfile to install required formulae and casks
+# Runs brew bundle on the downloaded BREWFILE_TMP to install required formulae and casks
 install_gacli_deps() {
-    brewfile="$DIR/.auto-install/Brewfile"
-    if command -v brew >/dev/null 2>&1 && [ -f "$brewfile" ]; then
-        brew bundle --file="$brewfile" >/dev/null || {
-            printStyled error "Failed to run Brewfile"
-            return 1
-        }
-        printStyled success "Installed"
-    else
-        printStyled warning "No Brewfile found or brew unavailable → skipping"
-    fi
+
+    # Log
+    printStyled info "Installing GACLI dependencies... ${EMOJI_WAIT}"
+
+    # Check Brewfile integrity
+    [ -f "${BREWFILE_TMP}" ] || {
+        printStyled error "Unable to find dependencies descriptor at: ${CYAN}${BREWFILE_TMP}${NONE}"
+        return 1
+    }
+
+    # Check Homebrew install
+    command -v brew >/dev/null 2>&1 || {
+        printStyled error "Unable to find ${ORANGE}Homebrew${NONE}"
+        return 1     
+    }
+
+    # Install dependencies
+    brew bundle --file="${BREWFILE_TMP}" >/dev/null || {
+        printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
+        return 1
+    }
+
+    # Log
+    printStyled success "Installed: ${GREEN}GACLI dependencies${NONE}"
 }
 
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
-    chmod +x "$ENTRY_POINT" || {
-        printStyled warning "Failed make $ENTRY_POINT executable"
+    chmod +x "${FILE_ENTRY_POINT}" || {
+        printStyled warning "Failed to make ${CYAN}${FILE_ENTRY_POINT}${YELLOW} executable"
         return 1
     }
-    printStyled info "Entry point: ${GREEN}executable${NONE}"
+    printStyled success "Entry point: ${GREEN}executable${NONE}"
 }
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 create_wrapper() {
-    mkdir -p "$SYM_DIR" || {
-        printStyled warning "Failed to create $SYM_DIR"; return 1
+    mkdir -p "${SYM_DIR}" || {
+        printStyled warning "Failed to create ${CYAN}${SYM_DIR}${NONE}"; return 1
     }
 
-    if [ -f "$SYMLINK" ] || [ -d "$SYMLINK" ] || [ -L "$SYMLINK" ]; then
-        rm -f "$SYMLINK"
+    if [ -f "${SYMLINK}" ] || [ -d "${SYMLINK}" ] || [ -L "${SYMLINK}" ]; then
+        rm -f "${SYMLINK}"
     fi
 
     {
         printf '%s\n' '#!/usr/bin/env sh'
-        printf '%s\n' "exec zsh \"$ENTRY_POINT\" \"\$@\""
-    } > "$SYMLINK" && chmod +x "$SYMLINK" || {
-        printStyled warning "Failed to create wrapper"; return 1
+        printf '%s\n' "exec zsh \"${FILE_ENTRY_POINT}\" \"\$@\""
+    } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
+        printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
     }
-    printStyled info "Wrapper: ${GREEN}created${GREY} → ${CYAN}$SYMLINK${GREY} → ${CYAN}$ENTRY_POINT${NONE}"
+    printStyled success "Wrapper: ${GREEN}created${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${FILE_ENTRY_POINT}${NONE}"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
 update_zshrc() {
 
-    touch "$ZSHRC" || {
-        printStyled error "Unable to create .zshrc file: $ZSHRC"
+    touch "${FILE_ZSHRC}" || {
+        printStyled error "Unable to create .zshrc file: ${CYAN}${FILE_ZSHRC}${NONE}"
         return 1
     }
 
-    if grep -q '# GACLI' "$ZSHRC"; then
-        printStyled success ".zshrc already configured"
+    if grep -q '# GACLI' "${FILE_ZSHRC}"; then
+        printStyled success "Zsh : ${GREEN}configured${NONE}"
         return 0
     fi
     {
         printf '\n\n# GACLI\n'
-        printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
-        printf 'source "%s"\n' "$ENTRY_POINT"
-    } >> "$ZSHRC" || {
-        printStyled warning "Failed update $ZSHRC"; return 1
+        printf 'export PATH="%s:$PATH"\n' "${SYM_DIR}"
+        printf 'source "%s"\n' "${FILE_ENTRY_POINT}"
+    } >> "${FILE_ZSHRC}" || {
+        printStyled warning "Failed update ${FILE_ZSHRC}"; return 1
     }
-    printStyled info ".zshrc: ${GREEN}updated${NONE}"
+    printStyled success "Zsh: ${GREEN}configured${NONE}"
+}
+
+# Deletes installer and temporary files
+cleanup() {
+
+    # Resolve installer symlinks
+    local installer="$0"
+    while [ -L "${installer}" ]; do
+        dir="$(dirname "${installer}")"
+        installer="$(readlink "${installer}")"
+        case "${installer}" in
+        /*) ;;
+        *) installer="${dir}/${installer}" ;;
+        esac
+    done
+    local dir="$(dirname "${installer}")"
+    local base="$(basename "${installer}")"
+
+    # Move to installer directory and get absolute path
+    cd "${dir}" >/dev/null 2>&1 || return 1
+    abs_dir="$(pwd -P)" || return 1
+    installer="${abs_dir}/${base}"
+
+    # Delete installer
+    [ -f "${installer}" ] && rm -f "${installer}"
+
+    # Delete temporary files
+    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
+
+    # Log
+    printStyled success "Cleanup: ${GREEN}completed${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -453,14 +494,15 @@ update_zshrc() {
 
 auto_launch() {
     echo ""
-    printStyled success "GACLI successfully installed 🚀"
+    printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀"
     echo ""
-    if [ -n "$ZSH_VERSION" ]; then
-        printStyled info "Reloading shell... ${EMOJI_WAIT}"
+    if command -v zsh >/dev/null 2>&1; then
+        printStyled info "Reloading shell..."
         exec zsh
     else
-        printStyled warning "Open a new terminal or run: exec zsh"
+        printStyled error "Missing dependencie: ${ORANGE}zsh${NONE}"
         echo ""
+        return 1
     fi
 }
 

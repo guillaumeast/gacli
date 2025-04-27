@@ -1,0 +1,15 @@
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/fixture/E2E/tests/curl.zunit
+###############################
+
+@test 'E22              → Linux             → Curl' {
+
+    # Install GACLI
+    curl -fsSL "${INSTALLER_URL}"
+    assert $? equals 0
+    
+    # Run tests
+    run_tests
+    assert $? equals 0
+}

@@ -1,5 +1,5 @@
 ###############################
-# FICHIER /.auto-install/Brewfile
+# FICHIER /installer/Brewfile
 ###############################
 
 brew "curl"         # HTTP CLIENT → Required to donwload Homebrew and GACLI files
