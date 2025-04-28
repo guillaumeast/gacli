@@ -2,5 +2,6 @@
 # FICHIER /installer/Brewfile
 ###############################
 
-# All core dependencies are currently installed by native package manager
+brew "coreutils"
+brew "jq"
 

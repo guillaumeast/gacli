@@ -309,12 +309,29 @@ install_brew() {
     # Install Homebrew dependencies
     install_brew_deps || return 1
 
+    # Setup Linux env
+    if [ "$IS_LINUX" = true ]; then
+        mkdir -p /home/linuxbrew/.linuxbrew || {
+            printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
+            return 1
+        }
+        chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
+            printStyled error "Unable to make Homebrew folder writable: /home/linuxbrew/.linuxbrew"
+            return 1
+        }
+    fi
+
     # Install
     printStyled wait "Downloading Homebrew..."
-    yes '' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null 2>&1
+    bash_path="$(command -v bash || printf %s '/bin/bash')"
+    brew_installer_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+    yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")" || { # TODO: >/dev/null 2>&1
+        printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
+        return 1
+    }
     printStyled success "Downloaded: ${GREEN}Homebrew${NONE}"
     
-    # Setup Linux env
+    # Configure Linux env
     if [ "$IS_LINUX" = true ]; then
         files="/root/.profile /root/.kshrc /root/.bashrc /root/.zshrc /root/.dashrc /root/.tcshrc /root/.cshrc"
         brew_path=""
@@ -375,9 +392,11 @@ install_brew() {
 install_brew_deps() {
 
     # TODO: macOS default package manager ?
-    
-    # Depending on current package manager
+
+    # Variables
     default_deps="file git curl bash zsh coreutils jq"
+
+    # ✅ Fully supported
     if command -v brew >/dev/null 2>&1; then
         package_manager="brew"
         step_1="brew install coreutils"
@@ -385,7 +404,7 @@ install_brew_deps() {
     elif command -v apt >/dev/null 2>&1; then
         package_manager="apt"
         step_1="${SUDO}apt-get update -y"
-        step_2="${SUDO}apt-get install -y build-essential procps ${default_deps}"
+        step_2="${SUDO}apt-get install -y build-essential ${default_deps} procps"
         cmd="${step_1} && ${step_2}"
     elif command -v dnf >/dev/null 2>&1; then
         if dnf --version 2>/dev/null | grep -q "5\."; then
@@ -395,23 +414,41 @@ install_brew_deps() {
             package_manager="dnf v4"
             step_1="${SUDO}dnf group install -y \"Development Tools\""
         fi
-        step_2="${SUDO}dnf install -y procps-ng ${default_deps} gawk"
+        step_2="${SUDO}dnf install -y ${default_deps} procps-ng gawk"
         cmd="${step_1} && ${step_2}"
     elif command -v zypper >/dev/null 2>&1; then
         package_manager="zypper"
         step_1="${SUDO}zypper refresh"
-        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y procps ${default_deps} gzip ruby"
+        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y ${default_deps} procps gzip ruby"
         cmd="${step_1} && ${step_2}"
-    elif command -v apk >/dev/null 2>&1; then
-        package_manager="apk"
-        step_1="${SUDO}apk update"
-        step_2="${SUDO}apk add --no-cache build-base procps ${default_deps}"
+    elif command -v emerge >/dev/null 2>&1; then
+        package_manager="emerge"
+        step_1="${SUDO}emerge --sync"
+        step_2="${SUDO}emerge -n --quiet sys-devel/gcc sys-devel/binutils sys-apps/file dev-vcs/git net-misc/curl app-shells/bash app-shells/zsh sys-apps/coreutils app-misc/jq sys-process/procps"
         cmd="${step_1} && ${step_2}"
+    # 🚧 WIP
+    elif command -v slackpkg >/dev/null 2>&1; then
+        package_manager="slackpkg"
+        step_1="${SUDO}slackpkg update"
+        step_2="${SUDO}slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
+        step_3="${SUDO}update-ca-certificates --fresh"
+        cmd="${step_1} && ${step_2} && ${step_3}"
+    # ⚠️ Partially supported (arm64 not supported) (TODO: add proper error message)
     elif command -v pacman >/dev/null 2>&1; then
         package_manager="pacman"
-        cmd="${SUDO}pacman -Sy --noconfirm base-devel procps-ng ${default_deps}"
+        cmd="${SUDO}pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
+    # 🛑 Unsupported
+    elif command -v apk >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}apk${RED} (glibc-based distribution required)"
+        return 1
     elif command -v yum >/dev/null 2>&1; then
         printStyled error "Unsupported package manager: ${ORANGE}yum${RED} (git ≥ 2.7.0 not available)"
+        return 1
+    elif command -v nix-env >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}nix-env${RED} (FHS required)"
+        return 1
+    elif command -v xbps-install >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}xbps${RED} (server-side SSL/TLS issues)"
         return 1
     else
         printStyled error "No supported package manager found"
@@ -421,7 +458,7 @@ install_brew_deps() {
 
     printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
     printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
-    eval "${cmd}" >/dev/null || { # TODO: 2>&1
+    eval "${cmd}" || { # TODO: >/dev/null 2>&1
         printStyled error "Unable to install Homebrew dependencies"
         return 1
     }
@@ -484,7 +521,7 @@ install_gacli_deps() {
     }
 
     # Install dependencies
-    brew bundle --file="${BREWFILE_TMP}" || { # >/dev/null 2>&1
+    brew bundle --file="${BREWFILE_TMP}" >/dev/null 2>&1 || {
         printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
         return 1
     }
