@@ -638,7 +638,8 @@ auto_launch() {
     printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀\n"
     if command -v zsh >/dev/null 2>&1; then
         printStyled highlight "All done, ${ORANGE}restart your shell${NONE} or run ${ORANGE}exec zsh${NONE}"
-        echo ""
+        echo " "
+        echo " "
     else
         printStyled error "Missing dependencie: ${ORANGE}zsh${NONE}\n"
         return 1
