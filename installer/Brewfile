@@ -2,6 +2,5 @@
 # FICHIER /installer/Brewfile
 ###############################
 
-brew "coreutils"    # CROSS-PLATFORM TOOLS → Required to run GACLI on macOS and Linux
-brew "jq"           # JSON PARSER → Required by "yq"
+# All core dependencies are currently installed by native package manager
 

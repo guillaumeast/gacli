@@ -227,7 +227,7 @@ check_env() {
 
     # Detect arch
     ARCH="$(uname -m)"
-    printStyled success "Arch detected: ${GREEN}${ARCH}${NONE}"
+    printStyled success "Arch: ${GREEN}${ARCH}${NONE}"
 
     # Detect OS via uname
     ud=$(uname -s)
@@ -236,12 +236,28 @@ check_env() {
         Linux)  IS_LINUX=true ;;
         *)      printStyled error "Unsupported OS: ${ud}"; return 1 ;;
     esac
-    printStyled success "OS detected: ${GREEN}${ud}${NONE}"
+    printStyled success "OS: ${GREEN}${ud}${NONE}"
 
     # Detect distribution
-    if grep -qi alpine /etc/os-release; then
-        printStyled error "Alpine/Musl non supporté – utilisez une distribution glibc"
-        return 1
+    if [ "${IS_LINUX}" = true ]; then
+    
+        # Read /etc/os-release to get the distro pretty-name (fallback to ID)
+        if [ -r /etc/os-release ]; then
+            . /etc/os-release
+            distro="${NAME:-${ID}}"
+        else
+            distro="unknown"
+        fi
+        
+        # Alpine is unsupported (musl instead of glibc)
+        if echo "${distro}" | grep -qi alpine; then
+            printStyled info "Distribution: ${RED}${distro}${NONE}"
+            printStyled error "Distribution not supported → please use a ${ORANGE}glibc-based${RED} distribution"
+            return 1
+        fi
+
+        # Success
+        printStyled success "Distribution: ${GREEN}${distro}${NONE}"
     fi
 
     # Detect default shell
@@ -295,7 +311,7 @@ install_brew() {
 
     # Install
     printStyled wait "Downloading Homebrew..."
-    yes '' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null #2>&1
+    yes '' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null 2>&1
     printStyled success "Downloaded: ${GREEN}Homebrew${NONE}"
     
     # Setup Linux env
@@ -357,19 +373,21 @@ install_brew() {
 
 # Installs Homebrew dependencies
 install_brew_deps() {
+
+    # TODO: macOS default package manager ?
     
     # Depending on current package manager
-    package_manager=""
-    step_1=""
-    step_2=""
-    cmd=""
-    if command -v apt >/dev/null 2>&1; then
+    default_deps="file git curl bash zsh coreutils jq"
+    if command -v brew >/dev/null 2>&1; then
+        package_manager="brew"
+        step_1="brew install coreutils"
+        step_2="brew install jq"
+    elif command -v apt >/dev/null 2>&1; then
         package_manager="apt"
         step_1="${SUDO}apt-get update -y"
-        step_2="${SUDO}apt-get install -y build-essential procps curl file git bash zsh"
+        step_2="${SUDO}apt-get install -y build-essential procps ${default_deps}"
         cmd="${step_1} && ${step_2}"
     elif command -v dnf >/dev/null 2>&1; then
-        # TODO: add regex ?
         if dnf --version 2>/dev/null | grep -q "5\."; then
             package_manager="dnf v5"
             step_1="${SUDO}dnf install -y @development-tools"
@@ -377,22 +395,21 @@ install_brew_deps() {
             package_manager="dnf v4"
             step_1="${SUDO}dnf group install -y \"Development Tools\""
         fi
-        step_2="${SUDO}dnf install -y procps-ng curl file git bash zsh"
+        step_2="${SUDO}dnf install -y procps-ng ${default_deps} gawk"
         cmd="${step_1} && ${step_2}"
     elif command -v zypper >/dev/null 2>&1; then
-        # TODO: add ruby + fix curl ?
         package_manager="zypper"
         step_1="${SUDO}zypper refresh"
-        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y procps curl file git bash zsh gzip ruby"
+        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y procps ${default_deps} gzip ruby"
         cmd="${step_1} && ${step_2}"
     elif command -v apk >/dev/null 2>&1; then
         package_manager="apk"
         step_1="${SUDO}apk update"
-        step_2="${SUDO}apk add --no-cache build-base procps curl file git bash zsh"
+        step_2="${SUDO}apk add --no-cache build-base procps ${default_deps}"
         cmd="${step_1} && ${step_2}"
     elif command -v pacman >/dev/null 2>&1; then
         package_manager="pacman"
-        cmd="${SUDO}pacman -Sy --noconfirm base-devel procps-ng curl file git bash zsh"
+        cmd="${SUDO}pacman -Sy --noconfirm base-devel procps-ng ${default_deps}"
     elif command -v yum >/dev/null 2>&1; then
         printStyled error "Unsupported package manager: ${ORANGE}yum${RED} (git ≥ 2.7.0 not available)"
         return 1
@@ -404,7 +421,7 @@ install_brew_deps() {
 
     printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
     printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
-    eval "${cmd}" >/dev/null || { # 2>&1 
+    eval "${cmd}" >/dev/null 2>&1 || {
         printStyled error "Unable to install Homebrew dependencies"
         return 1
     }
@@ -467,7 +484,7 @@ install_gacli_deps() {
     }
 
     # Install dependencies
-    brew bundle --file="${BREWFILE_TMP}" >/dev/null || {
+    brew bundle --file="${BREWFILE_TMP}" || { # >/dev/null 2>&1
         printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
         return 1
     }
@@ -487,20 +504,26 @@ make_executable() {
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 create_wrapper() {
+
+    # Create symlink dir if missing
     mkdir -p "${SYM_DIR}" || {
         printStyled warning "Failed to create ${CYAN}${SYM_DIR}${NONE}"; return 1
     }
 
+    # Delete symlink if already exists
     if [ -f "${SYMLINK}" ] || [ -d "${SYMLINK}" ] || [ -L "${SYMLINK}" ]; then
         rm -f "${SYMLINK}"
     fi
 
+    # Create symlink
     {
         printf '%s\n' '#!/usr/bin/env sh'
-        printf '%s\n' "exec zsh \"${FILE_ENTRY_POINT}\" \"\$@\""
+        printf '%s\n' "exec \"$(command -v zsh)\" \"${FILE_ENTRY_POINT}\" \"\$@\""
     } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
         printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
     }
+
+    # Success
     printStyled success "Wrapper: ${GREEN}created${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${FILE_ENTRY_POINT}${NONE}"
 }
 
