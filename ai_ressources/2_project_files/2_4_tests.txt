@@ -1,0 +1,955 @@
+###############################
+# FICHIER /.zunit.yml
+###############################
+
+tap: false
+directories:
+  tests: tests/unit
+  output: tests/_output
+  support: tests/_support
+time_limit: 0
+fail_fast: true
+allow_risky: false
+
+#!/usr/bin/env zsh
+###############################
+# FICHIER /tests/_support/bootstrap.zsh
+###############################
+
+export DIR_ROOT="${PWD}"
+export DIR_SRC="${DIR_ROOT}/src"
+export DIR_TESTS="${DIR_ROOT}/tests"
+export DIR_FIXTURE="${DIR_TESTS}/fixture"
+
+# ────────────────────────────────────────────────────────────────
+# I/O formatting (from main.zsh)
+# ────────────────────────────────────────────────────────────────
+
+# Formatting
+BOLD="\033[1m"
+UNDERLINE="\033[4m"
+BLACK='\033[30m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+PURPLE='\033[35m'
+CYAN='\033[36m'
+ORANGE='\033[38;5;208m'
+GREY='\033[90m'
+NONE='\033[0m'
+COLOR_FORMULAE="${BLUE}"
+COLOR_CASKS="${CYAN}"
+COLOR_MODS="${PURPLE}"
+COLOR_COMMANDS="${ORANGE}"
+
+# Emojis
+EMOJI_SUCCESS="✦"
+EMOJI_WARN="⚠️"
+EMOJI_ERR="❌"
+EMOJI_INFO="✧"
+EMOJI_HIGHLIGHT="👉"
+EMOJI_DEBUG="🔎"
+EMOJI_WAIT="⏳"
+ICON_ON="⊙"
+ICON_OFF="○"
+
+printStyled() {
+    # Variables
+    local style=$1
+    local raw_message=$2
+    local final_message=""
+    local color=$NONE
+
+    # Argument check
+    if [[ -z "$style" || -z "$raw_message" ]]; then
+        echo "❌ [printStyled] Expected: <style> <message>"
+        return 1
+    fi
+
+    # Formatting
+    case "$style" in
+        error)
+            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
+            return
+            ;;
+        warning)
+            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
+            return
+            ;;
+        success)
+            color=$GREEN
+            final_message="${EMOJI_SUCCESS} ${raw_message}"
+            ;;
+        info)
+            color=$GREY
+            final_message="${EMOJI_INFO} ${raw_message}"
+            ;;
+        highlight)
+            color=$NONE
+            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
+            ;;
+        debug)
+            color=$YELLOW
+            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${YELLOW}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
+            ;;
+        *)
+            color=$NONE
+            final_message="${raw_message}"
+            ;;
+    esac
+
+    # Display
+    print "${color}$final_message${NONE}"
+}
+
+[[ ! -d "./.git" ]] && printStyled error "Please run tests from repo root folder"
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/time.zunit
+###############################
+
+@setup {
+
+    # Load script to test
+    load "${DIR_SRC}/helpers/time.zsh"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'TIME         → Get current timestamp' {
+    run time_get_current
+    assert $state equals 0
+    assert "$output" matches '^[0-9]{10}$'
+}
+
+@test 'TIME         → Add days to timestamp' {
+    run time_add_days "1745539200" "2"
+    assert $state equals 0
+    assert $output equals '1745712000'
+}
+
+@test 'TIME         → Convert UNIX timestamp to YYYY-MM-DD' {
+    run time_to_human "1745712000"
+    assert $state equals 0
+    assert "$output" same_as '2025-04-27'
+}
+
+@test 'TIME         → Convert YYYY-MM-DD to UNIX timestamp' {
+    run time_from_human "2025-04-27"
+    assert $state equals 0
+    assert "$output" same_as '1745712000'
+}
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/parser.zunit
+###############################
+
+@setup {
+
+    # Load script to test
+    load "${DIR_SRC}/helpers/parser.zsh"
+
+    # Fixtures
+    DIR_FIXTURE="${DIR_FIXTURE}/parser"
+    JSON_FIXTURE="${DIR_FIXTURE}/fixture.json"
+    BREW_FIXTURE="${DIR_FIXTURE}/fixture.Brewfile"
+    BREW_EMPTY="${DIR_FIXTURE}/empty.Brewfile"
+
+    # Output files
+    DIR_TMP="${DIR_FIXTURE}/.tmp"
+    JSON_OUT="${DIR_TMP}/output.json"
+    BREW_OUT="${DIR_TMP}/Brewfile"
+
+    # Reset output files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+    cp "${JSON_FIXTURE}" "${JSON_OUT}"
+    cp "${BREW_FIXTURE}" "${BREW_OUT}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TEST JSON FILES
+# ────────────────────────────────────────────────────────────────
+
+@test 'PARSER       → JSON → read' {
+
+    # → 0 value (scalar)
+    run file_read "${JSON_FIXTURE}" scalar_empty
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 1 value (scalar)
+    run file_read "${JSON_FIXTURE}" scalar_value
+    assert $state equals 0
+    assert "$output" same_as 'old value 1'
+
+    # → 0 value (list)
+    run file_read "${JSON_FIXTURE}" list_0
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values (list)
+    run file_read "${JSON_FIXTURE}" list_2
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old value 1'
+    assert "${lines[2]}" same_as 'old value 2'
+}
+
+@test 'PARSER       → JSON → write' {
+
+    # → 0 value → 1 value (scalar)
+    file_write "${JSON_OUT}" "scalar_empty" "value 1"
+    run file_read "${JSON_OUT}" "scalar_empty"
+    assert $state equals 0
+    assert "$output" same_as 'value 1'
+
+    # → 1 value → 1 value (scalar)
+    file_write "${JSON_OUT}" "scalar_value" "value 1"
+    run file_read "${JSON_OUT}" "scalar_value"
+    assert $state equals 0
+    assert "$output" same_as 'value 1'
+
+    # → 1 value → 0 value (scalar)
+    file_write "${JSON_OUT}" "scalar_value" ""
+    run file_read "${JSON_OUT}" "scalar_value"
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'PARSER       → JSON → reset' {
+
+    # → 2 values → 0 value
+    file_reset "${JSON_OUT}" "list_2"
+    run file_read "${JSON_OUT}" "list_2"
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'PARSER       → JSON → add' {
+
+    # → 0 value → 1 value
+    file_add "${JSON_OUT}" "list_0" "new value"
+    run file_read "${JSON_OUT}" "list_0"
+    assert $state equals 0
+    assert "$output" same_as 'new value'
+
+    # → 2 values → 4 values
+    file_add "${JSON_OUT}" "list_2" "new value 1" "new value 2"
+    run file_read "${JSON_OUT}" "list_2"
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old value 1'
+    assert "${lines[2]}" same_as 'old value 2'
+    assert "${lines[3]}" same_as 'new value 1'
+    assert "${lines[4]}" same_as 'new value 2'
+}
+
+@test 'PARSER       → JSON → rm' {
+
+    # → 1 value → 0 value
+    file_rm "${JSON_OUT}" "list_1" "old value 1"
+    run file_read "${JSON_OUT}" "list_1"
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 3 values → 1 value
+    file_rm "${JSON_OUT}" "list_3" "old value 1" "old value 3"
+    run file_read "${JSON_OUT}" "list_3"
+    assert $state equals 0
+    assert "$output" same_as 'old value 2'
+}
+
+# ────────────────────────────────────────────────────────────────
+# TEST BREWFILES
+# ────────────────────────────────────────────────────────────────
+
+@test 'PARSER       → BREW → read' {
+
+    # → 0 value (formulae)
+    run file_read "${BREW_EMPTY}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 0 value (casks)
+    run file_read "${BREW_EMPTY}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values (formulae)
+    run file_read "${BREW_FIXTURE}" formulae
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old formula 1'
+    assert "${lines[2]}" same_as 'old formula 2'
+
+    # → 2 values (casks)
+    run file_read "${BREW_FIXTURE}" casks
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old cask 1'
+    assert "${lines[2]}" same_as 'old cask 2'
+}
+
+@test 'PARSER       → BREW → write' {
+
+    # → 2 values → 3 values (formulae)
+    file_write "${BREW_OUT}" formulae "new formula 1"
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old formula 1'
+    assert "${lines[2]}" same_as 'old formula 2'
+    assert "${lines[3]}" same_as 'new formula 1'
+
+    # → 2 values → 3 values (casks)
+    file_write "${BREW_OUT}" casks "new cask 1"
+    run file_read "${BREW_OUT}" casks
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old cask 1'
+    assert "${lines[2]}" same_as 'old cask 2'
+    assert "${lines[3]}" same_as 'new cask 1'
+}
+
+@test 'PARSER       → BREW → reset' {
+
+    # → 2 values → 0 value (formulae)
+    file_reset "${BREW_OUT}" formulae
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values → 0 value (casks)
+    file_reset "${BREW_OUT}" casks
+    run file_read "${BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+@test 'PARSER       → BREW → add' {
+
+    # → 2 values → 4 values (formulae)
+    file_add "${BREW_OUT}" formulae "new formula 1" "new formula 2"
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old formula 1'
+    assert "${lines[2]}" same_as 'old formula 2'
+    assert "${lines[3]}" same_as 'new formula 1'
+    assert "${lines[4]}" same_as 'new formula 2'
+
+    # → 2 values → 4 values (casks)
+    file_add "${BREW_OUT}" casks "new cask 1" "new cask 2"
+    run file_read "${BREW_OUT}" casks
+    assert $state equals 0
+    assert "${lines[1]}" same_as 'old cask 1'
+    assert "${lines[2]}" same_as 'old cask 2'
+    assert "${lines[3]}" same_as 'new cask 1'
+    assert "${lines[4]}" same_as 'new cask 2'
+}
+
+@test 'PARSER       → BREW → rm' {
+
+    # → 2 values → 0 values (formulae)
+    file_rm "${BREW_OUT}" formulae "old formula 1" "old formula 2"
+    run file_read "${BREW_OUT}" formulae
+    assert $state equals 0
+    assert "$output" is_empty
+
+    # → 2 values → 0 values (casks)
+    file_rm "${BREW_OUT}" casks "old cask 1" "old cask 2"
+    run file_read "${BREW_OUT}" casks
+    assert $state equals 0
+    assert "$output" is_empty
+}
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+}
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/brew.zunit
+###############################
+
+@setup {
+
+    # Load helpers
+    load "${DIR_SRC}/helpers/parser.zsh"
+
+    # Load script to test
+    load "${DIR_SRC}/helpers/brew.zsh"
+
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/brew"
+
+    # Fixture
+    BREWFILE="${DIR_FIXTURE}/test.Brewfile"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'BREW         → Detect if formula is active' {
+    
+    # → false
+    brew uninstall --force fortune
+    run brew_is_f_active "fortune"
+    assert $state equals 1
+
+    # → true
+    brew install fortune
+    run brew_is_f_active "fortune"
+    assert $state equals 0
+    brew uninstall --force fortune
+}
+
+@test 'BREW         → Detect if cask is active' {
+    
+    # → false
+    brew uninstall --cask --force tablecruncher
+    run brew_is_c_active "wrong cask"
+    assert $state equals 1
+
+    # → true
+    brew install tablecruncher
+    run brew_is_c_active "tablecruncher"
+    assert $state equals 0
+    brew uninstall --cask --force tablecruncher
+}
+
+@test 'BREW         → Run brew update, bundle, upgrade, cleanup' {
+
+    # Reset brew setup
+    brew uninstall --force fortune
+    brew uninstall --cask --force tablecruncher
+
+    # Test
+    run brew_bundle "${BREWFILE}"
+    assert $state equals 0
+    brew_is_f_active "fortune"
+    assert $? equals 0
+    run brew_is_c_active "tablecruncher"
+    assert $? equals 0
+
+    # Reset brew setup
+    brew uninstall --force fortune
+    brew uninstall --cask --force tablecruncher
+}
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/update.zunit
+###############################
+
+@setup {
+
+    # Load helpers
+    load "${DIR_SRC}/helpers/time.zsh"
+    load "${DIR_SRC}/helpers/parser.zsh"
+    load "${DIR_SRC}/helpers/brew.zsh"
+
+    # Load script to test
+    load "${DIR_SRC}/logic/update.zsh"
+
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/update"
+    export FILES_TOOLS=( \ 
+        "${DIR_FIXTURE}/tools/core.tools.json" \ 
+        "${DIR_FIXTURE}/tools/modules.tools.json" \ 
+        "${DIR_FIXTURE}/tools/user.tools.json" \ 
+    )
+
+    # Fixture
+    CONFIG_UNINITIALIZED="${DIR_FIXTURE}/config/uninitialized.json"
+    CONFIG_DISABLED="${DIR_FIXTURE}/config/disabled.json"
+    CONFIG_ENABLED="${DIR_FIXTURE}/config/enabled.json"
+    BREW_TEST="${DIR_FIXTURE}/test.Brewfile"
+
+    # Output files
+    DIR_TMP="${DIR_FIXTURE}/.tmp"
+    CONFIG_OUT="${DIR_TMP}/config_output.json"
+    BREW_OUT="${DIR_TMP}/merged_output.Brewfile"
+
+    # Reset temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+    cp "${CONFIG_UNINITIALIZED}" "${CONFIG_OUT}"
+    echo "" > "${BREW_OUT}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'UPDATE       → Get config values from config file' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
+
+    # Run test
+    _update_get_config
+    assert $? equals 0
+
+    # Check variables
+    today="$(time_get_current)"
+    assert $TODAY same_as "$today"
+    assert $INITIALIZED same_as 'true'
+    assert $LAST_UPDATE same_as '1745000000'
+    assert $AUTO_UPDATE same_as 'true'
+    assert $FREQ_DAYS same_as '2'
+    assert $NEXT_UPDATE same_as '1745000001'
+}
+
+@test 'UPDATE       → Save config values into config file' {
+
+    # Shadow env variable for config file path
+    FILE_CONFIG_UPDATE="${CONFIG_OUT}"
+
+    # Setup variables
+    INITIALIZED="true"
+    LAST_UPDATE="007"
+    AUTO_UPDATE="true"
+    FREQ_DAYS="999"
+    NEXT_UPDATE="42"
+
+    # Run test
+    _update_set_config
+    assert $? equals 0
+
+    # Check output file
+    assert "$(file_read "${CONFIG_OUT}" initialized)" same_as $INITIALIZED
+    assert "$(file_read "${CONFIG_OUT}" last_update)" same_as $LAST_UPDATE
+    assert "$(file_read "${CONFIG_OUT}" auto_update)" same_as $AUTO_UPDATE
+    assert "$(file_read "${CONFIG_OUT}" freq_days)" same_as $FREQ_DAYS
+    assert "$(file_read "${CONFIG_OUT}" next_update)" same_as $NEXT_UPDATE
+}
+
+@test 'UPDATE       → Detect if auto-update is due' {
+
+    # → false (disabled)
+    FILE_CONFIG_UPDATE="${CONFIG_DISABLED}"
+    _update_get_config
+    run _update_is_reached
+    assert $state equals 1
+
+    # → false (date not reached)
+    FILE_CONFIG_UPDATE="${CONFIG_OUT}"
+    cp "${CONFIG_ENABLED}" "${CONFIG_OUT}"
+    file_write "${CONFIG_OUT}" next_update "$(time_add_days "$(time_get_current)" "99")"
+    _update_get_config
+    run _update_is_reached
+    assert $state equals 1
+
+    # → true (enable + date reached)
+    FILE_CONFIG_UPDATE="${CONFIG_ENABLED}"
+    _update_get_config
+    run _update_is_reached
+    assert $state equals 0
+}
+
+@test 'UPDATE       → Detect if update is required' {
+
+    # → false (all dependencies already installed)
+    brew install fortune
+    brew install busted
+    brew install caffeine
+    brew install tablecruncher
+    run _update_is_required "${BREW_TEST}"
+    assert $state equals 1
+
+    # → true (some dependencies are missing)
+    brew uninstall --force busted
+    brew uninstall --cask --force tablecruncher
+    run _update_is_required "${BREW_TEST}"
+    assert $state equals 0
+    brew uninstall --force fortune
+    brew uninstall --cask --force caffeine
+}
+
+@test 'UPDATE       → Merge dependencies' {
+
+    local in_formulae=()
+    local in_casks=()
+    local out_formulae=()
+    local out_casks=()
+
+    update_merge_into "${BREW_OUT}"
+    assert $? equals 0
+
+    # Fetch input dependencies
+    for file in "${FILES_TOOLS[@]}"; do
+        [[ ! -f "${file}" ]] && continue
+        in_formulae+=("${(@f)$(file_read "${file}" formulae)}")
+        in_casks+=("${(@f)$(file_read "${file}" casks)}")
+    done
+
+    # Fetch output dependencies
+    out_formulae+=("${(@f)$(file_read "${BREW_OUT}" formulae)}")
+    out_casks+=("${(@f)$(file_read "${BREW_OUT}" casks)}")
+
+    # Check formulae
+    for formula in "${in_formulae[@]}"; do
+        assert "${formula}" in "${out_formulae[@]}"
+    done
+
+    # Check casks
+    for cask in "${in_casks[@]}"; do
+        assert "${cask}" in "${out_casks[@]}"
+    done
+}
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_TMP}" ]] && rm -r "${DIR_TMP}"
+}
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/modules.zunit
+###############################
+
+# TODO: auto download latest sample_module
+
+@setup {
+
+    # Load helpers
+    load "${DIR_SRC}/helpers/time.zsh"
+    load "${DIR_SRC}/helpers/parser.zsh"
+    load "${DIR_SRC}/helpers/brew.zsh"
+
+    # Load script to test
+    load "${DIR_SRC}/logic/modules.zsh"
+
+    # Shadow variables
+    DIR_FIXTURE="${DIR_FIXTURE}/modules"
+    MODULES_INSTALLED=()
+    MODULES_ACTIV=()
+    COMMANDS_MODS=()
+
+    # Fixtures
+    DIR_MODS_SAMPLES="${DIR_FIXTURE}"
+    MODULE_CORRUPTED_ENTRY_POINT="corrupted_entry_point"
+    MODULE_CORRUPTED_TOOLS="corrupted_tools"
+    MODULE_UNINSTALLED="wrong_name"
+    MODULE_VALID="sample_module"
+    MODULE_NESTED="sample_nested_module"
+
+    # Output files
+    DIR_TEST_TMP="${DIR_FIXTURE}/.tmp"
+    DIR_MODS="${DIR_TEST_TMP}/modules"
+    DIR_TMP="${DIR_TEST_TMP}/tools"
+    FILE_TOOLS_MODULES="${DIR_TMP}/modules.tools.json"
+    FILE_TOOLS_USER="${DIR_TMP}/user.tools.json"
+
+    # Reset temporary files
+    [[ -d "${DIR_TEST_TMP}" ]] && rm -r "${DIR_TEST_TMP}"
+    mkdir -p "${DIR_MODS}"
+    mkdir -p "${DIR_TMP}"
+    cp "${DIR_SRC}/data/tools/modules.tools.json" "${FILE_TOOLS_MODULES}"
+    cp "${DIR_SRC}/data/tools/user.tools.json" "${FILE_TOOLS_USER}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'MODULES      → Detect if module is installed' {
+
+    # Set fake path
+    DIR_MODS="${DIR_MODS_SAMPLES}"
+
+    # Check → false (uninstalled)
+    run _module_is_downloaded "${MODULE_UNINSTALLED}"
+    assert $state equals 1
+
+    # Check → false (corrupted entry point)
+    run _module_is_downloaded "${MODULE_CORRUPTED_ENTRY_POINT}"
+    assert $state equals 1
+
+    # Check → false (corrupted tools)
+    run _module_is_downloaded "${MODULE_CORRUPTED_TOOLS}"
+    assert $state equals 1
+
+    # Check → true
+    run _module_is_downloaded "${MODULE_VALID}"
+    assert $state equals 0
+}
+
+@test 'MODULES      → Download module files' {
+
+    # Download module
+    _module_download "${MODULE_VALID}"
+    assert $? equals 0
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
+}
+    
+@test 'MODULES      → Init modules                  → (via modules/)' {
+
+    # Pre-install (download) module
+    _module_download "${MODULE_VALID}"
+
+    # Init modules
+    modules_init
+    assert $? equals 0
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
+
+    # Check merged dependencies
+    local merged_modules=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" modules)}")
+    local merged_formulae=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" formulae)}")
+    local merged_casks=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" casks)}")
+    local module=""
+    local tools=""
+    local item=""
+    local list=()
+    for module in $MODULES_INSTALLED; do
+
+        tools="${DIR_MODS}/${module}/${CONFIG_FILE}"
+
+        # Check nested modules
+        list=("${(@f)$(file_read "${tools}" modules)}")
+        for item in $list; do
+            assert "${item}" in $merged_modules
+        done
+
+        # Check formulae
+        list=("${(@f)$(file_read "${tools}" formulae)}")
+        for item in $list; do
+            assert "${item}" in $merged_formulae
+        done
+
+        # Check casks
+        list=("${(@f)$(file_read "${tools}" casks)}")
+        for item in $list; do
+            assert "${item}" in $merged_casks
+        done
+    done
+}
+
+@test 'MODULES      → Init modules                  → (via user.tools.json)' {
+
+    # Declare module
+    file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
+
+    # Init modules
+    modules_init
+    assert $? equals 0
+    assert "${MODULE_VALID}" in $MODULES_INSTALLED
+    assert "${MODULE_NESTED}" in $MODULES_INSTALLED
+
+    # Check merged dependencies
+    local merged_modules=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" modules)}")
+    local merged_formulae=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" formulae)}")
+    local merged_casks=("${(@f)$(file_read "${FILE_TOOLS_MODULES}" casks)}")
+    local module=""
+    local tools=""
+    local item=""
+    local list=()
+    for module in $MODULES_INSTALLED; do
+
+        tools="${DIR_MODS}/${module}/${CONFIG_FILE}"
+
+        # Check nested modules
+        list=("${(@f)$(file_read "${tools}" modules)}")
+        for item in $list; do
+            assert "${item}" in $merged_modules
+        done
+
+        # Check formulae
+        list=("${(@f)$(file_read "${tools}" formulae)}")
+        for item in $list; do
+            assert "${item}" in $merged_formulae
+        done
+
+        # Check casks
+        list=("${(@f)$(file_read "${tools}" casks)}")
+        for item in $list; do
+            assert "${item}" in $merged_casks
+        done
+    done
+}
+
+@test 'MODULES      → Fetch module commands' {
+
+    local entry_point="${DIR_MODS_SAMPLES}/${MODULE_VALID}/${ENTRY_POINT}"
+    local COMMANDS_MODS=()
+
+    _module_get_commands "${entry_point}"
+    assert $? equals 0
+
+    assert "${#COMMANDS_MODS[@]}" equals 2
+    assert 'being_curious=asking_questions' in $COMMANDS_MODS
+    assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
+}
+
+@test 'MODULES      → Resolve the ultimate query    → (via user.tools.json)' {
+
+    # Declare module
+    file_add "${FILE_TOOLS_USER}" modules "${MODULE_VALID}"
+
+    # Init modules
+    modules_init
+
+    # Load modules
+    modules_load
+    assert $? equals 0
+    assert "${MODULE_VALID}" in $MODULES_ACTIV
+    assert "${MODULE_NESTED}" in $MODULES_ACTIV
+    assert 'being_curious=asking_questions' in $COMMANDS_MODS
+    assert 'ultimate_question=ultimate_answer' in $COMMANDS_MODS
+    assert 'nested_command=nested_function' in $COMMANDS_MODS
+
+    # Test sample_module
+    run asking_questions
+    assert $state equals 0
+    assert $output same_as '...'
+
+    run ultimate_answer
+    assert $state equals 0
+    assert $output same_as "${ULTIMATE_ANSWER}"
+
+    # Test nested module
+    run nested_function
+    assert $state equals 0
+    assert $output same_as 'nested answer'
+}
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_TEST_TMP}" ]] && rm -r "${DIR_TEST_TMP}"
+}
+
+#!/usr/bin/env zunit
+###############################
+# FICHIER /tests/unit/6_E2E_launcher.zunit
+###############################
+
+# ────────────────────────────────────────────────────────────────
+# SETUP
+# ────────────────────────────────────────────────────────────────
+
+@setup {
+
+    # TODO: add dockerfile/compose pour installer zsh et zunit aux containers !
+
+    # Docker config
+    IMAGES_MANUAL=(
+        ubuntu                  # Linux → apt
+        fedora                  # Linux → dnf
+        archlinux               # Linux → pacman
+        centos:7                # Linux → yum
+    )
+    IMAGES_CURL=(
+        debian:bullseye         # Close to usual servers
+        ubuntu:22.04            # Desktop/server standard
+        fedora:latest           # RedHat like Rolling release
+        alpine:latest           # Minimalist but wget included
+        archlinux:latest        # Power user OS
+        centos:7                # Old companies servers
+        amazonlinux:2           # AWS servers
+        opensuse/leap:latest    # Another RPM approach
+        kalilinux/kali-rolling  # Pentest env
+    )
+    IMAGES_WGET=(
+        debian:bullseye         # Close to usual servers
+        ubuntu:22.04            # Desktop/server standard
+        fedora:latest           # RedHat like Rolling release
+        alpine:latest           # Minimalist but wget included
+        archlinux:latest        # Power user OS
+        centos:7                # Old companies servers
+        amazonlinux:2           # AWS servers
+        opensuse/leap:latest    # Another RPM approach
+        kalilinux/kali-rolling  # Pentest env
+    )
+
+
+    # Fixture (virtual paths)
+    DIR_VIRTUAL="/shared"
+    DIR_VIRTUAL_UNIT="${DIR_VIRTUAL}/tests/unit"
+    VIRTUAL_TEST_MANUAL="zunit \"${DIR_VIRTUAL_UNIT}/manual.zunit\" --output-text"
+    VIRTUAL_TEST_CURL="zunit \"${DIR_VIRTUAL_UNIT}/curl.zunit\" --output-text"
+    VIRTUAL_TEST_WGET="zunit \"${DIR_VIRTUAL_UNIT}/wget.zunit\" --output-text"
+
+    # Fixture (local paths)
+    DIR_LOCAL_FIXTURE="${DIR_LOCAL_FIXTURE}/E2E"
+    DIR_LOCAL_OUTPUT_MAIN="${DIR_TESTS}/_output"
+    DIR_LOCAL_OUTPUT_UNIT="${DIR_LOCAL_FIXTURE}/tests/_output"
+    LOCAL_INSTALLER_ORIGIN="${DIR_ROOT}/installer/install.sh"
+    LOCAL_INSTALLER_SHARED="${DIR_LOCAL_FIXTURE}/install.sh"
+
+    # Reset temporary files
+    [[ -d "${DIR_LOCAL_OUTPUT_UNIT}" ]] && rm -r "${DIR_LOCAL_OUTPUT_UNIT}"
+    mkdir -p "${DIR_LOCAL_OUTPUT_UNIT}"
+    cp "${LOCAL_INSTALLER_ORIGIN}" "${LOCAL_INSTALLER_SHARED}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# TESTS
+# ────────────────────────────────────────────────────────────────
+
+@test 'E22              → Linux             → Manual' {
+
+    for image in $IMAGES_MANUAL; do
+        docker run --rm -v "${DIR_LOCAL_FIXTURE}:${DIR_VIRTUAL}" "${image}" zsh -c "${VIRTUAL_TEST_MANUAL}"
+        assert $? equals 0
+        mv -f "${DIR_LOCAL_OUTPUT_UNIT}/output.txt" "${DIR_LOCAL_OUTPUT_MAIN}/${image}.output.txt"
+    done
+}
+
+@test 'E22              → Linux             → Curl' {
+
+    for image in $IMAGES_CURL; do
+        docker run --rm -v "${DIR_LOCAL_FIXTURE}:${DIR_VIRTUAL}" "${image}" zsh -c "${VIRTUAL_TEST_CURL}"
+        assert $? equals 0
+        mv -f "${DIR_LOCAL_OUTPUT_UNIT}/output.txt" "${DIR_LOCAL_OUTPUT_MAIN}/${image}.output.txt"
+    done
+}
+
+@test 'E22              → Linux             → Wget' {
+
+    for image in $IMAGES_WGET; do
+        docker run --rm -v "${DIR_LOCAL_FIXTURE}:${DIR_VIRTUAL}" "${image}" zsh -c "${VIRTUAL_TEST_WGET}"
+        assert $? equals 0
+        mv -f "${DIR_LOCAL_OUTPUT_UNIT}/output.txt" "${DIR_LOCAL_OUTPUT_MAIN}/${image}.output.txt"
+    done
+}
+
+@test 'E22              → macOS             → Curl' {
+
+    # TODO: Install GACLI with "${INSTALL_CMD_CURL}"
+    # TODO: Run core commands
+    # TODO: Run module commands
+    # TODO: Uninstall GACLI
+    # TODO: Delete container
+}
+
+
+# ────────────────────────────────────────────────────────────────
+# CLEANUP
+# ────────────────────────────────────────────────────────────────
+
+@teardown {
+
+    # Delete temporary files
+    [[ -d "${DIR_LOCAL_OUTPUT_UNIT}" ]] && rm -r "${DIR_LOCAL_OUTPUT_UNIT}"
+    [[ -f "${LOCAL_INSTALLER_SHARED}" ]] && rm "${LOCAL_INSTALLER_SHARED}"
+}
+

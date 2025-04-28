@@ -508,7 +508,7 @@ zunit
 | 0.7.1 | 🟠 deployed → `dev` branch | 🧪 test(zsh): Implement `Zunit` tests |
 | 0.7.2 | 🚧 WIP → `dev` branch | 🧪 test(sh): Implement `bats_core` tests |
 | 0.7.3 | 🔴 TODO | ⚙️ ci(all): Add `GitHub Actions` CI pipeline |
-| 0.8.0 | 🔴 TODO | 🎁 feat(modules): Add commands `gacli <install-list-rm> <...tools...>` |
+| 0.8.0 | 🔴 TODO | 🎁 feat(modules): Add commands `gacli <install-list-rm> <tools>` |
 | 0.9.0 | 🔴 TODO | 📦 build(modules): `Modules` version management |
 | 1.0.0 | 🔴 TODO | 🚀 First public `release` |
 
