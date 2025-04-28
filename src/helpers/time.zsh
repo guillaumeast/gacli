@@ -12,9 +12,9 @@ TIME_CMD=""
 # Set TIME_CMD depending on platform (gdate or date)
 time_init() {
 
-    if command -v gdate; then
+    if command -v gdate > /dev/null 2>&1; then
         TIME_CMD="gdate"
-    elif command -v date; then
+    elif command -v date > /dev/null 2>&1; then
         TIME_CMD="date"
     else
         printStyled error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
@@ -99,7 +99,7 @@ time_from_human() {
 
     # Resolve TIME_CMD depending on platform
     time_init || return 1
-    
+
     # Arguments checks
     if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
         printStyled error "Expected format: YYYY-MM-DD (received: ${1})"

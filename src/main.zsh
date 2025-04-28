@@ -327,7 +327,7 @@ print_formulae() {
     done
 
     # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
