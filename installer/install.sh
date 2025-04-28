@@ -396,7 +396,7 @@ install_brew_deps() {
     # Variables
     default_deps="file git curl bash zsh coreutils jq"
 
-    # ✅ Fully supported
+    # ✅ Supported
     if command -v brew >/dev/null 2>&1; then
         package_manager="brew"
         step_1="brew install coreutils"
@@ -405,6 +405,11 @@ install_brew_deps() {
         package_manager="apt"
         step_1="${SUDO}apt-get update -y"
         step_2="${SUDO}apt-get install -y build-essential ${default_deps} procps"
+        cmd="${step_1} && ${step_2}"
+    elif command -v urpmi >/dev/null 2>&1; then
+        package_manager="urpmi"
+        step_1="${SUDO}urpmi.update -a"
+        step_2="${SUDO}urpmi --auto ${default_deps} procps-ng gcc make binutils"
         cmd="${step_1} && ${step_2}"
     elif command -v dnf >/dev/null 2>&1; then
         if dnf --version 2>/dev/null | grep -q "5\."; then
@@ -416,6 +421,9 @@ install_brew_deps() {
         fi
         step_2="${SUDO}dnf install -y ${default_deps} procps-ng gawk"
         cmd="${step_1} && ${step_2}"
+    elif command -v pacman >/dev/null 2>&1; then
+        package_manager="pacman"
+        cmd="${SUDO}pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
     elif command -v zypper >/dev/null 2>&1; then
         package_manager="zypper"
         step_1="${SUDO}zypper refresh"
@@ -426,17 +434,12 @@ install_brew_deps() {
         step_1="${SUDO}emerge --sync"
         step_2="${SUDO}emerge -n --quiet sys-devel/gcc sys-devel/binutils sys-apps/file dev-vcs/git net-misc/curl app-shells/bash app-shells/zsh sys-apps/coreutils app-misc/jq sys-process/procps"
         cmd="${step_1} && ${step_2}"
-    # 🚧 WIP
     elif command -v slackpkg >/dev/null 2>&1; then
         package_manager="slackpkg"
         step_1="${SUDO}slackpkg update"
-        step_2="${SUDO}slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
+        step_2="yes | ${SUDO}slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
         step_3="${SUDO}update-ca-certificates --fresh"
         cmd="${step_1} && ${step_2} && ${step_3}"
-    # ⚠️ Partially supported (arm64 not supported) (TODO: add proper error message)
-    elif command -v pacman >/dev/null 2>&1; then
-        package_manager="pacman"
-        cmd="${SUDO}pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
     # 🛑 Unsupported
     elif command -v apk >/dev/null 2>&1; then
         printStyled error "Unsupported package manager: ${ORANGE}apk${RED} (glibc-based distribution required)"

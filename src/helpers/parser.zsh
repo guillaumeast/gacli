@@ -289,7 +289,7 @@ _json_write() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "${file}" || return 1
+  command mv -f "${file}.tmp" "${file}" || return 1
 }
 
 # PRIVATE - Reset list value into JSON file
@@ -299,7 +299,7 @@ _json_reset() {
   local key=$2
 
   jq --arg key "$key" '.[$key] = null' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # PRIVATE - Add value to a list into JSON file
@@ -310,7 +310,7 @@ _json_add() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] += [$value]' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # PRIVATE - Remove value from a list into JSON file
@@ -321,7 +321,7 @@ _json_rm() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] |= map(select(. != $value))' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -381,7 +381,7 @@ _brew_reset() {
           ;;
   esac
 
-  mv "${tmp_file}" "${file}" || {
+  command mv -f "${tmp_file}" "${file}" || {
     printStyled error "Failed to overwrite ${file}"
     rm -f "$tmp_file"
     return 1
@@ -447,7 +447,7 @@ _brew_rm() {
     return 1
   }
 
-  mv "${file}.tmp" "${file}" || {
+  command mv -f "${file}.tmp" "${file}" || {
     printStyled error "Failed to overwrite ${file} after removal"
     return 1
   }
