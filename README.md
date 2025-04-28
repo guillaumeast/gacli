@@ -12,14 +12,13 @@
 
 ## ✨ Highlights
 
-- **One-command bootstrap** – runs even on a bare `container`, installs `Homebrew` and every declared `tool` in one go
-- **Zero external deps** – the installer works with `curl`, `wget` *or* plain `sh` only
-- **Modular by design** – drop a folder in `src/modules/` or run `gacli install <module>`: auto-download, merge deps, load commands
-- **Smart auto-update** – optional “every *n* days” scheduler that merges `tools.json` files, installs/upgrades tools and cleans leftovers
-- **Cross-platform** – tested on `macOS` + main `Linux` package managers (`apt`, `dnf`, `pacman`, `zypper`, `urpmi`, `emerge`, `slackpkg`)
-- **Instant status dashboard** – coloured ✔︎ / ○ icons for each `formula`, `cask` & `module` at shell startup
-- **Built-in CLI** – `gacli update | config | uninstall` plus dynamic commands exported by `modules`
-- **Test-ready** – `zunit` & `bats-core` scaffolding; `CI workflow` incoming
+- **Cross-platform** – tested on `macOS` + main `Linux` package managers
+- **One-command bootstrap** – even on a bare `container`
+- **Zero external deps** – `curl` ***OR*** `wget` ***OR*** `POSIX sh` only
+- **Modular by design** – drop folders in `$HOME/.gacli/modules/` or run `gacli install <module>`
+- **Built-in CLI** – `gacli commands` and `custom modules commands` available
+- **Instant status dashboard** – displays each `tool` status at shell startup
+- **Test-ready** – `zunit` & `bats-core` scaffolding
 
 ---
 
@@ -100,7 +99,10 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/he
 |---------|-------------|---------|
 | `gacli` | Launch | Prints status of each `tool` and `command` |
 | `gacli help` | Get help | Prints available `tools` and `commands` |
-| `gacli config` | Configure | Triggers interactive `configuration` wizard |
+| `gacli config` | Configure `GACLI` | Triggers interactive `configuration` wizard |
+| `gacli install <list/file>` | Install `tools` | Installs one or more `tools` from given `list` or `file` |
+| `gacli rm <list/file>` | Uninstall `tools` | Uninstalls one or more `tools` from given `list` or `file` |
+| `gacli list <type>` | Print installed `tools` | Displays all `tools` installed if no `type` specified |
 | `gacli update` | Update `tools` | Merges and updates all `tools` |
 | `gacli <command> [args …]` | Run `module` commands | Every `module` can expose its own `CLI` |
 
@@ -116,18 +118,8 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/he
 | `cask` | [Homebrew Casks](https://formulae.brew.sh/cask/) |
 | `module` | **[Gacli-Hub](https://github.com/guillaumeast/gacli-hub)** |
 
-### Add or remove a tool
-
-```sh
-gacli install "<formula/cask/module_name/module_path>"
-gacli rm "<formula/cask/module_name>"
-```
-
-> Or add **local** `modules` into `$HOME/.gacli/modules/` and run `gacli update`
-> 
-> Or add **[gacli-hub](https://github.com/guillaumeast/gacli-hub)** `module_names` into `data/tools/user.tools.json` and run `gacli update`
-
-### Tool descriptors
+<details>
+  <summary>Descriptors</summary>
 
 | Descriptor | Source | Tools name |
 |--------|------|--------------|
@@ -135,6 +127,7 @@ gacli rm "<formula/cask/module_name>"
 | `modules/*/tools.json` | Individual `module` dependecies (optional) | `module tools`
 | `data/tools/modules.tools.json` | Merged `modules` dependecies (optional) | `modules tools`
 | `data/tools/user.tools.json` | `user` tools (optional) | `user tools`
+</details>
 
 <details>
   <summary>Descriptors schema</summary>
@@ -147,6 +140,17 @@ gacli rm "<formula/cask/module_name>"
 }
 ```
 </details>
+
+### Add or remove tools
+
+```sh
+gacli install "${tool_names[@]}"
+gacli rm "${tool_names[@]}"
+```
+
+> Or add/remove **local** `modules folders` in `$HOME/.gacli/modules/` and run `gacli update`
+> 
+> Or add/remove **[gacli-hub](https://github.com/guillaumeast/gacli-hub)** `module names` in `$HOME/.gacli/data/tools/user.tools.json` and run `gacli update`
 
 ---
 
