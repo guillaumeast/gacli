@@ -99,7 +99,7 @@ main() {
 
     # Check env compatibility and files integrity
     _gacli_check_system || abort "1" || return 1
-    _gacli_check_files  || abort "2" || return 1
+    _gacli_check_files || abort "2" || return 1
 
     # Load core scripts
     local script
@@ -109,15 +109,14 @@ main() {
             abort "3" || return 1
         fi
     done
-    time_init || abort "4" || return 1              # Implemented in time.zsh
 
     # Load modules and check if update is due (date or new dependencies)
-    modules_init || abort "5" || return 1           # Implemented in modules.zsh
-    update_init  || abort "6" || return 1           # Implemented in update.zsh
-    modules_load || abort "7" || return 1           # Implemented in modules.zsh
+    modules_init || abort "4" || return 1           # Implemented in modules.zsh
+    update_init  || abort "5" || return 1           # Implemented in update.zsh
+    modules_load || abort "6" || return 1           # Implemented in modules.zsh
 
     # Dispatch commands
-    _gacli_dispatch "$@" || abort "8" || return 1
+    _gacli_dispatch "$@" || abort "7" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────

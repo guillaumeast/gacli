@@ -18,6 +18,7 @@ time_init() {
         TIME_CMD="date"
     else
         printStyled error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
+        return 1
     fi
 }
 
@@ -30,6 +31,9 @@ time_get_current() {
 
     # Variables
     local current_ts
+
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
 
     # Fetch current date
     if ! current_ts="$("${TIME_CMD}" +%s)"; then
@@ -47,6 +51,9 @@ time_add_days() {
     # Variables
     local start_ts="$1"
     local add="$2"
+
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
 
     # Arguments checks
     if [[ -z "${start_ts}" || -z "${add}" ]]; then
@@ -68,6 +75,9 @@ time_to_human() {
     # Variables
     local ts="$1"
 
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
+
     # Arguments checks
     if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
         printStyled error "Expected a timestamp (received: ${1})"
@@ -87,6 +97,9 @@ time_from_human() {
     # Variables
     local date_str="${1}"
 
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
+    
     # Arguments checks
     if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
         printStyled error "Expected format: YYYY-MM-DD (received: ${1})"
