@@ -1,7 +1,7 @@
 # GACLI ROADMAP / TODO LIST
 
 ## Version 0.7.1 → Create all unit tests (one commit per file once all tests are "green" in local for this file)
-1. Create Zunit tests for each `.zsh` file
+✅ Create Zunit tests for each `.zsh` file
 2. Create bats-core tests for `install.sh` and `uninstall.sh`
 
 ---

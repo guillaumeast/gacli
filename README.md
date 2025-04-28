@@ -1,217 +1,543 @@
 # 🚀 GACLI
 
-### 🚧 **WORK IN PROGRESS: `modules.json` support is not implemented yet** 🚧  
-👉 Please install your modules manually in `gacli/modules/user_modules/`
+[![macOS](https://img.shields.io/badge/OS-macOS-darkgreen)](https://www.apple.com/macos/)
+[![Linux](https://img.shields.io/badge/OS-Linux-darkgreen)](https://kernel.org/)
+[![Shell: zsh](https://img.shields.io/badge/shell-zsh-darkblue)](https://www.zsh.org/)
+[![Status: Beta](https://img.shields.io/badge/status-beta-red)](#🏗️Roadmap)
+[![License: MIT](https://img.shields.io/badge/license-MIT-white)](./LICENSE.txt)
+
+'***Modular cross-platform CLI** to bootstrap and manage your development environment.*'
 
 ---
 
-✌️ *Managing and bootstrapping your dev environment has never been so easy* ⚡
+## ✨ Highlights
 
-✨ `GACLI` is a **modular CLI** designed to **automate setup, updates and tooling** for both `macOS` and `Linux`.
-
----
-
-## 🧰 Features
-
-- Installs `Homebrew` if not available
-- Installs all `formulae` and `casks` listed in the `Brewfile`
-- Initializes a configuration with an **auto-update** frequency
-- Updates everything with a **single command**
-- Modular structure with optional **command-based extensions**
-- Supports nested modules and per-module dependencies
-- Shows **tools status** on launch
-- 100% compatible with `macOS` and `Linux`
-
----
-
-## 🎓 Educational Purpose
-
-This project was designed to **learn how to build modular tools from scratch**, without relying on external boilerplates or frameworks.
-
-Its goal is to help understand low-level mechanics behind tools like `Homebrew`, `Oh My Zsh`, `asdf`, or CLI wrappers — how they work, how they can be replaced, and how to design cross-platform automation from scratch.
-
-**This project is not meant to be universally useful.**  
-It’s a learning sandbox and a productivity tool for my own setup — but feel free to fork, reuse or contribute if you find it useful!
+- **One-command bootstrap** – runs even on a bare `container`, installs `Homebrew` and every declared `tool` in one go
+- **Zero external deps** – the installer works with `curl`, `wget` *or* plain `sh` only
+- **Modular by design** – drop a folder in `src/modules/` or run `gacli install <module>`: auto-download, merge deps, load commands
+- **Smart auto-update** – optional “every *n* days” scheduler that merges `tools.json` files, installs/upgrades tools and cleans leftovers
+- **Cross-platform** – tested on `macOS` + main `Linux` package managers (`apt`, `dnf`, `pacman`, `zypper`, `urpmi`, `emerge`, `slackpkg`)
+- **Instant status dashboard** – coloured ✔︎ / ○ icons for each `formula`, `cask` & `module` at shell startup
+- **Built-in CLI** – `gacli update | config | uninstall` plus dynamic commands exported by `modules`
+- **Test-ready** – `zunit` & `bats-core` scaffolding; `CI workflow` incoming
 
 ---
 
 ## 🚀 Installation
 
-GACLI requires your default shell to be `zsh`:
-  - macOS: preinstalled (if default shell is different, run `chsh -s /bin/zsh`)
-  - Linux: `sudo apt install zsh`
+Paste that in a `macOS` Terminal or `Linux` shell prompt:
 
-### Quick command
-
-```bash
-/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/modules/.install/install.zsh)"
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/installer/install.sh)"
 ```
-
-This command:
-
-1. Checks and installs required dependencies automatically
-2. Clones the repository into `~/.gacli`
-3. Creates a symbolic link in `~/.local/bin`
-4. Adds `~/.local/bin` to your `PATH` if necessary
 
 <details>
-<summary>📦 Dependencies (auto-installed)</summary>
+  <summary>Other install methods</summary>
 
-- `git`
-- `curl`
-- `Homebrew`
-- `coreutils`
-- `jq`
-
+  - If you have `wget` :
+  
+  ```sh
+  sh -c "$(wget -qO- https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/installer/install.sh)"
+  ```
+  
+  - Else, grab `installer/install.sh` from the repo and run :
+  
+  ```sh
+  sh /path/to/install.sh
+  ```
+  
 </details>
 
-### Available options
+<details>
+  <summary>Options</summary>
 
-Use `--force` option to overwrite an existing installation
+  - --force → overwrite an existing installation
+  
+  ```sh
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/dev/installer/install.sh)" -- --force
+  ```
+  
+  💡 Pass options after `--` so they aren’t interpreted by `curl` / `wget`.
+    
+</details>
 
-**Example**:
+<details>
+  <summary> Supported platforms & package managers</summary>
 
-```bash
-/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/modules/.install/install.zsh)" -- --force
-```
+- `GACLI` installs `Homebrew` **plus** your declared `tools` on the following systems:
+  
+[![macOS](https://img.shields.io/badge/OS-macOS-darkgreen)](https://www.apple.com/macos/)
 
-> ⚠️ Options must be passed **after `--`**, otherwise they will be interpreted by `curl` instead of the script.
+[![Docker: ubuntu](https://img.shields.io/badge/Linux-ubuntu-blue)](https://hub.docker.com/_/ubuntu)
+[![Docker: debian](https://img.shields.io/badge/Linux-debian-blue)](https://hub.docker.com/_/debian)
+[![Docker: mageia](https://img.shields.io/badge/Linux-mageia-blue)](https://hub.docker.com/_/mageia)
+[![Docker: fedora](https://img.shields.io/badge/Linux-fedora-blue)](https://hub.docker.com/_/fedora)
+[![Docker: archlinux](https://img.shields.io/badge/Linux-archlinux-blue)](https://hub.docker.com/_/archlinux)
+[![Docker: opensuse/leap](https://img.shields.io/badge/Linux-opensuse%2Fleap-blue)](https://hub.docker.com/r/opensuse/leap)
+[![Docker: gentoo/stage3](https://img.shields.io/badge/Linux-gentoo%2Fstage3-blue)](https://hub.docker.com/r/gentoo/stage3)
+[![Docker: vbatts/slackware](https://img.shields.io/badge/Linux-vbatts%2Fslackware-blue)](https://hub.docker.com/r/vbatts/slackware)
 
-
----
-
-## 🧠 How it works
-
-1. Asks for update frequency and stores it in the `config` file
-2. Installs `Homebrew` if missing
-3. Installs `formulae` and `casks` from the `Brewfile`
-4. Loads core `modules` from `gacli/modules/.core/`
-5. Loads launcher `modules` from `gacli/modules/.launcher/`
-6. Loads user `modules` from `gacli/modules/user_modules/`
-7. If found, loads declared `nested modules` from `modules.json`
-8. Performs `auto-update` if needed
-9. Shows a `status summary` at terminal startup
-
----
-
-## 🗂️ Project Structure
-
-```bash
-gacli
-├── README.md
-├── gacli.zsh           # GACLI entry point
-├── Brewfile            # Declares custom formulae and casks
-├── modules.json        # Declares custom modules
-└── modules/
-    ├── module_manager.zsh  # Parse and orchestrate all modules
-    ├── .install/           # GACLI auto-installer
-    ├── .core/              # GACLI core modules (cross-platform compatibility)
-    ├── .launcher           # Lifecycle logic (config, update, uninstall)
-    ├── .tmp                # Runtime generated files (config, merged Brewfile, module index)
-    └── user_modules        # User custom modules (optional)
-        ├── module_example
-        │   ├── main.zsh      # ← module's entry point
-        │   ├── Brewfile      # ← required formulae and casks declared here
-        │   ├── modules.json  # ← nested modules declared here
-        │   └── ...
-        └── ...
-```
+[![Pkg: apt](https://img.shields.io/badge/Pkg-apt-purple)](https://wiki.debian.org/apt)
+[![Pkg: urpmi](https://img.shields.io/badge/Pkg-urpmi-purple)](https://wiki.mageia.org/en/URPMI)
+[![Pkg: dnf](https://img.shields.io/badge/Pkg-dnf-purple)](https://dnf.readthedocs.io/en/latest/)
+[![Pkg: pacman](https://img.shields.io/badge/Pkg-pacman-purple)](https://wiki.archlinux.org/title/Pacman)
+[![Pkg: zypper](https://img.shields.io/badge/Pkg-zypper-purple)](https://en.opensuse.org/SDB:Zypper_manual)
+[![Pkg: emerge](https://img.shields.io/badge/Pkg-emerge-purple)](https://wiki.gentoo.org/wiki/Portage)
+[![Pkg: slackpkg](https://img.shields.io/badge/Pkg-slackpkg-purple)](https://docs.slackware.com/slackpkg)
+  
+  > 🧠 `Install.sh` detects the `package manager` and pulls `curl`, `bash`, `zsh`, `coreutils` and `jq` before `Homebrew` and the rest.  
+  
+  > 🤞 If your `distro` is not listed but ships one of the `package managers` above, chances are it will work — `PR`s welcome!
+</details>
 
 ---
 
-## 📦 Brewfile
+## 🏃 Getting started
 
-You can declare custom dependencies in `gacli/Brewfile` and/or in your own `<custom_module>/Brewfile`:
+`GACLI` automatically launch on each `zsh` startup but you can also launch it manually from any `shell`:
 
-```bash
-brew "pyenv"
-cask "ollama"
+| Command | Description | Details |
+|---------|-------------|---------|
+| `gacli` | Launch | Prints status of each `tool` and `command` |
+| `gacli help` | Get help | Prints available `tools` and `commands` |
+| `gacli config` | Configure | Triggers interactive `configuration` wizard |
+| `gacli update` | Update `tools` | Merges and updates all `tools` |
+| `gacli <command> [args …]` | Run `module` commands | Every `module` can expose its own `CLI` |
+
+> 💡 Run `gacli uninstall` anytime to cleanly remove `GACLI` files, wrapper and `.zshrc` entries, but keep `Homebrew` & tools.
+
+---
+
+## 🛠️ Tools
+
+| Tool type | Source |
+|-----------|--------|
+| `formula` | [Homebrew Formulae](https://formulae.brew.sh/formula/) |
+| `cask` | [Homebrew Casks](https://formulae.brew.sh/cask/) |
+| `module` | **[Gacli-Hub](https://github.com/guillaumeast/gacli-hub)** |
+
+### Add or remove a tool
+
+```sh
+gacli install "<formula/cask/module_name/module_path>"
+gacli rm "<formula/cask/module_name>"
 ```
 
-Apply changes by restarting your terminal or running:
-```bash
-gacli update
-```
+> Or add **local** `modules` into `$HOME/.gacli/modules/` and run `gacli update`
+> 
+> Or add **[gacli-hub](https://github.com/guillaumeast/gacli-hub)** `module_names` into `data/tools/user.tools.json` and run `gacli update`
 
-🪄 `GACLI` automatically merges and deduplicates all `Brewfiles` and `modules.json` files into `gacli/modules/.tmp/`.
+### Tool descriptors
+
+| Descriptor | Source | Tools name |
+|--------|------|--------------|
+| `data/tools/core.tools.json` | Core `GACLI` dependencies | `core tools`
+| `modules/*/tools.json` | Individual `module` dependecies (optional) | `module tools`
+| `data/tools/modules.tools.json` | Merged `modules` dependecies (optional) | `modules tools`
+| `data/tools/user.tools.json` | `user` tools (optional) | `user tools`
+
+<details>
+  <summary>Descriptors schema</summary>
+
+```json
+{
+  "formulae": ["formula_1", "formula_2"],
+  "casks": ["cask_1", "cask_2"],
+  "modules": ["module_1", "module_2"]
+}
+```
+</details>
 
 ---
 
 ## 🧩 Modules
 
-`GACLI` is fully modular:
-- Each `module` lives in its own folder in `user_modules/`
-- Each `module` can expose any number of `commands` via a `get_commands()` function
-- Each `module` can declare any number of `formulae`, `casks` in his `Brewfile`
-- Each `module` can declare any number of `nested modules` in his `modules.json`
+<details>
+  <summary>What is a module?</summary>
 
-You can add new `modules` by:
-1. Creating a `.zsh` file in `modules/user_modules/<your_module>/`
-2. [OPTIONAL] Declaring `formulae` and `casks` dependencies in `<your_module>/Brewfile` as:
-```bash
-brew "<formula>"
-cask "<cask>"
+A **`module`** is a self‑contained folder that can:
+
+* declare its own `formulae`, `casks` and dependent `modules` inside **`tools.json`**
+* expose `CLI commands` through a `get_commands` function in **`main.zsh`**
+* bundle any helper `scripts`, `assets` or `docs` it needs
+
+If the folder lives in **`src/modules/`** it is considered *`local`*; otherwise `GACLI` can download it on‑the‑fly from the **[gacli-hub](https://github.com/guillaumeast/gacli-hub)**.
+</details>
+
+<details>
+  <summary>Lifecycle</summary>
+
+1. **Discovery** – `modules_init` collects: sub‑folders of `src/modules/` **+** the `modules` array in `user.tools.json`
+2. **Download / update** – missing modules are fetched from `gacli‑hub`, extracted into `src/modules/`
+3. **Dependency merge** – each module’s `tools.json` is merged into `modules.tools.json`
+4. **Load & register** – `modules_load` sources `<module>/main.zsh`, calls `get_commands` and registers them
+</details>
+
+<details>
+  <summary>Expose commands</summary>
+
+1. In your `module` entry point (`my_name/main.zsh`):
+```zsh
+my_hello() {
+  printStyled highlight "Hello from my_module!"
+}
+
+get_commands() {
+  echo "hello=my_hello"
+}
 ```
-3. [OPTIONAL] Declaring `modules` dependencies in `<your_module>/modules.json` as:
+
+2. In your terminal:
+
+```sh
+gacli hello
+# Output: Hello from my_module!
+```
+</details>
+
+<details>
+  <summary>Install a module</summary>
+
+- Install a `remote module`
+```sh
+gacli install "module_name"
+```
+
+- Install a `local module`
+```sh
+gacli install "module_path"
+```
+
+`GACLI` downloads **`module`**, installs its deps and its `commands` become available instantly.
+</details>
+
+<details>
+  <summary>Uninstall a module</summary>
+
+```sh
+gacli rm "module_name"
+```
+</details>
+
+<details>
+  <summary>Nested modules</summary>
+
+A `module` can require others in its **`tools.json`**:
+
 ```json
 {
-  "modules": [
-    {
-      "name": "<module_name>",
-      "repo": "https://github.com/<user>/<module_repo>",
-      "enabled": true
-    }
-  ]
-}
-```
-4. [OPTIONAL] Exposing `commands` via a `get_commands` function as:
-```zsh
-get_commands() {
-  echo "command_name=function_name"
+  "modules": ["nested_module_1", "nested_module_2"]
 }
 ```
 
-🪄 `GACLI` automatically merges and deduplicates all `Brewfiles` and `modules.json` files into `gacli/modules/.tmp/`.
+`GACLI` resolves these recursively, downloading each only once.
+</details>
 
----
+<details>
+  <summary>Create your own module</summary>
 
-## 🔄 Update
-
-```zsh
-gacli update
+```bash
+modules/
+└── my_module/
+    ├── main.zsh
+    ├── tools.json
+    └── ...
 ```
 
-✅ Merges all `Brewfiles` and `modules.json` files
-✅ Installs & updates all tools
-✅ Cleans up old versions
+1. Create the folder & files  
+2. `gacli update` – merges dependencies  
+3. Reload shell & test commands
+4. When ready, publish to `GitHub` and open a PR on **[gacli-hub](https://github.com/guillaumeast/gacli-hub)** to share it!
+</details>
+
+> 💡 More details at: **[gacli-hub](https://github.com/guillaumeast/gacli-hub)**
 
 ---
 
-## 🧹 Uninstall
+## ♻️ Update & auto‑update
 
-```zsh
-gacli uninstall
+| Command | Description |
+|---------|-------------|
+| `gacli config` | Edit auto‑update frequency interactively |
+| *(startup)* | Auto‑update if `next_update` reached or deps missing |
+| `gacli update` | Run an update immediately |
+
+> 💡 You can disable auto-update by setting frequency to `0`.
+
+<details>
+  <summary>Manual update</summary>
+
+  Trigger a full merge → install → cleanup cycle at any time:
+
+  ```sh
+  gacli update
+  ```
+
+  Under the hood:
+
+  1. `update_merge_into` concatenates **core + user + modules** `JSON descriptors` into `src/.tmp/Brewfile`
+  2. `brew_bundle` installs missing `formulae`/`casks`, upgrades outdated ones, then runs `brew cleanup`
+  3. Config file `update.config.json` is refreshed (`last_update`, `next_update`)
+</details>
+
+<details>
+  <summary>Auto‑update scheduler</summary>
+
+  During start‑up `update_init` checks:
+
+  * `auto_update`   → enabled / disabled  
+  * `next_update`   → UNIX timestamp of the next run  
+  * **OR** missing dependencies
+
+  If the date is reached **or** deps are missing, the manual update routine is executed automatically.
+</details>
+
+<details>
+  <summary>Configuration</summary>
+
+  The configuration wizard is automatically triggered on first launch.
+
+  You can edit config at any time by running:
+
+  ```sh
+  gacli config
+  ```
+
+  You will be asked:
+
+  > `How many days between each auto‑update? (OFF = 0)`
+
+  * `0` → disables auto‑update  
+  * any integer *n* → scheduler will run every *n* days
+
+  The values are saved in `data/config/update.config.json`:
+
+  ```json
+  {
+    "initialized": "true",
+    "auto_update": "true",
+    "last_update": "1713504000",
+    "freq_days": "7",
+    "next_update": "1714108800"
+  }
+  ```
+</details>
+
+---
+
+## 🧠 How it works
+
+<details>
+  <summary>1. Config step</summary>
+  
+  – On first run or on `gacli config`, asks for an *auto‑update frequency* and stores it in `data/config/update.config.json`.
+</details>
+
+<details>
+  <summary>2. Modules discovery</summary>
+  
+  – `modules_init` scans `modules/` **and** `data/tools/user.tools.json`.
+</details>
+
+
+<details>
+  <summary> 3. Modules download</summary>
+  
+  - Clones any missing `module` from `GitHub`, then merges their `tools.json` into `data/tools/modules.tools.json`.
+</details>
+  
+<details>
+  <summary> 4. Dependencies merge</summary>
+  
+  – Core, user & modules `tools.json` files are concatenated **deduplicated** into `.tmp/Brewfile`.  
+</details>
+
+<details>
+  <summary> 5. Update check</summary>
+  
+  – `update_init` compares the current date with `next_update` **and** checks for missing `formulae`/`casks`
+</details>
+
+<details>
+  <summary> 6. Smart update</summary>
+  
+  - If needed, `brew_bundle` installs/upgrades everything and cleans old versions.  
+</details>
+
+<details>
+  <summary> 7. Dynamic CLI</summary>
+  
+  – `modules_load` sources each module’s `main.zsh`, reads `get_commands`, and appends them to the dispatcher.  
+</details>
+
+<details>
+  <summary> 8. Runtime</summary>
+  
+  – Without args, `GACLI` prints a coloured status dashboard; with a command, it routes to the matching function (core or `module`).
+</details>
+
+<details>
+  <summary>👁️ Better have a look?</summary>
+
+  ```mermaid
+  flowchart TD
+      A[Start shell] --> B(Execute <code>gacli</code>)
+      B --> C[Integrity checks & helper load]
+      C --> D[<code>modules_init</code>: download/merge modules]
+      D --> E[<code>update_init</code>: merge tools files]
+      E --> F{Auto‑update due?<br>Missing deps?}
+      F -- Yes --> G[<code>brew_bundle</code>: install / upgrade / cleanup]
+      F -- No --> H[Skip]
+      G --> I[<code>modules_load</code>: source modules & commands]
+      H --> I
+      I --> J[Dashboard + command dispatch]
+  ```
+</details>
+
+---
+
+## 🗂️ Repository structure
+
+```bash
+gacli/
+├── installer/
+│   ├── Brewfile                    # GACLI dependencies descriptor
+│   └── install.sh                  # <----- 1. ONE-LINER AUTO-INSTALLER
+├── src/
+│   ├── main.zsh                    # <----- 2. GACLI ENTRY POINT (dispatcher)
+│   ├── data/                       # static JSON descriptors
+│   ├── helpers/                    # stateless utilities
+│   ├── logic/                      # <----- 3. ORCHESTRATION LAYER (modules / update / uninstall)
+│   ├── modules/                    # <----- 4. USER & DOWNLOADED MODULES
+│   │   └── ...                     # (each folder = 1 module)
+│   └── .tmp/                       # runtime‑generated files (merged Brewfile, etc.)
+└── test/                           # bats-core test scripts
+    ├── unit/                       # zunit tests
+    ├── _output_/                   # zunit TAP reports
+    ├── _support_/                  # zunit bootstrap
+    └── fixture/                    # tests fixtures
 ```
 
-✅ Delete all `GACLI` files
-✅ Delete the `wrapper` and `symlink link`
-✅ Delete entries from `.zshrc`
-✅ Clean config
+> 💡 Only `src` folder is installed by `ìnstall.sh`, other dirs are only required for dev purposes
 
-👉 It will **NOT**:
-🚫 Uninstall `Homebrew`
-🚫 Uninstall any `formula` or `cask`
+> 💡 `GACLI` automatically creates `src/.tmp/` and fills it at runtime; you can safely add it to your `.gitignore`.
 
-Feel free to remove those manually if you want to fully clean your environment.
+### Module anatomy
 
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
-See the [LICENSE](./LICENSE) file for details.
+```bash
+my_module/
+├── main.zsh        # <----- 5. MODULE ENTRY POINT (may implement get_commands)
+├── tools.json      # formulae / casks / nested modules
+└── …               # optional helpers, docs, etc.
+```
 
 ---
 
-Made with ❤️ by [guillaumeast](https://github.com/guillaumeast)
+## 🧪 Testing & CI
 
+### Tested environments
+
+[![Local: macOS](https://img.shields.io/badge/Local-macOS-darkgreen)](https://www.apple.com/macos/)
+
+[![Docker: ubuntu](https://img.shields.io/badge/Docker-ubuntu-blue)](https://hub.docker.com/_/ubuntu)
+[![Docker: debian](https://img.shields.io/badge/Docker-debian-blue)](https://hub.docker.com/_/debian)
+[![Docker: mageia](https://img.shields.io/badge/Docker-mageia-blue)](https://hub.docker.com/_/mageia)
+[![Docker: fedora](https://img.shields.io/badge/Docker-fedora-blue)](https://hub.docker.com/_/fedora)
+[![Docker: archlinux](https://img.shields.io/badge/Docker-archlinux-blue)](https://hub.docker.com/_/archlinux)
+[![Docker: opensuse/leap](https://img.shields.io/badge/Docker-opensuse%2Fleap-blue)](https://hub.docker.com/r/opensuse/leap)
+[![Docker: gentoo/stage3](https://img.shields.io/badge/Docker-gentoo%2Fstage3-blue)](https://hub.docker.com/r/gentoo/stage3)
+[![Docker: vbatts/slackware](https://img.shields.io/badge/Docker-vbatts%2Fslackware-blue)](https://hub.docker.com/r/vbatts/slackware)
+
+[![Pkg: apt](https://img.shields.io/badge/Pkg-apt-purple)](https://wiki.debian.org/apt)
+[![Pkg: urpmi](https://img.shields.io/badge/Pkg-urpmi-purple)](https://wiki.mageia.org/en/URPMI)
+[![Pkg: dnf](https://img.shields.io/badge/Pkg-dnf-purple)](https://dnf.readthedocs.io/en/latest/)
+[![Pkg: pacman](https://img.shields.io/badge/Pkg-pacman-purple)](https://wiki.archlinux.org/title/Pacman)
+[![Pkg: zypper](https://img.shields.io/badge/Pkg-zypper-purple)](https://en.opensuse.org/SDB:Zypper_manual)
+[![Pkg: emerge](https://img.shields.io/badge/Pkg-emerge-purple)](https://wiki.gentoo.org/wiki/Portage)
+[![Pkg: slackpkg](https://img.shields.io/badge/Pkg-slackpkg-purple)](https://docs.slackware.com/slackpkg)
+
+> Each supported `platform` and `package manager` is fully tested
+
+### Test suites
+
+| Layer | Framework | Status |Location |
+|-------|-----------|--------|---------|
+| **`zsh` scripts** | **`zunit`** | ✅ Implemented | `tests/unit/*.zunit` |
+| **`sh` POSIX scripts** | **`bats‑core`** | 🚧 WIP | `tests/*.bats` |
+
+<details>
+  <summary>Test scripts and fixtures</summary>
+
+| Framework | Description |Location |
+|-----------|-------------|---------|
+| **`zunit`** | config file | `.zunit.yaml` |
+| **`zunit`** | setup script | `tests/_support/bootstrap` |
+| **`zunit`** | TAP reports | `tests/_output` |
+| **`zunit`** | Various fixtures | `tests/fixture` |
+</details>
+
+### Run local tests
+
+```sh
+zunit
+```
+
+### Run Docker tests
+
+```sh
+# 🚧 Work in progress...
+```
+
+### CI Pipeline (`GitHub Actions`)
+
+```sh
+# 🚧 Work in progress...
+```
+
+---
+
+## 🏗️ Roadmap
+
+| Version | Status | Description |
+|---------|--------|-------------|
+| 0.7.0 | 🟠 deployed → `dev` branch | 🎁 feat(all): Initial untest version |
+| 0.7.1 | 🟠 deployed → `dev` branch | 🧪 test(zsh): Implement `Zunit` tests |
+| 0.7.2 | 🚧 WIP → `dev` branch | 🧪 test(sh): Implement `bats_core` tests |
+| 0.7.3 | 🔴 TODO | ⚙️ ci(all): Add `GitHub Actions` CI pipeline |
+| 0.8.0 | 🔴 TODO | 🎁 feat(modules): Add commands `gacli <install-list-rm> <...tools...>` |
+| 0.9.0 | 🔴 TODO | 📦 build(modules): `Modules` version management |
+| 1.0.0 | 🔴 TODO | 🚀 First public `release` |
+
+---
+
+## 🎓 Why GACLI exists
+
+This project started as a **learning sandbox** to understand:
+
+- 📦 internals of **`package management systems`**
+- ⚡️ building a **`one-liner installer`** in pure `POSIX` `sh`  
+- 🧩 building a **`modular CLI`** in pure `zsh`  
+- 👹 building **`cross‑platform` `shell automations`** (`macOS` + many `Linux` distros)  
+- ♻️ writing **`self‑updating scripts`** with minimal `dependencies`
+- 🧪 writing **`unit tests`** with `zunit` and `bats-core`
+- 🐳 using **`containers`** with `Docker`
+- ⚙️ setting up a **`CI pipeline`** with `GitHub Actions`
+
+🫵 Feel free to `fork`, `tweak` or `cherry‑pick` parts for your own setup!
+
+---
+
+## 🙏 Contributing
+
+1. `Fork` → `branch` → `code`  
+2. Ensure `zunit` & `bats` suites pass locally  
+3. `Commit` using conventional prefixed messages (`feat(): ...`, `fix(): ...`, …)  
+4. Open a `PR` → `CI` must be green 💚
+
+---
+
+## License
+
+MIT – see [LICENSE](./LICENSE)
+
+Made with ❤️ and way too much `if !` statements by [@guillaumeast](https://github.com/guillaumeast)

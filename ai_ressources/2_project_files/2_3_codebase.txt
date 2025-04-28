@@ -1,50 +1,46 @@
 ###############################
-# FICHIER /.auto-install/Brewfile
+# FICHIER /installer/Brewfile
 ###############################
 
-brew "curl"         # HTTP CLIENT → Required to donwload Homebrew and GACLI files
-brew "bash"         # SHELL INTERPRETER → Required to run Homebrew
-brew "zsh"          # SHELL INTERPRETER → Required to run GACLI
-brew "coreutils"    # CROSS-PLATFORM TOOLS → Required to run GACLI on macOS and Linux
-brew "yq"           # YAML PARSER → Required to parse GACLI config files
-brew "jq"           # JSON PARSER → Required by "yq"
+brew "curl"
+brew "coreutils"
+brew "jq"
 
 #!/usr/bin/env sh
 ###############################
-# FICHIER /src/.auto-install/install.sh
+# FICHIER /installer/install.sh
 ###############################
 
-# Run it automaticaly:
-# TODO: curl (local + Docker image with curl / wget + VM macOS)
-
-# Run it manually:
-# Move this file to your local shared folder (volume) then run:
-# docker run --rm -v "/Users/gui/Repos/docker/shared:/shared" -it ubuntu sh -c ". /shared/install.sh; exec zsh"
-
-# TODO: Télécharger uniquement le dossier "gacli/src" et le fichier "gacli/installer/Brewfile"
-# TODO: Après l'install → supprimer les fichiers "install.sh" et Brewfile
+# Move this file to your shared folder (volume) then run:
+# docker run --rm -v "<local_folder_path>:<virtual_folder_path>" -it <image> sh -c ". <virtual_folder_path>/install.sh"
 
 # Options
 FORCE_MODE="false"
 
-# OS variables
+# Setup variables
+ARCH=""
 IS_MACOS=false
 IS_LINUX=false
 SHELL_PATH=""
 SHELL_NAME=""
 
-# GACLI urls
-REPO="https://github.com/guillaumeast/gacli"
-ARCHIVE="${REPO}/archive/refs/heads/dev.tar.gz"
+# Urls
+URL_REPO="https://github.com/guillaumeast/gacli"
+URL_ARCHIVE="${URL_REPO}/archive/refs/heads/dev.tar.gz"
 
-# GACLI paths
-DIR=".gacli"
-ENTRY_POINT="main.zsh"
-ZSHRC=".zshrc"
+# Paths
+DIR_GACLI=".gacli"
+FILE_ENTRY_POINT="${DIR_GACLI}/main.zsh"
+FILE_ZSHRC=".zshrc"
+
+# Temporary files
+DIR_TMP=".gacli_tmp"
+DIR_TMP_SRC="${DIR_TMP}/src"
+BREWFILE_TMP="${DIR_TMP}/installer/Brewfile"
 
 # WRAPPER
 SYM_DIR=".local/bin"
-SYMLINK="gacli"
+SYMLINK="${SYM_DIR}/gacli"
 
 # Colors
 RED="$(printf '\033[31m')"
@@ -57,37 +53,42 @@ NONE="$(printf '\033[0m')"
 BOLD="$(printf '\033[1m')"
 
 # Emojis
-EMOJI_SUCCESS="✦"
-EMOJI_WARN="⚠️ "
-EMOJI_ERR="❌"
+EMOJI_SUCCESS="✓"
+EMOJI_WARN="⚠️"
+EMOJI_ERR="🛑"
 EMOJI_INFO="✧"
-EMOJI_HIGHLIGHT="👉"
+EMOJI_TBD="⚐"
+EMOJI_HIGHLIGHT="→"
 EMOJI_DEBUG="🔎"
-EMOJI_WAIT="⏳"
+EMOJI_WAIT="✧ ⏳"
 
 # ────────────────────────────────────────────────────────────────
 # PSEUDO-CODE
 # ────────────────────────────────────────────────────────────────
 
 # install.sh
-# |→ ✅ init_style                → Enable emojis if system can handle it + welcome message
-# |→ ✅ init_style                → Standardize output formatting
-# |
-# |→ ✅ parse_args                → Inits global variables referring to given args
-# |→ ✅ resolve_paths             → Resolve relative paths to absolute paths
-# |→ ✅ check_env                 → Detect environment: OS, default shell and privilege
-# |
-# |→ ✅ install_brew_deps         → Install Homebrew dependencies with current package manager
-# |→ ✅ install_brew              → Install Homebrew
-# |→ ✅ install_zsh               → Ensure ZSH is the default shell
-# |
-# |→ ✅ download_gacli            → Download GACLI files from Github
-# |→ ✅ install_gacli_deps        → Install GACLI dependencies from "${DIR}/.auto-install/Brewfile"
-# |→ ✅ make_executable           → Ensure GACLI entry point is executable
-# |→ ✅ create_wrapper            → Generate a small shell script to launch GACLI reliably across shells
-# |→ ✅ update_zshrc              → Append GACLI to PATH and source its entry point in ~/.zshrc
-# |
-# |→ ✅ auto_launch               → Launch GACLI
+    # |→ ✅ init_style                → Enable emojis if system can handle it + welcome message
+    # |→ ✅ init_style                → Standardize output formatting
+    # |
+    # |→ ✅ parse_args                → Inits global variables referring to given args
+    # |→ ✅ resolve_paths             → Resolve relative paths to absolute paths
+    # |→ ✅ check_env                 → Detect environment: OS, default shell and privilege
+    # |
+    # |→ ✅ install_brew_deps         → Install Homebrew dependencies with current package manager
+    # |→ ✅ install_brew              → Install Homebrew
+    # |→ ✅ install_zsh               → Ensure ZSH is the default shell
+    # |
+    # |→ ✅ download_gacli            → Download GACLI files from Github
+    # |→ ✅ install_gacli_deps        → Install GACLI dependencies from BREWFILE_TMP
+    # |→ ✅ make_executable           → Ensure GACLI entry point is executable
+    # |→ ✅ create_wrapper            → Generate a small shell script to launch GACLI reliably across shells
+    # |→ ✅ update_zshrc              → Append GACLI to PATH and source its entry point in ~/.zshrc
+    # |
+    # |→ ✅ auto_launch               → Launch GACLI
+#
+
+# TODO: make zsh default shell
+# TODO: add more package managers (apt-get, ziper...)
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -109,23 +110,14 @@ main() {
     printStyled highlight "Installing package manager: Homebrew..."
     install_brew    || return 4
 
-    # echo ""
-    # printStyled highlight "Installing shell: zsh..."
-    # TODO: fix install_zsh     || return 5
-
     echo ""
-    printStyled highlight "Downloading GACLI ${GREY}→${CYAN} ${DIR}${GREY}...${NONE}"
-    download_gacli  || return 6
-
-    echo ""
-    printStyled highlight "Installing GACLI dependencies... ${EMOJI_WAIT}"
-    install_gacli_deps    || return 7
-
-    echo ""
-    printStyled highlight "Installing GACLI CLI..."
-    make_executable || return 8
-    create_wrapper  || return 9
-    update_zshrc    || return 10
+    printStyled highlight "Installing GACLI ${GREY}→${CYAN} ${DIR_GACLI}${GREY}...${NONE}"
+    download_gacli  || return 5
+    install_gacli_deps    || return 6
+    make_executable || return 7
+    create_wrapper  || return 8
+    update_zshrc    || return 9
+    cleanup         || return 10
 
     auto_launch     || return 11
 }
@@ -145,35 +137,49 @@ init_style() {
     printf "%s\n" ""
 }
 
-# Centralised formatter to colour‑code and prefix log messages by severity
+# Centralised formatter to colour‑code and emoji log messages by severity
 printStyled() {
     style=$1
     msg=$2
-    color=$NONE
-    case "$style" in
+    color_text=$GREY
+    color_emoji=$GREY
+    case "${style}" in
         error)
-            printf "%s\n" "${RED}${BOLD}${EMOJI_ERR} ${msg}${NONE}" >&2
+            printf "%s\n" "${EMOJI_ERR} ${RED}${BOLD}${msg}${NONE}" >&2
             return ;;
         warning)
-            printf "%s\n" "${YELLOW}${BOLD}${EMOJI_WARN} ${msg}${NONE}" >&2
+            printf "%s\n" "${EMOJI_WARN}  ${YELLOW}${BOLD}${msg}${NONE}" >&2
             return ;;
         success)
-            color=$GREEN
-            prefix=$EMOJI_SUCCESS
+            color_text=$GREY
+            color_emoji=$GREEN
+            emoji=$EMOJI_SUCCESS
+            ;;
+        wait)
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_WAIT
             ;;
         info)
-            color=$GREY
-            prefix=$EMOJI_INFO
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_INFO
+            ;;
+        info_tbd)
+            color_text=$GREY
+            color_emoji=$ORANGE
+            emoji=$EMOJI_TBD
             ;;
         highlight)
-            color=$NONE
-            prefix=$EMOJI_HIGHLIGHT
+            color_text=$NONE
+            color_emoji=$NONE
+            emoji=$EMOJI_HIGHLIGHT
             ;;
         *)
-            prefix=""
+            emoji=""
             ;;
     esac
-    printf "%s\n" "${color}${prefix} ${msg}${NONE}"
+    printf "%s\n" "${color_emoji}${emoji} ${color_text}${msg}${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -183,67 +189,115 @@ printStyled() {
 # Parses CLI options (currently only --force) and sets corresponding flags
 parse_args() {
     for arg in "$@"; do
-        case "$arg" in
+        case "${arg}" in
             --force)
                 FORCE_MODE="true"
                 ;;
             *)
-                printStyled error "Expected : --force (received : $arg)"
+                printStyled error "Expected : --force (received : ${arg})"
                 return 1
                 ;;
         esac
     done
-    printStyled info "Arguments: ${GREEN}parsed${NONE}"
+    printStyled success "Arguments: ${GREEN}parsed${NONE}"
 }
 
-# Expands user‑relative paths, ensures .zshrc exists, and defines wrapper targets
+# Expands user‑relative paths, ensures .zshrc exists, and defines wrapper installers
 resolve_paths() {
-    [ -n "$HOME" ] || { printStyled error "\$HOME not set"; return 1; }
 
-    DIR="$HOME/$DIR"
-    ENTRY_POINT="$DIR/$ENTRY_POINT"
-    ZSHRC="$HOME/$ZSHRC"
-    SYM_DIR="$HOME/$SYM_DIR"
-    SYMLINK="$SYM_DIR/$SYMLINK"
-    printStyled info "Paths: ${GREEN}resolved${NONE}"
+    # Ensure $HOME is set
+    [ -n "${HOME}" ] || { printStyled error "\$HOME not set"; return 1; }
+
+    # Main paths
+    DIR_GACLI="${HOME}/${DIR_GACLI}"
+    FILE_ENTRY_POINT="${HOME}/${FILE_ENTRY_POINT}"
+    FILE_ZSHRC="${HOME}/${FILE_ZSHRC}"
+
+    # Symlink paths
+    SYM_DIR="${HOME}/${SYM_DIR}"
+    SYMLINK="${HOME}/${SYMLINK}"
+
+    # Temporary paths
+    DIR_TMP="${HOME}/${DIR_TMP}"
+    DIR_TMP_SRC="${HOME}/${DIR_TMP_SRC}"
+    BREWFILE_TMP="${HOME}/${BREWFILE_TMP}"
+
+    # Reset temporary files
+    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
+
+    # Log
+    printStyled success "Paths: ${GREEN}resolved${NONE}"
 }
 
 # Detects OS, default shell and privilege
 check_env() {
+
+    # Detect arch
+    ARCH="$(uname -m)"
+    printStyled success "Arch: ${GREEN}${ARCH}${NONE}"
+
     # Detect OS via uname
     ud=$(uname -s)
-    case "$ud" in
+    case "${ud}" in
         Darwin) IS_MACOS=true ;;
         Linux)  IS_LINUX=true ;;
-        *)      printStyled error "Unsupported OS: $ud"; return 1 ;;
+        *)      printStyled error "Unsupported OS: ${ud}"; return 1 ;;
     esac
-    printStyled info "OS detected: ${GREEN}$ud${NONE}"
+    printStyled success "OS: ${GREEN}${ud}${NONE}"
+
+    # Detect distribution
+    if [ "${IS_LINUX}" = true ]; then
+    
+        # Read /etc/os-release to get the distro pretty-name (fallback to ID)
+        if [ -r /etc/os-release ]; then
+            . /etc/os-release
+            distro="${NAME:-${ID}}"
+        else
+            distro="unknown"
+        fi
+        
+        # Alpine is unsupported (musl instead of glibc)
+        if echo "${distro}" | grep -qi alpine; then
+            printStyled info "Distribution: ${RED}${distro}${NONE}"
+            printStyled error "Distribution not supported → please use a ${ORANGE}glibc-based${RED} distribution"
+            return 1
+        fi
+
+        # Success
+        printStyled success "Distribution: ${GREEN}${distro}${NONE}"
+    fi
 
     # Detect default shell
     SHELL_PATH=${SHELL:-$(command -v sh)}
     SHELL_NAME=$(basename "$SHELL_PATH")
-    if [ $SHELL_NAME = "zsh" ]; then
+    style=""
+    color=""
+    if [ ${SHELL_NAME} = "zsh" ]; then
+        style="success"
         color="${GREEN}"
-    elif [ -n "$SHELL_NAME" ]; then
+    elif [ -n "${SHELL_NAME}" ]; then
+        style="info_tbd"
         color="${ORANGE}"
     else
+        style="info"
         color="${RED}"
         SHELL_NAME="unknwon"
     fi
-    printStyled info "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
+    printStyled "${style}" "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
 
     # — Privilege escalation setup —
     if [ "$(id -u)" -ne 0 ]; then
         if command -v sudo >/dev/null 2>&1; then
-            SUDO="sudo"
-            printStyled info "Privilege: ${GREEN}sudo enabled${NONE}"
+            SUDO="sudo "
+            printStyled success "Privilege: ${GREEN}sudo enabled${NONE}"
         else
             SUDO=""
-            printStyled info "Privilege: ${ORANGE}No sudo detected → non-root installs may fail${NONE}"
+            printStyled info_tbd "Privilege: ${ORANGE}No sudo detected${GREY} → non-root installs may fail${NONE}"
         fi
     else
         SUDO=""
-        printStyled info "Privilege: ${GREEN}root${NONE}"
+        printStyled success "Privilege: ${GREEN}root${NONE}"
     fi
 }
 
@@ -261,382 +315,470 @@ install_brew() {
     fi
 
     # Install Homebrew dependencies
-    install_brew_deps
+    install_brew_deps || return 1
 
-    # Install
-    printStyled info "Installing ${ORANGE}Homebrew${GREY}... ${EMOJI_WAIT}"
-    yes '' | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null 2>&1
-    
     # Setup Linux env
     if [ "$IS_LINUX" = true ]; then
+        mkdir -p /home/linuxbrew/.linuxbrew || {
+            printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
+            return 1
+        }
+        chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
+            printStyled error "Unable to make Homebrew folder writable: /home/linuxbrew/.linuxbrew"
+            return 1
+        }
+    fi
+
+    # Install
+    printStyled wait "Downloading Homebrew..."
+    bash_path="$(command -v bash || printf %s '/bin/bash')"
+    brew_installer_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+    yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")" || { # TODO: >/dev/null 2>&1
+        printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
+        return 1
+    }
+    printStyled success "Downloaded: ${GREEN}Homebrew${NONE}"
+    
+    # Configure Linux env
+    if [ "$IS_LINUX" = true ]; then
         files="/root/.profile /root/.kshrc /root/.bashrc /root/.zshrc /root/.dashrc /root/.tcshrc /root/.cshrc"
-        printStyled info "Configuring ${ORANGE}Linux${GREY}..."
+        brew_path=""
+        brew_shellenv=""
+
+        # Resolve brew path
+        location_1="/home/linuxbrew/.linuxbrew/bin/brew"
+        location_2="/home/linuxbrew/.linuxbrew/Homebrew/bin/brew"
+        if command -v brew; then
+            brew_path="$(command -v brew)"
+        elif [ -x "${location_1}" ]; then
+            brew_path=$location_1
+        elif [ -x "${location_2}" ]; then
+            brew_path=$location_2
+        else
+            printStyled error "Unable to locate ${ORANGE}Homebrew${RED} binary"
+            return 1
+        fi
+
+        # Resolve brew shellenv output
+        brew_shellenv="$("${brew_path}" shellenv)" || {
+            printStyled error "Unable to fetch ${ORANGE}brew shellenv${NONE}"
+            return 1
+        }
 
         # Add Homebrew to all source files
+        touch "/root/.zshrc"
         for file in $files; do
-            echo >> "$file"
-            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$file"
+            [ ! -f "${file}" ] && continue
+            echo "" >> "${file}"
+            echo "eval \"${brew_shellenv}\"" >> "${file}"
         done
 
         # Add Homebrew to current session
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        eval "${brew_shellenv}"
 
         # Install gcc if missing
         if ! command -v gcc >/dev/null 2>&1; then
-            brew install gcc >/dev/null 2>&1
+            brew install gcc >/dev/null 2>&1 || {
+                printStyled error "Unable to install ${ORANGE}gcc${NONE}"
+                return 1
+            }
         fi
+        printStyled success "Configured: ${GREEN}Linuxbrew${NONE}"
     fi
 
     # Check install
     if ! command -v brew >/dev/null 2>&1; then
-        printStyled error "Unable to install ${GREEN}Homebrew${NONE}"
+        printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
         return 1
     fi
     
     # Success
-    printStyled info "Installed: ${GREEN}Homebrew${NONE}"
+    printStyled success "Installed: ${GREEN}Homebrew${NONE}"
 }
 
 # Installs Homebrew dependencies
 install_brew_deps() {
-    
-    # Depending on current package manager
-    if command -v apt >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}apt${NONE}"
-        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
-        $SUDO apt-get update -y >/dev/null 2>&1
-        $SUDO apt-get install -y build-essential procps curl file git bash >/dev/null 2>&1
+
+    # TODO: macOS default package manager ?
+
+    # Variables
+    default_deps="file git curl bash zsh coreutils jq"
+
+    # ✅ Supported
+    if command -v brew >/dev/null 2>&1; then
+        package_manager="brew"
+        step_1="brew install coreutils"
+        step_2="brew install jq"
+    elif command -v apt >/dev/null 2>&1; then
+        package_manager="apt"
+        step_1="${SUDO}apt-get update -y"
+        step_2="${SUDO}apt-get install -y build-essential ${default_deps} procps"
+        cmd="${step_1} && ${step_2}"
+    elif command -v urpmi >/dev/null 2>&1; then
+        package_manager="urpmi"
+        step_1="${SUDO}urpmi.update -a"
+        step_2="${SUDO}urpmi --auto ${default_deps} procps-ng gcc make binutils"
+        cmd="${step_1} && ${step_2}"
     elif command -v dnf >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}dnf${NONE}"
-        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
-        $SUDO dnf groupinstall -y "Development Tools" >/dev/null 2>&1
-        $SUDO dnf install -y procps-ng file bash >/dev/null 2>&1
+        if dnf --version 2>/dev/null | grep -q "5\."; then
+            package_manager="dnf v5"
+            step_1="${SUDO}dnf install -y @development-tools"
+        else
+            package_manager="dnf v4"
+            step_1="${SUDO}dnf group install -y \"Development Tools\""
+        fi
+        step_2="${SUDO}dnf install -y ${default_deps} procps-ng gawk"
+        cmd="${step_1} && ${step_2}"
     elif command -v pacman >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}pacman${NONE}"
-        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
-        $SUDO pacman -Sy --noconfirm base-devel procps-ng curl file git bash >/dev/null 2>&1
+        package_manager="pacman"
+        cmd="${SUDO}pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
+    elif command -v zypper >/dev/null 2>&1; then
+        package_manager="zypper"
+        step_1="${SUDO}zypper refresh"
+        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y ${default_deps} procps gzip ruby"
+        cmd="${step_1} && ${step_2}"
+    elif command -v emerge >/dev/null 2>&1; then
+        package_manager="emerge"
+        step_1="${SUDO}emerge --sync"
+        step_2="${SUDO}emerge -n --quiet sys-devel/gcc sys-devel/binutils sys-apps/file dev-vcs/git net-misc/curl app-shells/bash app-shells/zsh sys-apps/coreutils app-misc/jq sys-process/procps"
+        cmd="${step_1} && ${step_2}"
+    elif command -v slackpkg >/dev/null 2>&1; then
+        package_manager="slackpkg"
+        step_1="${SUDO}slackpkg update"
+        step_2="yes | ${SUDO}slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
+        step_3="${SUDO}update-ca-certificates --fresh"
+        cmd="${step_1} && ${step_2} && ${step_3}"
+    elif command -v pkg >/dev/null 2>&1; then
+        package_manager="pkg"
+        step_1="${SUDO}pkg update -f"
+        step_2="${SUDO}pkg install -y ${default_deps} procps gcc gmake binutils"
+        cmd="${step_1} && ${step_2}"
+
+    # 🛑 Unsupported
+    elif command -v apk >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}apk${RED} (glibc-based distribution required)"
+        return 1
     elif command -v yum >/dev/null 2>&1; then
-        printStyled info "Current package manager: ${ORANGE}yum${NONE}"
-        printStyled info "Installing Homebrew dependencies... ${EMOJI_WAIT}"
-        $SUDO yum groupinstall 'Development Tools' >/dev/null 2>&1
-        $SUDO yum install -y procps-ng curl file git bash >/dev/null 2>&1
+        printStyled error "Unsupported package manager: ${ORANGE}yum${RED} (git ≥ 2.7.0 not available)"
+        return 1
+    elif command -v nix-env >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}nix-env${RED} (FHS required)"
+        return 1
+    elif command -v xbps-install >/dev/null 2>&1; then
+        printStyled error "Unsupported package manager: ${ORANGE}xbps${RED} (server-side SSL/TLS issues)"
+        return 1
     else
-        printStyled warning "No supported package manager found"
+        printStyled error "No supported package manager found"
+        return 1
     fi
-}
 
-# Install zsh (if needed) and make it the user’s default login shell
-install_zsh() {
-    printStyled info "Trying to install zsh..."
 
-    target_shell=$(command -v zsh)
-    [ -z "$target_shell" ] && {
-        printStyled error "zsh not found in PATH"
+    printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
+    printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
+    eval "${cmd}" || { # TODO: >/dev/null 2>&1
+        printStyled error "Unable to install Homebrew dependencies"
         return 1
     }
 
-    # Ajoute zsh dans /etc/shells si besoin
-    if [ -n "$SUDO" ] && [ -w /etc/shells ] && ! grep -q "$target_shell" /etc/shells 2>/dev/null; then
-        echo "$target_shell" | $SUDO tee -a /etc/shells >/dev/null
-    fi
-
-    # Détermine le shell actuel
-    current_shell=$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f7)
-    [ -z "$current_shell" ] && current_shell="$SHELL"
-
-    if [ "$current_shell" = "$target_shell" ]; then
-        printStyled success "Default shell already ${GREEN}zsh${NONE}"
-        return 0
-    fi
-
-    printStyled info "Switching default shell to ${ORANGE}zsh${GREY}..."
-    
-    # Ne tente pas de changer dans un conteneur Docker
-    if grep -qa 'docker\|lxc' /proc/1/cgroup 2>/dev/null; then
-        printStyled warning "Running in a container → skipping chsh"
-        return 0
-    fi
-
-    if command -v chsh >/dev/null 2>&1; then
-        if [ -n "$SUDO" ]; then
-            $SUDO chsh -s "$target_shell" "$(id -un)" >/dev/null 2>&1
-        else
-            chsh -s "$target_shell" >/dev/null 2>&1
-        fi
-        printStyled success "Default shell changed: ${GREEN}zsh${NONE}"
-    else
-        printStyled warning "chsh not available → cannot change default shell"
-    fi
+    # Success
+    printStyled success "Installed: ${GREEN}Homebrew dependencies${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
 # INSTALL GACLI
 # ────────────────────────────────────────────────────────────────
 
-# Retrieves GACLI source (curl, wget or git) into the target directory, honouring --force
+# Retrieves GACLI source (curl, wget or git) into the installer directory, honouring --force
 download_gacli() {
 
-    # Create destination folder
-    [ ! -d "$DIR" ] || {
-        [ "$FORCE_MODE" = "true" ] && { rm -rf "$DIR"; } || {
-            printStyled error "$DIR already exists (--force to overwrite)"
-            return 1
-        }
-    }
-    mkdir -p "$DIR" || { printStyled error "Unable to create $DIR"; return 1; }
+    # Log
+    printStyled wait "Downloading GACLI..."
 
-    # Download → TODO: only download src folder !
-    if curl -fsSL "$ARCHIVE" | tar -xzf - -C "$DIR" --strip-components=1 >/dev/null 2>&1; then
-        printStyled success "Downloaded"
-        return 0
-    else
-        printStyled warning "Download failed"
+    # Delete previous install if --force, else abort
+    if [ -d "${DIR_GACLI}" ]; then
+        if [ "${FORCE_MODE}" = "true" ]; then
+            rm -rf "${DIR_GACLI}"
+        else
+            printStyled error "Gacli already installed. Use --force to overwrite"
+            return 1
+        fi
     fi
+
+    # Download all repo in tmp folder
+    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 >/dev/null 2>&1 || {
+        printStyled error "Download failed"
+        return 1
+    }
+
+    # Copy source files
+    mv "${DIR_TMP_SRC}" "${DIR_GACLI}" || {
+        printStyled error "Unable to move files into: ${DIR_GACLI}"
+        return 1
+    }
+
+    printStyled success "Downloaded: ${GREEN}GACLI${NONE}"
 }
 
-# Runs brew bundle on the downloaded Brewfile to install required formulae and casks
+# Runs brew bundle on the downloaded BREWFILE_TMP to install required formulae and casks
 install_gacli_deps() {
-    brewfile="$DIR/.auto-install/Brewfile"
-    if command -v brew >/dev/null 2>&1 && [ -f "$brewfile" ]; then
-        brew bundle --file="$brewfile" >/dev/null || {
-            printStyled error "Failed to run Brewfile"
-            return 1
-        }
-        printStyled success "Installed"
-    else
-        printStyled warning "No Brewfile found or brew unavailable → skipping"
-    fi
+
+    # Log
+    printStyled wait "Installing GACLI dependencies..."
+
+    # Check Brewfile integrity
+    [ -f "${BREWFILE_TMP}" ] || {
+        printStyled error "Unable to find dependencies descriptor at: ${CYAN}${BREWFILE_TMP}${NONE}"
+        return 1
+    }
+
+    # Check Homebrew install
+    command -v brew >/dev/null 2>&1 || {
+        printStyled error "Unable to find ${ORANGE}Homebrew${NONE}"
+        return 1     
+    }
+
+    # Install dependencies
+    brew bundle --file="${BREWFILE_TMP}" >/dev/null 2>&1 || {
+        printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
+        return 1
+    }
+
+    # Log
+    printStyled success "Installed: ${GREEN}GACLI dependencies${NONE}"
 }
 
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
-    chmod +x "$ENTRY_POINT" || {
-        printStyled warning "Failed make $ENTRY_POINT executable"
+    chmod +x "${FILE_ENTRY_POINT}" || {
+        printStyled warning "Failed to make ${CYAN}${FILE_ENTRY_POINT}${YELLOW} executable"
         return 1
     }
-    printStyled info "Entry point: ${GREEN}executable${NONE}"
+    printStyled success "Made executable: ${GREEN}Entry point${NONE}"
 }
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 create_wrapper() {
-    mkdir -p "$SYM_DIR" || {
-        printStyled warning "Failed to create $SYM_DIR"; return 1
+
+    # Create symlink dir if missing
+    mkdir -p "${SYM_DIR}" || {
+        printStyled warning "Failed to create ${CYAN}${SYM_DIR}${NONE}"; return 1
     }
 
-    if [ -f "$SYMLINK" ] || [ -d "$SYMLINK" ] || [ -L "$SYMLINK" ]; then
-        rm -f "$SYMLINK"
+    # Delete symlink if already exists
+    if [ -f "${SYMLINK}" ] || [ -d "${SYMLINK}" ] || [ -L "${SYMLINK}" ]; then
+        rm -f "${SYMLINK}"
     fi
 
+    # Create symlink
     {
         printf '%s\n' '#!/usr/bin/env sh'
-        printf '%s\n' "exec zsh \"$ENTRY_POINT\" \"\$@\""
-    } > "$SYMLINK" && chmod +x "$SYMLINK" || {
-        printStyled warning "Failed to create wrapper"; return 1
+        printf '%s\n' "exec \"$(command -v zsh)\" \"${FILE_ENTRY_POINT}\" \"\$@\""
+    } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
+        printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
     }
-    printStyled info "Wrapper: ${GREEN}created${GREY} → ${CYAN}$SYMLINK${GREY} → ${CYAN}$ENTRY_POINT${NONE}"
+
+    # Success
+    printStyled success "Created: ${GREEN}wrapper${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${FILE_ENTRY_POINT}${NONE}"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
 update_zshrc() {
 
-    touch "$ZSHRC" || {
-        printStyled error "Unable to create .zshrc file: $ZSHRC"
+    touch "${FILE_ZSHRC}" || {
+        printStyled error "Unable to create .zshrc file: ${CYAN}${FILE_ZSHRC}${NONE}"
         return 1
     }
 
-    if grep -q '# GACLI' "$ZSHRC"; then
-        printStyled success ".zshrc already configured"
+    if grep -q '# GACLI' "${FILE_ZSHRC}"; then
+        printStyled success "Zsh : ${GREEN}configured${NONE}"
         return 0
     fi
     {
         printf '\n\n# GACLI\n'
-        printf 'export PATH="%s:$PATH"\n' "$SYM_DIR"
-        printf 'source "%s"\n' "$ENTRY_POINT"
-    } >> "$ZSHRC" || {
-        printStyled warning "Failed update $ZSHRC"; return 1
+        printf 'export PATH="%s:$PATH"\n' "${SYM_DIR}"
+        printf 'source "%s"\n' "${FILE_ENTRY_POINT}"
+    } >> "${FILE_ZSHRC}" || {
+        printStyled warning "Failed update ${FILE_ZSHRC}"; return 1
     }
-    printStyled info ".zshrc: ${GREEN}updated${NONE}"
+    printStyled success "Configured: ${GREEN}zsh${NONE}"
+}
+
+# Deletes installer and temporary files
+cleanup() {
+
+    # Resolve installer symlinks
+    installer="$0"
+    while [ -L "${installer}" ]; do
+        dir="$(dirname "${installer}")"
+        installer="$(readlink "${installer}")"
+        case "${installer}" in
+        /*) ;;
+        *) installer="${dir}/${installer}" ;;
+        esac
+    done
+    dir="$(dirname "${installer}")"
+    base="$(basename "${installer}")"
+
+    # Move to installer directory and get absolute path
+    # TODO: do not change activ dir !!
+    cd "${dir}" >/dev/null 2>&1 || return 1
+    abs_dir="$(pwd -P)" || return 1
+    installer="${abs_dir}/${base}"
+
+    # Delete installer
+    [ -f "${installer}" ] && rm -f "${installer}"
+
+    # Delete temporary files
+    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
+
+    # Log
+    printStyled success "Cleanup: ${GREEN}completed${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
 # RUN
 # ────────────────────────────────────────────────────────────────
 
+# Displays success message and either execs a new zsh or prompts the user to reopen a shell
+# TODO: add --no-launch option to avoid auto_launch for test purposes
 auto_launch() {
     echo ""
-    printStyled success "GACLI successfully installed 🚀"
+    printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀"
     echo ""
-    if [ -n "$ZSH_VERSION" ]; then
-        printStyled info "Reloading shell... ${EMOJI_WAIT}"
+    if command -v zsh >/dev/null 2>&1; then
+        printStyled info "Reloading shell..."
         exec zsh
     else
-        printStyled warning "Open a new terminal or run: exec zsh"
+        printStyled error "Missing dependencie: ${ORANGE}zsh${NONE}"
         echo ""
+        return 1
     fi
 }
 
-# Displays success message and either execs a new zsh or prompts the user to reopen a shell
+
 main "$@"
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/helpers/brew.zsh
+# FICHIER /src/helpers/time.zsh
 ###############################
+
+TIME_CMD=""
+
+# ────────────────────────────────────────────────────────────────
+# INIT
+# ────────────────────────────────────────────────────────────────
+
+# Set TIME_CMD depending on platform (gdate or date)
+time_init() {
+
+    if command -v gdate > /dev/null 2>&1; then
+        TIME_CMD="gdate"
+    elif command -v date > /dev/null 2>&1; then
+        TIME_CMD="date"
+    else
+        printStyled error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
+        return 1
+    fi
+}
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Run Homebrew bundle if at least one formula or cask from given Brewfile is not yet active
-brew_bundle() {
-    local brewfile="${1}"
+# Returns current timestamp
+time_get_current() {
 
-    _brew_is_update_due "${1}" || return 0
+    # Variables
+    local current_ts
 
-    # Loading mesage
-    print ""
-    printStyled "info" "Updating... (this may take a few minutes) ⏳"
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
 
-    # Update Homebrew
-    if ! brew update  > /dev/null 2>&1; then
-        printStyled warning "Failed to update Homebrew"
-    fi
-
-    # Install/uninstall formulae & casks referring to the Brewfile
-    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
-        printStyled error "Failed to run bundle Homebrew"
+    # Fetch current date
+    if ! current_ts="$("${TIME_CMD}" +%s)"; then
+        printStyled error "Failed to get current timestamp"
         return 1
     fi
 
-    # Upgrade
-    if ! brew upgrade 1>/dev/null; then
-        printStyled error "Failed to upgrade Homebrew packages"
+    # Return value
+    echo "${current_ts}"
+}
+
+# Add a number of days to a timestamp and return result as timestamp
+time_add_days() {
+
+    # Variables
+    local start_ts="$1"
+    local add="$2"
+
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
+
+    # Arguments checks
+    if [[ -z "${start_ts}" || -z "${add}" ]]; then
+        printStyled error "Expected : <start_ts> <add> (received : ${1} ${2})"
+        return 1
+    fi
+    if ! [[ "${start_ts}" =~ ^[0-9]+$ && "${add}" =~ ^[0-9]+$ ]]; then
+        printStyled error "Both arguments must be positive integers"
         return 1
     fi
 
-    # Cleanup
-    if ! brew cleanup 1>/dev/null; then
-        printStyled warning "Failed to cleanup Homebrew packages"
+    # Compute
+    echo $((86400 * $add + $start_ts))
+}
+
+# Convert UNIX timestamp to YYYY-MM-DD
+time_to_human() {
+
+    # Variables
+    local ts="$1"
+
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
+
+    # Arguments checks
+    if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
+        printStyled error "Expected a timestamp (received: ${1})"
+        return 1
+    fi
+
+    # Convert
+    if ! "${TIME_CMD}" -u -d "@$ts" "+%Y-%m-%d"; then
+        printStyled error "Conversion failed"
+        return 1
     fi
 }
 
-# Check if given formula is active
-brew_is_f_active() {
-    local formula="${1}"
-    [[ "$formula" = "coreutils" ]] && formula="gdate"
+# Convert YYYY-MM-DD to UNIX timestamp
+time_from_human() {
 
-    if command -v $formula >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
-}
+    # Variables
+    local date_str="${1}"
 
-# Check if given cask is active
-brew_is_c_active() {
-    local cask="${1}"
+    # Resolve TIME_CMD depending on platform
+    time_init || return 1
 
-    # "my-cask-name" → "My Cask Name.app"
-    local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
-
-    # Check .app folders first for speed, fallback to brew if missing
-    if [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]]; then
-        return 0
-    elif brew list --cask "$cask" >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# ────────────────────────────────────────────────────────────────
-# PRIVATE
-# ────────────────────────────────────────────────────────────────
-
-# Install Homebrew
-_brew_install() {
-
-    # Check if Homebrew is already installed
-    if command -v brew >/dev/null 2>&1; then
-        return 0
-    fi
-    printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
-
-    # Resolve install command
-    local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-    if $IS_MACOS || $IS_LINUX; then
-        if $IS_LINUX; then
-            install_cmd="NONINTERACTIVE=1 ${install_cmd}"
-        fi
-    else
-        printStyled error "Unsupported OS: ${OSTYPE}"
+    # Arguments checks
+    if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        printStyled error "Expected format: YYYY-MM-DD (received: ${1})"
         return 1
     fi
 
-    # Execute install command
-    if ! eval "$install_cmd"; then
-        printStyled error "Homebrew installation failed"
+    # Convert
+    if ! "${TIME_CMD}" -u -d "${date_str}" +%s; then
+        printStyled error "Conversion failed"
         return 1
     fi
-
-    # Add Homebrew to PATH
-    local brew_exec_path
-    if ! brew_exec_path="$(command -v brew)"; then
-        printStyled error "Failed to detect brew after installation"
-        return 1
-    fi
-
-    # Check if install is successful
-    if ! eval "$("$brew_exec_path" shellenv)"; then
-        printStyled error "Failed to set Homebrew environment"
-        return 1
-    fi
-
-    # Refresh command hash table
-    if ! hash -r; then
-        printStyled warning "Failed to refresh shell hash table"
-    fi
-}
-
-# Check if at least one formula or cask from given Brewfile is not active
-_brew_is_update_due() {
-    local brewfile="${1}"
-    local formulae=()
-    local casks=()
-
-    # Arg check
-    [[ -f "${brewfile}" ]] || {
-        printStyled error "Expected: <brewfile> (received: ${brewfile})"
-        return 1
-    }
-
-    # Get formulae from $brewfile
-    formulae+=("${(@f)$(file_read "${brewfile}" "formulae")}") || {
-        printStyled error "Unable to read Brewfile: ${brewfile}"
-        return 1
-    }
-
-    # Check each formula status
-    for formula in "${formulae[@]}"; do
-        brew_is_f_active "${formula}" || return 0
-    done
-
-    # Get casks from $brewfile
-    casks+=("${(@f)$(file_read "${brewfile}" "casks")}") || {
-        printStyled error "Unable to read Brewfile: ${brewfile}"
-        return 1
-    }
-
-    # Check each cask status
-    for cask in "${casks[@]}"; do
-        brew_is_c_active "${cask}" || return 0
-    done
 }
 
 #!/usr/bin/env zsh
 ###############################
 # FICHIER /src/helpers/parser.zsh
 ###############################
+
+# TODO: add boolean and numeric format support (JSON)
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -903,8 +1045,8 @@ _json_read() {
       echo $output
       ;;
     "array")
-      output=("${(@f)$(jq ".${key}[]" "$file")}")
-      echo $output
+      output=("${(@f)$(jq -r ".${key}[]" "$file")}")
+      printf '%s\n' "${output[@]}"
       ;;
     *)
       print "${RED}Error: unsupported type '${type}' for key '${key}'${NONE}" >&2
@@ -922,7 +1064,7 @@ _json_write() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "${file}" || return 1
+  command mv -f "${file}.tmp" "${file}" || return 1
 }
 
 # PRIVATE - Reset list value into JSON file
@@ -932,7 +1074,7 @@ _json_reset() {
   local key=$2
 
   jq --arg key "$key" '.[$key] = null' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # PRIVATE - Add value to a list into JSON file
@@ -943,7 +1085,7 @@ _json_add() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] += [$value]' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # PRIVATE - Remove value from a list into JSON file
@@ -954,7 +1096,7 @@ _json_rm() {
   local value=$3
 
   jq --arg key "$key" --arg value "$value" '.[$key] |= map(select(. != $value))' "$file" > "${file}.tmp" || return 1
-  mv "${file}.tmp" "$file" || return 1
+  command mv -f "${file}.tmp" "$file" || return 1
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -971,10 +1113,10 @@ _brew_read() {
 
   case "${key}" in
     formulae)
-      output=("${(@f)$(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      output=("${(@f)$(grep '^brew "' "$file" | cut -d'"' -f2 2>/dev/null)}")
       ;;
     casks)
-      output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null | sed 's/.*/"&"/')}")
+      output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)}")
       ;;
     *)
       printStyled error "Unknown key for brewfile: '${key}'"
@@ -982,7 +1124,7 @@ _brew_read() {
       ;;
   esac
 
-  echo $output
+  printf '%s\n' "${output[@]}"
 }
 
 # PRIVATE - Reset list value into a Brewfile
@@ -1014,7 +1156,7 @@ _brew_reset() {
           ;;
   esac
 
-  mv "${tmp_file}" "${file}" || {
+  command mv -f "${tmp_file}" "${file}" || {
     printStyled error "Failed to overwrite ${file}"
     rm -f "$tmp_file"
     return 1
@@ -1080,7 +1222,7 @@ _brew_rm() {
     return 1
   }
 
-  mv "${file}.tmp" "${file}" || {
+  command mv -f "${file}.tmp" "${file}" || {
     printStyled error "Failed to overwrite ${file} after removal"
     return 1
   }
@@ -1088,383 +1230,130 @@ _brew_rm() {
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /src/helpers/time.zsh
+# FICHIER /src/helpers/brew.zsh
 ###############################
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Returns current timestamp
-time_get_current() {
-    local current_ts
-    if ! current_ts="$(gdate +%s)"; then
-        printStyled error "Failed to get current timestamp"
-        return 1
-    fi
-    echo "${current_ts}"
-}
+# PUBLIC - Run Homebrew update, bundle, upgrade and cleanup
+brew_bundle() {
+    local brewfile="${1}"
 
-# Add a number of days to a timestamp and return result as timestamp
-time_add_days() {
-
-    # Variables
-    local start_ts="$1"
-    local add="$2"
-
-    # Arguments checks
-    if [[ -z "${start_ts}" || -z "${add}" ]]; then
-        printStyled error "Expected : <start_ts> <add> (received : ${1} ${2})"
-        return 1
-    fi
-    if ! [[ "${start_ts}" =~ ^[0-9]+$ && "${add}" =~ ^[0-9]+$ ]]; then
-        printStyled error "Both arguments must be positive integers"
-        return 1
-    fi
-
-    # Dependency check
-    if ! command -v gdate >/dev/null 2>&1; then
-        printStyled error "Missing dependency: gdate (from coreutils)"
-        return 1
-    fi
-
-    # Compute
-    echo $((86400 * $add + $start_ts))
-}
-
-# Convert UNIX timestamp to YYYY-MM-DD
-time_to_human() {
-    local ts="$1"
-    if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
-        printStyled error "Expected a timestamp (received: ${1})"
-        return 1
-    fi
-
-    if ! gdate -d "@$ts" "+%Y-%m-%d"; then
-        printStyled error "Conversion failed"
-        return 1
-    fi
-}
-
-# Convert YYYY-MM-DD to UNIX timestamp
-time_from_human() {
-    local date_str="${1}"
-
-    # Check format
-    if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-        printStyled error "Expected format: YYYY-MM-DD (received: ${1})"
-        return 1
-    fi
-
-    # Dependency check
-    if ! command -v gdate >/dev/null 2>&1; then
-        printStyled error "Missing dependency: gdate (from coreutils)"
-        return 1
-    fi
-
-    # Convert
-    if ! gdate -d "${date_str}" +%s; then
-        printStyled error "Conversion failed"
-        return 1
-    fi
-}
-
-#!/usr/bin/env zsh
-###############################
-# FICHIER /src/logic/modules.zsh
-###############################
-
-# TODO: If cycle conflict → Ask user to choose ([1] file_1 → file_2 || [2] file_2 → file_1 || [3] Only file_1 || [4] Only file_2 || [5] Cancel both)
-#   |-> Reorganise MODULES global var content to be same oredered as resolved conflicts (and remove canceled modules)
-
-# Github repo containing all available modules
-MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
-
-# Modules signature
-ENTRY_POINT="main.zsh"
-CONFIG_FILE="tools.json"
-
-# Active modules and commands
-MODULES_INSTALLED=()
-MODULES_ACTIV=()
-
-# ────────────────────────────────────────────────────────────────
-# DOWNLOAD FILES
-# ────────────────────────────────────────────────────────────────
-
-# PUBLIC - Download and merge all modules
-modules_init() {
-    local modules_raw=()
-    local modules_to_check=()
-    local merged_formulae=()
-    local merged_casks=()
-
-    # Reset merged file
-    file_reset "${FILE_TOOLS_MODULES}" formulae || return 1
-    file_reset "${FILE_TOOLS_MODULES}" casks || return 1
-
-    # Get modules list from $DIR_MODS
-    setopt local_options nullglob # Avoid errors when DIR_MODS is empty
-    local folders=("${DIR_MODS}"/*(/))
-    if [[ ${#folders[@]} -gt 0 ]]; then
-        local module_path
-        for module_path in "${folders[@]}"; do
-            modules_to_check+=("${module_path##*/}")
-        done
-    fi
-
-    # Get modules list from $FILE_TOOLS_USER
-    modules_raw+=("${(@f)$(file_read "${FILE_TOOLS_USER}" modules)}") || return 1
-
-    if [[ ${#modules_raw[@]} -gt 0 ]]; then
-        for module in "${modules_raw[@]}"; do
-            [[ -z "$module" ]] && continue
-            modules_to_check+=("${module}")
-        done
-    fi
-
-    # Modules are optional
-    [[ ${#modules_to_check[@]} = 0 ]] && return 0
-
-    # Download modules
-    for module in "${modules_to_check[@]}"; do
-        # Download module and nested modules
-        _module_download "${module}" || continue
-
-        # Merge dependencies
-        merged_formulae+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}") || continue
-        merged_casks+=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}") || continue
-    done
-
-    # Save merged dependencies
-    file_add "${FILE_TOOLS_MODULES}" formulae "${merged_formulae[@]}" || {
-        printStyled error "Unable to merge modules dependencies"
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
         return 1
     }
-    file_add "${FILE_TOOLS_MODULES}" casks "${merged_casks[@]}"|| {
-        printStyled error "Unable to merge modules dependencies"
+
+    # Loading mesage
+    print ""
+    printStyled "info" "Updating... (this may take a few minutes) ⏳"
+
+    # Update Homebrew
+    if ! brew update  > /dev/null 2>&1; then
+        printStyled warning "Failed to update Homebrew"
+    fi
+
+    # Install/uninstall formulae & casks referring to the Brewfile
+    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
+        printStyled error "Failed to run bundle Homebrew"
+        return 1
+    fi
+
+    # Upgrade
+    if ! brew upgrade 1>/dev/null; then
+        printStyled error "Failed to upgrade Homebrew packages"
+        return 1
+    fi
+
+    # Cleanup
+    if ! brew cleanup 1>/dev/null; then
+        printStyled warning "Failed to cleanup Homebrew packages"
+    fi
+}
+
+# PUBLIC - Check if given formula is active
+brew_is_f_active() {
+
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
         return 1
     }
+
+    local formula="${1}"
+    [[ "$formula" = "coreutils" ]] && formula="gdate"
+
+    command -v $formula >/dev/null 2>&1 || return 1
 }
 
-# PRIVATE - Download and extract a module (recursively)
-_module_download() {
-    local module="${1}"
-    local config=""
-    local nested_modules=()
+# PUBLIC - Check if given cask is active
+brew_is_c_active() {
+    local cask="${1}"
 
-    # Download module if needed
-    if ! _module_is_downloaded "${module}"; then
-        local descriptor_url="${MODULES_LIB}/${module}.json"
-        local tmp_descriptor="${TMP_DIR}/${module}.json"
-        local module_url=""
-
-        # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
-        curl "${descriptor_url}" > "${tmp_descriptor}" || {
-            printStyled error "Unable to download descriptor"
-            printStyled error "→ url: ${descriptor_url}"
-            rm -f "$tmp_descriptor"
-            return 1
-        }
-
-        # Get archive url
-        module_url=$(file_read "${tmp_descriptor}" module_url) || {
-            printStyled error "Unable to parse descriptor"
-            rm -f "${tmp_descriptor}"
-            return 1
-        }
-        rm -f "${tmp_descriptor}"
-
-        # Download module archive
-        local tmp_archive="$(mktemp)"
-        if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
-            printStyled error "Unable to download module archive"
-            printStyled error "→ url: ${module_url}"
-            rm -f "$tmp_archive"
-            return 1
-        fi
-
-        # Create target directory
-        mkdir -p "${DIR_MODS}/${module}" || {
-            printStyled error "Failed to create module directory: ${DIR_MODS}/${module}"
-            rm -f "$tmp_archive"
-            return 1
-        }
-
-        # Extract archive to module directory
-        if ! tar -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
-            printStyled error "Failed to extract archive: ${tmp_archive}"
-            rm -f "$tmp_archive"
-            return 1
-        fi
-
-        # Cleanup
-        rm -f "$tmp_archive"
-
-        # Check integrity
-        _module_is_downloaded "${module}" || {
-            printStyled error "Unable to recognize module: ${module}"
-            return 1
-        }
-    fi
-
-    # Download nested modules (recursive)
-    config="${DIR_MODS}/${module}/${CONFIG_FILE}"
-    nested_modules+=("${(@f)$(file_read "${config}" modules)}")
-    for nested_module in "${nested_modules[@]}"; do
-        _module_download "${nested_module}" || {
-            printStyled error "Unable to download nested module: ${nested_module}"
-            return 1
-        }
-    done
-
-    # Add to installed modules variable
-    MODULES_INSTALLED+=("${module}")
-}
-
-# PRIVATE - Check if a module is correctly installed
-_module_is_downloaded() {
-
-    # Resolve paths
-    local module="${1}"
-    local module_path="${DIR_MODS}/${module}"
-    local entry_point="${module_path}/${ENTRY_POINT}"
-    local config_file="${module_path}/${CONFIG_FILE}"
-
-    # Check signatures
-    [[ -d "${module_path}" ]] || return 1
-    [[ -f "${entry_point}" ]] || return 1
-    [[ -f "${config_file}" ]] || return 1
-}
-
-# ────────────────────────────────────────────────────────────────
-# SOURCE CODE
-# ────────────────────────────────────────────────────────────────
-
-# PUBLIC - Source installed modules and activate their commands
-modules_load() {
-
-    local module
-    for module in "${MODULES_INSTALLED[@]}"; do
-        source "${module}" || {
-            printStyled warning "Unable to load module: ${module}"
-            continue
-        }
-        _module_get_commands "${module}" || {
-            printStyled warning "Unable to fetch module commands: ${module}"
-            continue
-        }
-        MODULES_ACTIV+=("${module}")
-    done
-}
-
-# PRIVATE - Extract dynamic commands from a module via get_commands
-_module_get_commands() {
-    local file="$1"
-
-    # Argument check
-    if [[ -z "$file" ]]; then
-        printStyled error "Expected : <file> (received : $1)"
+    # Install Homebrew if missing
+    _brew_install || {
+        printStyled error "Missing required dependencie: Homebrew"
         return 1
-    fi
+    }
 
-    # get_commands is optional
-    if ! typeset -f get_commands >/dev/null; then
+    # "my-cask-name" → "My Cask Name.app"
+    local app_name="$(echo "$cask" | sed -E 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1').app"
+
+    # Check .app folders first for speed, fallback to brew if missing
+    [[ -d "/Applications/$app_name" || -d "$HOME/Applications/$app_name" ]] && return 0
+    brew list --cask "$cask" >/dev/null 2>&1 || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# PRIVATE
+# ────────────────────────────────────────────────────────────────
+
+# PRIVATE - Install Homebrew
+_brew_install() {
+
+    # Check if Homebrew is already installed
+    if command -v brew > /dev/null 2>&1; then
         return 0
     fi
+    printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
 
-    # Capture and validate output
-    local raw_output
-    if ! raw_output="$(get_commands)"; then
-        printStyled error "get_commands failed in ${file}"
-        return 1
-    fi
-
-    local cmd
-    for cmd in ${(f)raw_output}; do
-        if [[ "$cmd" != *=* ]]; then
-            printStyled warning "Invalid command format: '$cmd' in ${file}"
-            printStyled highlight "Expected : 'command=function'"
-            continue
+    # Resolve install command
+    local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    if $IS_MACOS || $IS_LINUX; then
+        if $IS_LINUX; then
+            install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
-        COMMANDS_MODS+=("$cmd")
-    done
-
-    unfunction get_commands
-}
-
-#!/usr/bin/env zsh
-###############################
-# FICHIER /src/logic/uninstall.zsh
-###############################
-
-# TODO: make it independent (no need of gacli.zsh or other script to run)
-# TODO: make it 100% POSIX → .sh
-
-# Uninstall GACLI: remove all file and cleanup .zshrc
-gacli_uninstall() {
-    printStyled info "Uninstalling... ⏳"
-
-    # Variables
-    local zshrc_file="$HOME/.zshrc"
-    local config_file="${CONFIG}"
-
-    # Remove GACLI lines from .zshrc
-    print ""
-    printStyled info "Updating .zshrc file... ⏳"
-    if [[ -f "${zshrc_file}" ]]; then
-        cp "${zshrc_file}" "${zshrc_file}.bak" || {
-            printStyled error "Failed to backup zshrc file"
-            return 1
-        }
-
-        # Remove all GACLI lines (header + source + alias)
-        grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
-            printStyled error "Failed to parse zshrc file"
-            return 1
-        }
-
-
-        mv "${zshrc_file}.tmp" "$zshrc_file" || {
-            printStyled error "Failed to update zshrc file"
-            return 1
-        }
-
     else
-        printStyled warning ".zshrc file not found ($zshrc_file)"
-    fi
-    printStyled success "Updated"
-
-    # Remove GACLI wrapper
-    print ""
-    printStyled info "Removing wrapper... ⏳"
-    local wrapper_path="${HOME}/.local/bin/gacli"
-    if [[ -f "${wrapper_path}" ]]; then
-        rm -f "${wrapper_path}" || {
-            printStyled warning "Failed to delete wrapper ${wrapper_path}"
-        }
-    fi
-    printStyled success "Removed"
-
-    # Delete GACLI directory
-    print ""
-    printStyled info "Deleting GACLI files... ⏳"
-    if [[ -d "${GACLI_DIR}" ]]; then
-        rm -rf "${GACLI_DIR}" || {
-            printStyled error "Failed to delete directory ${GACLI_DIR}"
-            return 1
-        }
-    else
-        printStyled error "Unable to find GACLI directory: ${GACLI_DIR}"
+        printStyled error "Unsupported OS: ${OSTYPE}"
         return 1
     fi
-    printStyled success "Deleted"
 
-    print ""
-    printStyled success "Uninstall complete ✅"
-    print ""
-    printStyled highlight "Restart your terminal"
-    print ""
+    # Execute install command
+    if ! eval "$install_cmd"; then
+        printStyled error "Homebrew installation failed"
+        return 1
+    fi
+
+    # Add Homebrew to PATH
+    local brew_exec_path
+    if ! brew_exec_path="$(command -v brew)"; then
+        printStyled error "Failed to detect brew after installation"
+        return 1
+    fi
+
+    # Check if install is successful
+    if ! eval "$("$brew_exec_path" shellenv)"; then
+        printStyled error "Failed to set Homebrew environment"
+        return 1
+    fi
+
+    # Refresh command hash table
+    if ! hash -r; then
+        printStyled warning "Failed to refresh shell hash table"
+    fi
 }
 
 #!/usr/bin/env zsh
@@ -1476,9 +1365,9 @@ TODAY=""
 
 # Config
 INITIALIZED=""
+LAST_UPDATE=""
 AUTO_UPDATE=""
 FREQ_DAYS=""
-LAST_UPDATE=""
 NEXT_UPDATE=""
 
 # ────────────────────────────────────────────────────────────────
@@ -1504,7 +1393,7 @@ update_init() {
 
     # Run update if needed
     if [[ $(_update_is_reached) || $(_update_is_required "${tmp_brewfile}") ]]; then
-        _update_run "${tmp_brewfile}" || printStyled warning "Unable to run update"
+        _update_run_from "${tmp_brewfile}" || printStyled warning "Unable to run update"
     fi
 
     # Delete temporary Brewfile
@@ -1567,7 +1456,7 @@ _update_manual() {
         return 1
     }
 
-    _update_run "${tmp_brewfile}" || {
+    _update_run_from "${tmp_brewfile}" || {
         printStyled error "Update failed"
         rm -f "${tmp_brewfile}"
         return 1
@@ -1576,46 +1465,50 @@ _update_manual() {
 
 # PUBLIC - Generate temporary merged Brewfile with all dependencies (core + modules + user)
 update_merge_into() {
-    local output_brewfile="${1}"
+
+    # Variables
+    local output_brewfile="$1"
+    local descriptor=""
     local formulae=()
     local casks=()
 
-    # Download missing modules and merge modules dependencies
-    modules_init || {
-        printStyled error "Unable to init modules"
+    # Check arguments
+    if [[ -z "${output_brewfile}" ]]; then
+        printStyled error "Expected : <output_brewfile> (received : ${1})"
         return 1
-    }
+    fi
 
-    # Create output file if missing
-    touch "${output_brewfile}" || {
+    # Reset merged file
+    echo "" > "${output_brewfile}" || {
         printStyled error "Unable to create merged Brewfile: ${output_brewfile}"
         return 1
     }
 
+    # Merge content
     for descriptor in "${FILES_TOOLS[@]}"; do
+        [[ ! -f "${descriptor}" ]] && continue
+        formulae=("${(@f)$(file_read "${descriptor}" formulae)}")
+        casks=("${(@f)$(file_read "${descriptor}" casks)}")
 
-        # Formulae
-        formulae=("${(@f)$(file_read "${descriptor}" formulae)}") || return 1
-        for formula in "${formulae[@]}"; do
-            [[ -z "${formula}" ]] && continue
-            file_add "${output_brewfile}" formulae "${formula}" || {
-                printStyled warning "Unable to write formula: ${formula}"
-            }
-        done
+        # Intro
+        {
+            echo ""
+            echo "############################################"
+            echo "# Dependencies from ${descriptor}:"
+            echo ""
+        } >> "${output_brewfile}" || printStyled warning "Unable to write into: ${output_brewfile}"
 
-        # Casks
-        casks=("${(@f)$(file_read "${descriptor}" casks)}") || return 1
-        for cask in "${casks[@]}"; do
-            [[ -z "${cask}" ]] && continue
-            file_add "${output_brewfile}" casks "${cask}" || {
-                printStyled warning "Unable to write cask: ${cask}"
-            }
-        done
+        # Content
+        file_add "${output_brewfile}" formulae "${formulae[@]}"
+        file_add "${output_brewfile}" casks "${casks[@]}"
+
+        # Final line
+        echo "" >> "${output_brewfile}"
     done
 }
 
 # PRIVATE - Execute the update process and save new status in config file
-_update_run() {
+_update_run_from() {
     local brewfile="${1}"
     # Update Homebrew, formulae and casks (Implemented in `gacli/modules/.core/brew.zsh`)
     brew_bundle "${brewfile}" || return 1
@@ -1633,8 +1526,6 @@ _update_run() {
 
     # Save
     _update_set_config
-
-    # Update 
 
     # Display result
     printStyled success "Updated 🚀"
@@ -1736,6 +1627,261 @@ _update_display_next() {
 
 #!/usr/bin/env zsh
 ###############################
+# FICHIER /src/logic/modules.zsh
+###############################
+
+# Github repo containing all available modules
+MODULES_LIB="https://raw.githubusercontent.com/guillaumeast/gacli-hub/refs/heads/master/modules"
+
+# Modules signature
+ENTRY_POINT="main.zsh"
+CONFIG_FILE="tools.json"
+
+# Active modules and commands
+MODULES_INSTALLED=()
+MODULES_ACTIV=()
+
+# ────────────────────────────────────────────────────────────────
+# DOWNLOAD FILES
+# ────────────────────────────────────────────────────────────────
+
+# PUBLIC - Download and merge all modules
+modules_init() {
+    local modules_raw=()
+    local modules_to_check=()
+
+    # Reset merged file
+    file_reset "${FILE_TOOLS_MODULES}" formulae || return 1
+    file_reset "${FILE_TOOLS_MODULES}" casks || return 1
+    file_reset "${FILE_TOOLS_MODULES}" modules || return 1
+
+    # Get modules list from $DIR_MODS
+    setopt local_options nullglob # Avoid errors when DIR_MODS is empty
+    local folders=("${DIR_MODS}"/*(/))
+    if [[ ${#folders[@]} -gt 0 ]]; then
+        local module_path
+        for module_path in "${folders[@]}"; do
+            modules_to_check+=("${module_path##*/}")
+        done
+    fi
+
+    # Get modules list from $FILE_TOOLS_USER
+    modules_raw+=("${(@f)$(file_read "${FILE_TOOLS_USER}" modules)}") || return 1
+    if [[ ${#modules_raw[@]} -gt 0 ]]; then
+        for module in "${modules_raw[@]}"; do
+            [[ -z "$module" ]] && continue
+            modules_to_check+=("${module}")
+        done
+    fi
+
+    # Modules are optional
+    [[ ${#modules_to_check[@]} = 0 ]] && return 0
+
+    # Download modules and merge dependencies (recursively)
+    for module in "${modules_to_check[@]}"; do
+        _module_download "${module}" || continue
+    done
+}
+
+# PRIVATE - Download a module and merge dependencies (recursively)
+_module_download() {
+    local module="${1}"
+    local config=""
+    local list=()
+
+    # Download module if needed
+    if ! _module_is_downloaded "${module}"; then
+        local descriptor_url="${MODULES_LIB}/${module}.json"
+        local tmp_descriptor="${DIR_TMP}/${module}.json"
+        local module_url=""
+
+        # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
+        curl "${descriptor_url}" > "${tmp_descriptor}" || {
+            printStyled error "Unable to download descriptor of: ${module}"
+            printStyled error "→ url: ${descriptor_url}"
+            printStyled error "Check module descriptor at: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+
+        # Check descriptor integrity
+        [[ -f "${tmp_descriptor}" ]] || {
+            printStyled error "Unable to download descriptor of: ${module}"
+            printStyled error "→ url: ${descriptor_url}"
+            printStyled error "Check module descriptor at: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+
+        # Get archive url
+        module_url=$(file_read "${tmp_descriptor}" module_url) || {
+            printStyled error "Unable to parse descriptor of: ${module}"
+            rm -f "${tmp_descriptor}"
+            return 1
+        }
+        rm -f "${tmp_descriptor}"
+
+        # Check url integrity
+        [[ -n "${module_url}" ]] || {
+            printStyled error "Unable to extract url of: ${module}"
+            printStyled error "→ Check module descriptor at: ${descriptor_url}"
+            rm -f "$tmp_descriptor"
+            return 1
+        }
+
+        # Download module archive
+        local tmp_archive="$(mktemp)"
+        if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
+            printStyled error "Unable to download module archive"
+            printStyled error "→ url: ${module_url}"
+            rm -f "$tmp_archive"
+            return 1
+        fi
+
+        # Create target directory
+        mkdir -p "${DIR_MODS}/${module}" || {
+            printStyled error "Failed to create module directory: ${DIR_MODS}/${module}"
+            rm -f "$tmp_archive"
+            return 1
+        }
+
+        # Extract archive to module directory
+        if ! tar --strip-components=1 -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
+            printStyled error "Failed to extract archive: ${tmp_archive}"
+            rm -f "$tmp_archive"
+            return 1
+        fi
+
+        # Cleanup
+        rm -f "$tmp_archive"
+
+        # Check integrity
+        _module_is_downloaded "${module}" || {
+            printStyled error "Unable to recognize module: ${module}"
+            return 1
+        }
+    fi
+
+    # Download nested modules (recursive)
+    config="${DIR_MODS}/${module}/${CONFIG_FILE}"
+    list=("${(@f)$(file_read "${config}" modules)}")
+    for nested_module in "${list[@]}"; do
+        [[ -z "${nested_module}" ]] && continue
+        if ! _module_is_downloaded "${nested_module}"; then
+            _module_download "${nested_module}" || {
+                printStyled error "Unable to download nested module: ${nested_module}"
+                return 1
+            }
+        fi
+    done
+
+    # Add to installed modules variable
+    MODULES_INSTALLED+=("${module}")
+
+    # Merge dependencies
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}")
+    file_add "${FILE_TOOLS_MODULES}" formulae "${list[@]}" || {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}")
+    file_add "${FILE_TOOLS_MODULES}" casks "${list[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
+    list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" modules)}")
+    file_add "${FILE_TOOLS_MODULES}" modules "${list[@]}"|| {
+        printStyled error "Unable to merge modules dependencies"
+        return 1
+    }
+}
+
+# PRIVATE - Check if a module is correctly installed
+_module_is_downloaded() {
+
+    # Resolve paths
+    local module="${1}"
+    local module_path="${DIR_MODS}/${module}"
+    local entry_point="${module_path}/${ENTRY_POINT}"
+    local config_file="${module_path}/${CONFIG_FILE}"
+
+    # Check signatures
+    [[ -d "${module_path}" ]] || return 1
+    [[ -f "${entry_point}" ]] || return 1
+    [[ -f "${config_file}" ]] || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# SOURCE CODE
+# ────────────────────────────────────────────────────────────────
+
+# PUBLIC - Source installed modules and activate their commands
+modules_load() {
+    
+    local module=""
+    local entry_point=""
+    for module in "${MODULES_INSTALLED[@]}"; do
+        entry_point="${DIR_MODS}/${module}/${ENTRY_POINT}"
+        [[ ! -f "${entry_point}" ]] && continue
+        source "${entry_point}" || {
+            printStyled warning "Unable to load module: ${module}"
+            continue
+        }
+        _module_get_commands "${entry_point}" || {
+            printStyled warning "Unable to fetch module commands: ${module}"
+            continue
+        }
+        MODULES_ACTIV+=("${module}")
+    done
+}
+
+# PRIVATE - Extract dynamic commands list from a module via get_commands
+_module_get_commands() {
+    local file="$1"
+    local commands=()
+
+    # Argument check
+    if [[ ! -f "$file" ]]; then
+        printStyled error "Incorrect file : ${1}"
+        return 1
+    fi
+
+    # Clear hash table (before)
+    if typeset -f get_commands >/dev/null; then
+        unfunction get_commands
+    fi
+
+    # Source module file (TODO: do it in a subshell to avoid double sourcing issues ?)
+    source "${file}"
+    if (( $? != 0 )); then
+        printStyled error "Failed to load file : ${1}"
+        return 1
+    fi
+
+    # Check if get_commands is implemented
+    if ! typeset -f get_commands >/dev/null; then
+        return 1
+    fi
+
+    # Capture and validate output
+    commands=("${(@f)$(get_commands)}")
+    if (( $? != 0 )); then
+        unfunction get_commands
+        return 1
+    else
+        unfunction get_commands
+    fi
+
+    # Return commands
+    local cmd=""
+    for cmd in "${commands[@]}"; do
+        [[ -n "$cmd" && $cmd == *=* ]] || continue
+        COMMANDS_MODS+=("${cmd}")
+    done
+}
+
+#!/usr/bin/env zsh
+###############################
 # FICHIER /src/main.zsh
 ###############################
 
@@ -1781,8 +1927,8 @@ SCRIPTS=( \
     "${DIR_ROOT}/helpers/time.zsh" \
     "${DIR_ROOT}/helpers/parser.zsh" \
     "${DIR_ROOT}/helpers/brew.zsh" \
-    "${DIR_ROOT}/logic/modules.zsh" \
     "${DIR_ROOT}/logic/update.zsh" \
+    "${DIR_ROOT}/logic/modules.zsh" \
     "${DIR_ROOT}/logic/uninstall.zsh" \
 )
 
@@ -1809,9 +1955,9 @@ COLOR_MODS="${PURPLE}"
 COLOR_COMMANDS="${ORANGE}"
 
 # Emojis
-EMOJI_SUCCESS="✦"
+EMOJI_SUCCESS="✓"
 EMOJI_WARN="⚠️"
-EMOJI_ERR="❌"
+EMOJI_ERR="🛑"
 EMOJI_INFO="✧"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
@@ -1825,6 +1971,14 @@ ICON_OFF="○"
 
 # Main function
 main() {
+
+    # Check gacli install
+    if ! command -v gacli > /dev/null 2>&1; then
+        printStyled error "gacli command not found"
+        printStyled highlight "Try to restart your terminal or run: exec zsh"
+        return 1
+    fi
+
     # Check env compatibility and files integrity
     _gacli_check_system || abort "1" || return 1
     _gacli_check_files || abort "2" || return 1
@@ -1840,7 +1994,7 @@ main() {
 
     # Load modules and check if update is due (date or new dependencies)
     modules_init || abort "4" || return 1           # Implemented in modules.zsh
-    update_init || abort "5" || return 1            # Implemented in update.zsh
+    update_init  || abort "5" || return 1           # Implemented in update.zsh
     modules_load || abort "6" || return 1           # Implemented in modules.zsh
 
     # Dispatch commands
@@ -1966,11 +2120,11 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
+            echo "${RED}${BOLD}${EMOJI_ERR} [${RED}${funcstack[2]}${GREY}] → ${RED}${raw_message}${NONE}" >&2
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
+            print "${YELLOW}${BOLD}${EMOJI_WARN} [${ORANGE}${funcstack[2]}${GREY}] → ${ORANGE}${raw_message}${NONE}" >&2
             return
             ;;
         success)
@@ -2002,23 +2156,23 @@ printStyled() {
 # PUBLIC - Diplay tips
 help() {
     print ""
-    printStyled highlight "${COLOR_FORMULAE}Formulaes${GREY} → https://formulae.brew.sh/formula ${NONE}"
+    print "${GREY}→ Formulaes → https://formulae.brew.sh/formula ${NONE}"
     print_formulae
 
     print ""
-    printStyled highlight "${COLOR_CASKS}Casks${GREY} → https://formulae.brew.sh/cask/ ${NONE}"
+    print "${GREY}→ Casks → https://formulae.brew.sh/cask/ ${NONE}"
     print_casks
 
     print ""
-    printStyled highlight "${COLOR_MODS}Modules${GREY} → https://github.com/guillaumeast/gacli ${NONE}"
+    print "${GREY}→ Modules → https://github.com/guillaumeast/gacli ${NONE}"
     print_modules
 
     print ""
-    printStyled highlight "${COLOR_COMMANDS}Core commands${GREY}"
+    print "${GREY}→ Core commands${NONE}"
     print_core_commands
 
     print ""
-    printStyled highlight "${COLOR_COMMANDS}Modules commands${GREY}"
+    print "${GREY}→ Modules commands${NONE}"
     print_mods_commands
     print ""
 }
@@ -2042,13 +2196,20 @@ print_formulae() {
 
     # Compute
     for formula in "${formulae[@]}"; do
-        local icon="${GREY}${ICON_OFF}${NONE}"
-        brew_is_f_active "${formula}" && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_FORMULAE}$formula ${GREY}|${NONE} "
+        formula="${formula#"${formula%%[![:space:]]*}"}"  # Trim leading spaces
+        formula="${formula%"${formula##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $formula || "$formula" == "" ]] && continue
+        local icon="${RED}${ICON_OFF}${NONE}"
+        local color=$RED
+        brew_is_f_active "${formula}" && {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_FORMULAE
+        }
+        output+="${icon} ${color}$formula ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
-    print "${output% ${GREY}|${NONE} }"
+    [[ -n "${output}" ]] && print "${output% ${GREY}|${NONE} }"
 
     # Delete temporary Brewfile
     rm -f "${tmp_brewfile}"
@@ -2073,9 +2234,16 @@ print_casks() {
 
     # Compute
     for cask in "${casks[@]}"; do
-        local icon="${GREY}${ICON_OFF}${NONE}"
-        brew_is_c_active "${cask}" && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_CASKS}$cask ${GREY}|${NONE} "
+        cask="${cask#"${cask%%[![:space:]]*}"}"  # Trim leading spaces
+        cask="${cask%"${cask##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $cask || "$cask" == "" ]] && continue
+        local icon="${RED}${ICON_OFF}${NONE}"
+        local color=$RED
+        brew_is_c_active "${cask}" && {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_CASKS
+        }
+        output+="${icon} ${color}$cask ${GREY}|${NONE} "
     done
 
     # Display (removing trailing " | ")
@@ -2091,9 +2259,16 @@ print_modules() {
     local icon
 
     for module in "${MODULES_INSTALLED[@]}"; do
-        icon="${GREY}${ICON_OFF}${NONE}"
-        [[ " $MODULES_ACTIV " == *" $module "* ]] && icon="${GREEN}${ICON_ON}${NONE}"
-        output+="${icon} ${COLOR_MODS}${module}${NONE} ${GREY}|${NONE} "
+        module="${module#"${module%%[![:space:]]*}"}"  # Trim leading spaces
+        module="${module%"${module##*[![:space:]]}"}"  # Trim trailing spaces
+        [[ -z $module || "$module" == "" ]] && continue
+        local icon="${RED}${ICON_OFF}${NONE}"
+        local color=$RED
+        [[ " $MODULES_ACTIV " == *" $module "* ]] && {
+            icon="${GREEN}${ICON_ON}${NONE}"
+            color=$COLOR_MODS
+        }
+        output+="${icon} ${color}$module ${GREY}|${NONE} "
     done
     
     # Display (removing trailing " | ")
@@ -2131,308 +2306,71 @@ main "$@"
 
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /tests/setup.zunit
+# FICHIER /src/logic/uninstall.zsh
 ###############################
 
-DIR_CURRENT="$(dirname "${(%):-%N}")"
-DIR_ROOT="${DIR_CURRENT}/.."
-DIR_SRC="${DIR_ROOT}/src"
-DIR_TESTS="${DIR_ROOT}/tests"
+# Uninstall GACLI: remove all file and cleanup .zshrc
+gacli_uninstall() {
+    printStyled info "Uninstalling... ⏳"
 
-# ────────────────────────────────────────────────────────────────
-# I/O formatting (from main.zsh)
-# ────────────────────────────────────────────────────────────────
-
-# Formatting
-BOLD="\033[1m"
-UNDERLINE="\033[4m"
-BLACK='\033[30m'
-RED='\033[31m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-PURPLE='\033[35m'
-CYAN='\033[36m'
-ORANGE='\033[38;5;208m'
-GREY='\033[90m'
-NONE='\033[0m'
-COLOR_FORMULAE="${BLUE}"
-COLOR_CASKS="${CYAN}"
-COLOR_MODS="${PURPLE}"
-COLOR_COMMANDS="${ORANGE}"
-
-# Emojis
-EMOJI_SUCCESS="✦"
-EMOJI_WARN="⚠️"
-EMOJI_ERR="❌"
-EMOJI_INFO="✧"
-EMOJI_HIGHLIGHT="👉"
-EMOJI_DEBUG="🔎"
-EMOJI_WAIT="⏳"
-ICON_ON="⊙"
-ICON_OFF="○"
-
-printStyled() {
     # Variables
-    local style=$1
-    local raw_message=$2
-    local final_message=""
-    local color=$NONE
+    local zshrc_file="$HOME/.zshrc"
 
-    # Argument check
-    if [[ -z "$style" || -z "$raw_message" ]]; then
-        echo "❌ [printStyled] Expected: <style> <message>"
+    # Remove GACLI lines from .zshrc
+    print ""
+    printStyled info "Updating .zshrc file... ⏳"
+    if [[ -f "${zshrc_file}" ]]; then
+        cp "${zshrc_file}" "${zshrc_file}.bak" || {
+            printStyled error "Failed to backup zshrc file"
+            return 1
+        }
+
+        # Remove all GACLI lines (header + source + alias)
+        grep -vE '^# GACLI$|^export PATH="\$HOME/.local/bin:\$PATH"$|^source "\$HOME/.gacli/gacli.zsh"$' "${zshrc_file}" > "${zshrc_file}.tmp" || {
+            printStyled error "Failed to parse zshrc file"
+            return 1
+        }
+
+
+        mv "${zshrc_file}.tmp" "$zshrc_file" || {
+            printStyled error "Failed to update zshrc file"
+            return 1
+        }
+
+    else
+        printStyled warning ".zshrc file not found ($zshrc_file)"
+    fi
+    printStyled success "Updated"
+
+    # Remove GACLI wrapper
+    print ""
+    printStyled info "Removing wrapper... ⏳"
+    local wrapper_path="${HOME}/.local/bin/gacli"
+    if [[ -f "${wrapper_path}" ]]; then
+        rm -f "${wrapper_path}" || {
+            printStyled warning "Failed to delete wrapper ${wrapper_path}"
+        }
+    fi
+    printStyled success "Removed"
+
+    # Delete GACLI directory
+    print ""
+    printStyled info "Deleting GACLI files... ⏳"
+    if [[ -d "${GACLI_DIR}" ]]; then
+        rm -rf "${GACLI_DIR}" || {
+            printStyled error "Failed to delete directory ${GACLI_DIR}"
+            return 1
+        }
+    else
+        printStyled error "Unable to find GACLI directory: ${GACLI_DIR}"
         return 1
     fi
+    printStyled success "Deleted"
 
-    # Formatting
-    case "$style" in
-        error)
-            echo "${RED}${BOLD}${EMOJI_ERR} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${RED}${funcstack[2]}${GREY}\n    ${RED}└→ ${raw_message}${NONE}" >&2
-            return
-            ;;
-        warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN}  ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${ORANGE}${funcstack[2]}${GREY}\n    ${ORANGE}└→ ${raw_message}${NONE}" >&2
-            return
-            ;;
-        success)
-            color=$GREEN
-            final_message="${EMOJI_SUCCESS} ${raw_message}"
-            ;;
-        info)
-            color=$GREY
-            final_message="${EMOJI_INFO} ${raw_message}"
-            ;;
-        highlight)
-            color=$NONE
-            final_message="${EMOJI_HIGHLIGHT} ${raw_message}"
-            ;;
-        debug)
-            color=$YELLOW
-            final_message="${EMOJI_DEBUG} ${GREY}${funcstack[4]}${GREY} → ${GREY}${funcstack[3]}${GREY} → ${YELLOW}${funcstack[2]}${GREY}\n    ${YELLOW}└→ ${BOLD}${raw_message}${NONE}"
-            ;;
-        *)
-            color=$NONE
-            final_message="${raw_message}"
-            ;;
-    esac
-
-    # Display
-    print "${color}$final_message${NONE}"
-}
-
-#!/usr/bin/env zunit
-###############################
-# FICHIER /tests/unit/helpers/parser/parser.zunit
-###############################
-
-@setup {
-
-    # Setup env
-    dir_current="$(dirname "${(%):-%N}")"
-    load "${dir_current}/../../../setup.zsh"
-    load "${DIR_SRC}/helpers/parser.zsh"
-
-    # TODO: fix dynamic paths
-
-    # Fixtures
-    FIXTURE_JSON="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/fixture.json"
-    FIXTURE_BREW="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/Brewfile"
-    EMPTY_BREW="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/empty.Brewfile"
-
-    # Output files
-    F_JSON_OUT="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output/output.json"
-    F_BREW_OUT="/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output/Brewfile"
-
-    # Reset output files
-    mkdir -p "/Users/gui/Repos/gacli/gacli/tests/unit/helpers/parser/output"
-    cp "${FIXTURE_JSON}" "${F_JSON_OUT}"
-    cp "${FIXTURE_BREW}" "${F_BREW_OUT}"
-}
-
-# ────────────────────────────────────────────────────────────────
-# JSON PARSER
-# ────────────────────────────────────────────────────────────────
-
-@test 'JSON - read scalar       0 value' {
-    run file_read "${FIXTURE_JSON}" scalar_empty
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'JSON - read scalar       1 value' {
-    run file_read "${FIXTURE_JSON}" scalar_value
-    assert $state equals 0
-    assert "$output" same_as 'old value 1'
-}
-
-@test 'JSON - read list         0 value' {
-    run file_read "${FIXTURE_JSON}" list_0
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'JSON - read list         2 values' {
-    run file_read "${FIXTURE_JSON}" list_2
-    assert $state equals 0
-    assert "$output" same_as '"old value 1" "old value 2"'
-}
-
-# Now we assume that file_read is working as expected
-# So we'll check further writing functions by reading the output file with file_read
-
-# Scalar
-
-@test 'JSON - write scalar      0 value     → 1 value' {
-    file_write "${F_JSON_OUT}" "scalar_empty" "value 1"
-    run file_read "${F_JSON_OUT}" "scalar_empty"
-    assert $state equals 0
-    assert "$output" same_as 'value 1'
-}
-
-@test 'JSON - write scalar      1 value     → 1 value' {
-    file_write "${F_JSON_OUT}" "scalar_value" "value 1"
-    run file_read "${F_JSON_OUT}" "scalar_value"
-    assert $state equals 0
-    assert "$output" same_as 'value 1'
-}
-
-@test 'JSON - write scalar      1 value     → 0 value' {
-    file_write "${F_JSON_OUT}" "scalar_value" ""
-    run file_read "${F_JSON_OUT}" "scalar_value"
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-# Lists
-
-@test 'JSON - reset list        2 values    → 0 value' {
-    file_reset "${F_JSON_OUT}" "list_2"
-    run file_read "${F_JSON_OUT}" "list_2"
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'JSON - add one item      0 value     → 1 value' {
-    file_add "${F_JSON_OUT}" "list_0" "new value"
-    run file_read "${F_JSON_OUT}" "list_0"
-    assert $state equals 0
-    assert "$output" same_as '"new value"'
-}
-
-@test 'JSON - add two items     2 values    → 4 values' {
-    file_add "${F_JSON_OUT}" "list_2" "new value 1" "new value 2"
-    run file_read "${F_JSON_OUT}" "list_2"
-    assert $state equals 0
-    assert "$output" same_as '"old value 1" "old value 2" "new value 1" "new value 2"'
-}
-
-@test 'JSON - remove one item   1 value     → 0 value' {
-    file_rm "${F_JSON_OUT}" "list_1" "old value 1"
-    run file_read "${F_JSON_OUT}" "list_1"
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'JSON - remove two items  3 value     → 1 value' {
-    file_rm "${F_JSON_OUT}" "list_3" "old value 1" "old value 3"
-    run file_read "${F_JSON_OUT}" "list_3"
-    assert $state equals 0
-    assert "$output" same_as '"old value 2"'
-}
-
-# ────────────────────────────────────────────────────────────────
-# BREWFILE PARSER
-# ────────────────────────────────────────────────────────────────
-
-@test 'BREW - read formula      0 value' {
-    run file_read "${EMPTY_BREW}" formulae
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'BREW - read casks        0 value' {
-    run file_read "${EMPTY_BREW}" casks
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'BREW - read formulae     2 values' {
-    run file_read "${FIXTURE_BREW}" formulae
-    assert $state equals 0
-    assert "$output" same_as '"old formula 1" "old formula 2"'
-}
-
-@test 'BREW - read casks        2 values' {
-    run file_read "${FIXTURE_BREW}" casks
-    assert $state equals 0
-    assert "$output" same_as '"old cask 1" "old cask 2"'
-}
-
-# Now we assume that file_read is working as expected
-# So we'll check further writing functions by reading the output file with file_read
-
-# Scalar
-
-@test 'BREW - write formula     2 values    → 3 values' {
-    file_write "${F_BREW_OUT}" formulae "new formula 1"
-    run file_read "${F_BREW_OUT}" formulae
-    assert $state equals 0
-    assert "$output" same_as '"old formula 1" "old formula 2" "new formula 1"'
-}
-
-@test 'BREW - write cask        2 values    → 3 values' {
-    file_write "${F_BREW_OUT}" casks "new cask 1"
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" same_as '"old cask 1" "old cask 2" "new cask 1"'
-}
-
-# Reset
-
-@test 'BREW - reset formulae    2 values    → 0 value' {
-    file_reset "${F_BREW_OUT}" formulae
-    run file_read "${F_BREW_OUT}" formulae
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'BREW - reset casks       2 values    → 0 value' {
-    file_reset "${F_BREW_OUT}" casks
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-# Add
-
-@test 'BREW - add formulae      2 values    → 4 values' {
-    file_add "${F_BREW_OUT}" formulae "new formula 1" "new formula 2"
-    run file_read "${F_BREW_OUT}" formulae
-    assert $state equals 0
-    assert "$output" same_as '"old formula 1" "old formula 2" "new formula 1" "new formula 2"'
-}
-
-@test 'BREW - write casks       2 values    → 4 values' {
-    file_add "${F_BREW_OUT}" casks "new cask 1" "new cask 2"
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" same_as '"old cask 1" "old cask 2" "new cask 1" "new cask 2"'
-}
-
-# Remove
-
-@test 'BREW - remove formulae   2 values    → 0 value' {
-    file_rm "${F_BREW_OUT}" formulae "old formula 1" "old formula 2"
-    run file_read "${F_BREW_OUT}" formulae
-    assert $state equals 0
-    assert "$output" is_empty
-}
-
-@test 'BREW - remove casks      2 values    → 0 value' {
-    file_rm "${F_BREW_OUT}" casks "old cask 1" "old cask 2"
-    run file_read "${F_BREW_OUT}" casks
-    assert $state equals 0
-    assert "$output" is_empty
+    print ""
+    printStyled success "Uninstall complete ✅"
+    print ""
+    printStyled highlight "Restart your terminal"
+    print ""
 }
 
