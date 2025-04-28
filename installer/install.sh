@@ -421,7 +421,7 @@ install_brew_deps() {
 
     printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
     printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
-    eval "${cmd}" >/dev/null 2>&1 || {
+    eval "${cmd}" >/dev/null || { # TODO: 2>&1
         printStyled error "Unable to install Homebrew dependencies"
         return 1
     }
@@ -499,7 +499,7 @@ make_executable() {
         printStyled warning "Failed to make ${CYAN}${FILE_ENTRY_POINT}${YELLOW} executable"
         return 1
     }
-    printStyled success "Entry point: ${GREEN}executable${NONE}"
+    printStyled success "Made executable: ${GREEN}Entry point${NONE}"
 }
 
 # Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
@@ -524,7 +524,7 @@ create_wrapper() {
     }
 
     # Success
-    printStyled success "Wrapper: ${GREEN}created${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${FILE_ENTRY_POINT}${NONE}"
+    printStyled success "Created: ${GREEN}wrapper${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${FILE_ENTRY_POINT}${NONE}"
 }
 
 # Appends PATH export and source command to the user’s .zshrc when missing
@@ -546,7 +546,7 @@ update_zshrc() {
     } >> "${FILE_ZSHRC}" || {
         printStyled warning "Failed update ${FILE_ZSHRC}"; return 1
     }
-    printStyled success "Zsh: ${GREEN}configured${NONE}"
+    printStyled success "Configured: ${GREEN}zsh${NONE}"
 }
 
 # Deletes installer and temporary files
@@ -566,6 +566,7 @@ cleanup() {
     base="$(basename "${installer}")"
 
     # Move to installer directory and get absolute path
+    # TODO: do not change activ dir !!
     cd "${dir}" >/dev/null 2>&1 || return 1
     abs_dir="$(pwd -P)" || return 1
     installer="${abs_dir}/${base}"
