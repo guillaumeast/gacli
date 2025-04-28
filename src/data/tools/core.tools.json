@@ -1,8 +1,5 @@
 {
   "formulae": [
-    "bash",
-    "zsh",
-    "curl",
     "coreutils",
     "jq"
   ],
