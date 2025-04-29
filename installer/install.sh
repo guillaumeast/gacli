@@ -3,8 +3,24 @@
 # FICHIER /installer/install.sh
 ###############################
 
-# Move this file to your shared folder (volume) then run:
-# docker run --rm -v "<local_folder_path>:<virtual_folder_path>" -it <image> sh -c ". <virtual_folder_path>/install.sh"
+# ────────────────────────────────────────────────────────────────
+# POSIX SH GUARD — Ensure safe behavior when sourced
+# ────────────────────────────────────────────────────────────────
+
+# ZSH → Force local POSIX mode (Zsh is not POSIX by default)
+if [ "$(ps -p $$ -o comm=)" = "zsh" ]; then
+  emulate -L sh
+fi
+
+# FISH → Abort if sourced (Fish is not POSIX-compatible)
+if [ "$(ps -p $$ -o comm=)" = "fish" ]; then
+  echo "❌ This script is POSIX. Run with: sh install.sh" >&2
+  return 1
+fi
+
+# ────────────────────────────────────────────────────────────────
+# VARIABLES
+# ────────────────────────────────────────────────────────────────
 
 # Options
 FORCE_MODE="false"
