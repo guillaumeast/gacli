@@ -232,7 +232,7 @@ resolve_paths() {
 
     # Reset temporary files
     [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
-    mkdir -p "${DIR_TMP}"
+    "${SUDO}"mkdir -p "${DIR_TMP}"
 
     # Log
     printStyled success "Paths: ${GREEN}resolved${NONE}"
@@ -327,11 +327,11 @@ install_brew() {
 
     # Setup Linux env
     if [ "$IS_LINUX" = true ]; then
-        mkdir -p /home/linuxbrew/.linuxbrew || {
+        "${SUDO}"mkdir -p /home/linuxbrew/.linuxbrew || {
             printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
             return 1
         }
-        chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
+        "${SUDO}"chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
             printStyled error "Unable to make Homebrew folder writable: /home/linuxbrew/.linuxbrew"
             return 1
         }
@@ -557,7 +557,7 @@ install_gacli_deps() {
 
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
-    chmod +x "${FILE_ENTRY_POINT}" || {
+    "${SUDO}"chmod +x "${FILE_ENTRY_POINT}" || {
         printStyled warning "Failed to make ${CYAN}${FILE_ENTRY_POINT}${YELLOW} executable"
         return 1
     }
@@ -568,7 +568,7 @@ make_executable() {
 create_wrapper() {
 
     # Create symlink dir if missing
-    mkdir -p "${SYM_DIR}" || {
+    "${SUDO}"mkdir -p "${SYM_DIR}" || {
         printStyled warning "Failed to create ${CYAN}${SYM_DIR}${NONE}"; return 1
     }
 
@@ -581,7 +581,7 @@ create_wrapper() {
     {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec \"$(command -v zsh)\" \"${FILE_ENTRY_POINT}\" \"\$@\""
-    } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
+    } > "${SYMLINK}" && "${SUDO}"chmod +x "${SYMLINK}" || {
         printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
     }
 
