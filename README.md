@@ -27,7 +27,7 @@
 Paste that in a `macOS` Terminal or `Linux` shell prompt:
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/installer/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/master/installer/install.sh)"
 ```
 
 <details>
@@ -36,7 +36,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/he
   - If you have `wget` :
   
   ```sh
-  sh -c "$(wget -qO- https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/master/installer/install.sh)"
+  sh -c "$(wget -qO- https://raw.githubusercontent.com/guillaumeast/gacli/master/installer/install.sh)"
   ```
   
   - Else, grab `installer/install.sh` from the repo and run :
@@ -53,7 +53,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/he
   - --force → overwrite an existing installation
   
   ```sh
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/dev/installer/install.sh)" -- --force
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/master/installer/install.sh)" -- --force
   ```
   
   💡 Pass options after `--` so they aren’t interpreted by `curl` / `wget`.
