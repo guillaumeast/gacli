@@ -15,12 +15,12 @@ IS_LINUX=false
 
 # Check $HOME is set
 if [ -z "${HOME}" ] || [ ! -d "${HOME}" ]; then
-    echo " ---> [GACLI] E1: fatal error, exiting GACLI <---" >&2
+    echo " ---> Error: \$HOME is not set → exiting GACLI <---" >&2
     exit "1"
 fi
 
 # Directories
-DIR_ROOT="${HOME}/.gacli"
+DIR_ROOT="${HOME}/.gacli"   # Add to .zshrc ? (and rename DIR_GACLI ?)
 DIR_DATA="${DIR_ROOT}/data"
 DIR_CONFIG="${DIR_DATA}/config"
 DIR_TOOLS="${DIR_DATA}/tools"
@@ -124,6 +124,7 @@ main() {
 # ────────────────────────────────────────────────────────────────
 
 # PRIVATE - Detect the operating system and set the corresponding flags
+# TODO: delete (useless to recreate an existing env variable)
 _gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
         printStyled error "\$OSTYPE is not set" >&2
@@ -238,11 +239,13 @@ printStyled() {
     # Formatting
     case "$style" in
         error)
-            echo "${RED}${BOLD}${EMOJI_ERR} [${RED}${funcstack[2]}${GREY}] → ${RED}${raw_message}${NONE}" >&2
+            echo
+            echo "${EMOJI_ERR} [${RED}Error${GREY}: ${funcstack[2]}${GREY}] → ${BOLD}${RED}${raw_message}${NONE}" >&2
+            echo
             return
             ;;
         warning)
-            print "${YELLOW}${BOLD}${EMOJI_WARN} [${ORANGE}${funcstack[2]}${GREY}] → ${ORANGE}${raw_message}${NONE}" >&2
+            print "${EMOJI_WARN} [${ORANGE}Warning${GREY}: ${funcstack[2]}${GREY}] → ${BOLD}${ORANGE}${raw_message}${NONE}" >&2
             return
             ;;
         success)

@@ -223,9 +223,9 @@ file_rm() {
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-# PRIVATE - Return file extension in lowercase (special case for Brewfile)
+# PUBLIC - Return file extension in lowercase (special case for Brewfile)
 # __get_extension <file>
-_get_extension() {
+get_extension() {
     local file="${1}"
     local file_name="${file##*/}"
     local extension="${file##*.}"

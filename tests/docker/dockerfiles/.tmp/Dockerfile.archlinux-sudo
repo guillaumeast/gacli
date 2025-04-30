@@ -1,0 +1,16 @@
+# Uncomment and run :
+# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.archlinux-sudo -t archlinux-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
+# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared archlinux-sudo
+
+FROM archlinux
+
+# Add sudo
+RUN pacman -Sy --noconfirm sudo
+
+# Switch to non-root user
+RUN useradd -m -s /bin/sh appuser
+USER appuser
+WORKDIR /home/appuser
+
+# Run installer and return exit code
+CMD [ "sh", "/shared/install.sh" ]

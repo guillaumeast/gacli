@@ -1,0 +1,10 @@
+# Uncomment and run :
+# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.debian-sudo -t debian-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
+# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared debian-sudo
+
+FROM debian
+
+# Add sudo
+RUN apt-get update && \
+    apt-get install -y sudo && \
+    apt-get clean

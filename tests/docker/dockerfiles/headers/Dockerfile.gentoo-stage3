@@ -1,0 +1,9 @@
+# Uncomment and run :
+# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.gentoo/stage3-sudo -t gentoo/stage3-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
+# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared gentoo/stage3-sudo
+
+FROM gentoo/stage3
+
+# Add sudo
+RUN emerge --sync && \
+    emerge --quiet sudo

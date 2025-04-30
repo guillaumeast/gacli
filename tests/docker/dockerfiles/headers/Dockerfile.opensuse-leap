@@ -1,0 +1,9 @@
+# Uncomment and run :
+# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.opensuse/leap-sudo -t opensuse/leap-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
+# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared opensuse/leap-sudo
+
+FROM opensuse/leap
+
+# Add sudo
+RUN zypper refresh && \
+    zypper install -y sudo

@@ -42,7 +42,7 @@ FILE_ENTRY_POINT="${DIR_GACLI}/main.zsh"
 FILE_ZSHRC=".zshrc"
 
 # Temporary files
-DIR_TMP=".gacli_tmp"
+DIR_TMP="/tmp"
 DIR_TMP_SRC="${DIR_TMP}/src"
 BREWFILE_TMP="${DIR_TMP}/installer/Brewfile"
 
@@ -107,27 +107,27 @@ main() {
 
     init_style
     printStyled highlight "Initializing..."
-    parse_args "$@" || return 1
-    resolve_paths   || return 2
+    parse_args "$@" || exit 1
+    resolve_paths   || exit 2
 
     echo ""
     printStyled highlight "Checking environment..."
-    check_env       || return 3
+    check_env       || exit 3
 
     echo ""
     printStyled highlight "Installing package manager: Homebrew..."
-    install_brew    || return 4
+    install_brew    || exit 4
 
     echo ""
     printStyled highlight "Installing GACLI ${GREY}→${CYAN} ${DIR_GACLI}${GREY}...${NONE}"
-    download_gacli  || return 5
-    install_gacli_deps    || return 6
-    make_executable || return 7
-    create_wrapper  || return 8
-    update_zshrc    || return 9
-    cleanup         || return 10
+    download_gacli  || exit 5
+    install_gacli_deps    || exit 6
+    make_executable || exit 7
+    create_wrapper  || exit 8
+    update_zshrc    || exit 9
+    cleanup         || exit 10
 
-    auto_launch     || return 11
+    auto_launch     || exit 11
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -153,10 +153,14 @@ printStyled() {
     color_emoji=$GREY
     case "${style}" in
         error)
-            printf "%s\n" "${EMOJI_ERR} ${RED}${BOLD}${msg}${NONE}" >&2
+            echo
+            printf "%s\n" "${EMOJI_ERR} ${RED}Error: ${BOLD}${msg}${NONE}" >&2
+            echo
             return ;;
         warning)
-            printf "%s\n" "${EMOJI_WARN}  ${YELLOW}${BOLD}${msg}${NONE}" >&2
+            echo
+            printf "%s\n" "${EMOJI_WARN}  ${YELLOW}Warning: ${BOLD}${msg}${NONE}" >&2
+            echo
             return ;;
         success)
             color_text=$GREY
@@ -232,7 +236,7 @@ resolve_paths() {
 
     # Reset temporary files
     [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
-    "${SUDO}"mkdir -p "${DIR_TMP}"
+    mkdir -p "${DIR_TMP}"
 
     # Log
     printStyled success "Paths: ${GREEN}resolved${NONE}"
@@ -297,14 +301,18 @@ check_env() {
     # — Privilege escalation setup —
     if [ "$(id -u)" -ne 0 ]; then
         if command -v sudo >/dev/null 2>&1; then
-            SUDO="sudo "
-            printStyled success "Privilege: ${GREEN}sudo enabled${NONE}"
+            # Retry in sudo mode
+            printStyled info_tbd "Detected : ${ORANGE}non-root user${NONE}"
+            printStyled success "Detected : ${GREEN}sudo${NONE}"
+            printStyled warning "Retrying in sudo mode..."
+            printStyled warning "Password may be required"
+            exec sudo -E sh "$0" "$@"
         else
-            SUDO=""
-            printStyled info_tbd "Privilege: ${ORANGE}No sudo detected${GREY} → non-root installs may fail${NONE}"
+            printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
+            printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
+            printStyled warning "Non-root install may fail"
         fi
     else
-        SUDO=""
         printStyled success "Privilege: ${GREEN}root${NONE}"
     fi
 }
@@ -325,23 +333,23 @@ install_brew() {
     # Install Homebrew dependencies
     install_brew_deps || return 1
 
-    # Setup Linux env
-    if [ "$IS_LINUX" = true ]; then
-        "${SUDO}"mkdir -p /home/linuxbrew/.linuxbrew || {
-            printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
-            return 1
-        }
-        "${SUDO}"chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
-            printStyled error "Unable to make Homebrew folder writable: /home/linuxbrew/.linuxbrew"
-            return 1
-        }
-    fi
+    # # Setup Linux env
+    # if [ "$IS_LINUX" = true ]; then
+    #     mkdir -p /home/linuxbrew/.linuxbrew || {
+    #         printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
+    #         return 1
+    #     }
+    #     chown -R "$(id -un):$(id -gn)" /home/linuxbrew/.linuxbrew || {
+    #         printStyled error "Unable to make Homebrew folder writable: /home/linuxbrew/.linuxbrew"
+    #         return 1
+    #     }
+    # fi
 
     # Install
     printStyled wait "Downloading Homebrew..."
     bash_path="$(command -v bash || printf %s '/bin/bash')"
     brew_installer_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-    yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")" || { # TODO: >/dev/null 2>&1
+    yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")" >/dev/null 2>&1 || {
         printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
         return 1
     }
@@ -386,7 +394,7 @@ install_brew() {
 
         # Install gcc if missing
         if ! command -v gcc >/dev/null 2>&1; then
-            brew install gcc >/dev/null 2>&1 || {
+            brew install gcc >/dev/null 2>&1 || {   # TODO: add to native package manager installs ?
                 printStyled error "Unable to install ${ORANGE}gcc${NONE}"
                 return 1
             }
@@ -419,47 +427,47 @@ install_brew_deps() {
         step_2="brew install jq"
     elif command -v apt >/dev/null 2>&1; then
         package_manager="apt"
-        step_1="${SUDO}apt-get update -y"
-        step_2="${SUDO}apt-get install -y build-essential ${default_deps} procps"
+        step_1="apt-get update -y"
+        step_2="apt-get install -y build-essential ${default_deps} procps"
         cmd="${step_1} && ${step_2}"
     elif command -v urpmi >/dev/null 2>&1; then
         package_manager="urpmi"
-        step_1="${SUDO}urpmi.update -a"
-        step_2="${SUDO}urpmi --auto ${default_deps} procps-ng gcc make binutils"
+        step_1="urpmi.update -a"
+        step_2="urpmi --auto ${default_deps} procps-ng gcc make binutils"
         cmd="${step_1} && ${step_2}"
     elif command -v dnf >/dev/null 2>&1; then
         if dnf --version 2>/dev/null | grep -q "5\."; then
             package_manager="dnf v5"
-            step_1="${SUDO}dnf install -y @development-tools"
+            step_1="dnf install -y @development-tools"
         else
             package_manager="dnf v4"
-            step_1="${SUDO}dnf group install -y \"Development Tools\""
+            step_1="dnf group install -y \"Development Tools\""
         fi
-        step_2="${SUDO}dnf install -y ${default_deps} procps-ng gawk"
+        step_2="dnf install -y ${default_deps} procps-ng gawk"
         cmd="${step_1} && ${step_2}"
     elif command -v pacman >/dev/null 2>&1; then
         package_manager="pacman"
-        cmd="${SUDO}pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
+        cmd="pacman -Sy --noconfirm base-devel ${default_deps} procps-ng"
     elif command -v zypper >/dev/null 2>&1; then
         package_manager="zypper"
-        step_1="${SUDO}zypper refresh"
-        step_2="${SUDO}zypper install -y -t pattern devel_basis && ${SUDO}zypper install -y ${default_deps} procps gzip ruby"
+        step_1="zypper refresh"
+        step_2="zypper install -y -t pattern devel_basis && zypper install -y ${default_deps} procps gzip ruby"
         cmd="${step_1} && ${step_2}"
     elif command -v emerge >/dev/null 2>&1; then
         package_manager="emerge"
-        step_1="${SUDO}emerge --sync"
-        step_2="${SUDO}emerge -n --quiet sys-devel/gcc sys-devel/binutils sys-apps/file dev-vcs/git net-misc/curl app-shells/bash app-shells/zsh sys-apps/coreutils app-misc/jq sys-process/procps"
+        step_1="emerge --sync"
+        step_2="emerge -n --quiet sys-devel/gcc sys-devel/binutils sys-apps/file dev-vcs/git net-misc/curl app-shells/bash app-shells/zsh sys-apps/coreutils app-misc/jq sys-process/procps"
         cmd="${step_1} && ${step_2}"
     elif command -v slackpkg >/dev/null 2>&1; then
         package_manager="slackpkg"
-        step_1="${SUDO}slackpkg update"
-        step_2="yes | ${SUDO}slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
-        step_3="${SUDO}update-ca-certificates --fresh"
+        step_1="slackpkg update"
+        step_2="yes | slackpkg install ${default_deps} procps-ng gcc make binutils nghttp2 brotli cyrus-sasl ca-certificates perl"
+        step_3="update-ca-certificates --fresh"
         cmd="${step_1} && ${step_2} && ${step_3}"
     elif command -v pkg >/dev/null 2>&1; then
         package_manager="pkg"
-        step_1="${SUDO}pkg update -f"
-        step_2="${SUDO}pkg install -y ${default_deps} procps gcc gmake binutils"
+        step_1="pkg update -f"
+        step_2="pkg install -y ${default_deps} procps gcc gmake binutils"
         cmd="${step_1} && ${step_2}"
 
     # 🛑 Unsupported
@@ -483,7 +491,7 @@ install_brew_deps() {
 
     printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
     printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
-    eval "${cmd}" || { # TODO: >/dev/null 2>&1
+    eval "${cmd}" >/dev/null 2>&1 || {
         printStyled error "Unable to install Homebrew dependencies"
         return 1
     }
@@ -557,7 +565,7 @@ install_gacli_deps() {
 
 # Adds execute permission to the downloaded GACLI entry‑point script
 make_executable() {
-    "${SUDO}"chmod +x "${FILE_ENTRY_POINT}" || {
+    chmod +x "${FILE_ENTRY_POINT}" || {
         printStyled warning "Failed to make ${CYAN}${FILE_ENTRY_POINT}${YELLOW} executable"
         return 1
     }
@@ -568,7 +576,7 @@ make_executable() {
 create_wrapper() {
 
     # Create symlink dir if missing
-    "${SUDO}"mkdir -p "${SYM_DIR}" || {
+    mkdir -p "${SYM_DIR}" || {
         printStyled warning "Failed to create ${CYAN}${SYM_DIR}${NONE}"; return 1
     }
 
@@ -581,7 +589,7 @@ create_wrapper() {
     {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec \"$(command -v zsh)\" \"${FILE_ENTRY_POINT}\" \"\$@\""
-    } > "${SYMLINK}" && "${SUDO}"chmod +x "${SYMLINK}" || {
+    } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
         printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
     }
 
@@ -648,7 +656,6 @@ cleanup() {
 # ────────────────────────────────────────────────────────────────
 
 # Displays success message and either execs a new zsh or prompts the user to reopen a shell
-# TODO: add --no-launch option to avoid auto_launch for test purposes
 auto_launch() {
     echo ""
     printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀"
