@@ -3,7 +3,8 @@
 # FICHIER /<TODO: path>/style.zsh (move to src/helpers ?)
 ###############################
 
-# Style variables and formatted i/o functions
+# I/O formatter
+
 # ────────────────────────────────────────────────────────────────
 # FORMATTING
 # ────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ printStyled() {
             echo
             return ;;
         warning)
-            echo "${EMOJI_WARN}  ${YELLOW}Warning: ${BOLD}${msg}${NONE}" >&2
+            echo "${EMOJI_WARN}  ${YELLOW}Warning: ${msg}${NONE}" >&2
             return ;;
         success)
             color_text=$GREY
@@ -88,3 +89,54 @@ printStyled() {
     echo "${color_emoji}${emoji} ${color_text}${msg}${NONE}"
 }
 
+# Display section header
+printheader() {
+
+    echo
+    echo "----------------------------"
+    printStyled highlight "${1}"
+    echo "${GREY}----------------------------${NONE}"
+}
+
+# Display section header
+printfooter() {
+
+    echo "${GREY}----------------------------${NONE}"
+    echo "${1}"
+    echo "----------------------------"
+    echo
+}
+
+printresults() {
+
+    # Variables
+    local passed=0
+    local failed=0
+    local total=0
+    local winrate=0
+    local loserate=0
+
+    # Check args
+    if [[ ! "$1" =~ ^[0-9]+$ || ! "$2" =~ ^[0-9]+$ ]]; then
+        printStyled error "[printresults] Expected: <passed:int> <failed:int> (received: $1 $2)"
+        return 1
+    fi
+
+    # Compute
+    passed=$1
+    failed=$2
+    total=$(( $passed + $failed ))
+    winrate=$(( $passed * 100 / $total ))
+    loserate=$(( $failed * 100 / $total ))
+
+    # Display results
+    if (( failed == 0 )); then
+        printfooter "$(printStyled success "${GREEN}Passed → ${passed}${GREY} (100 %)${NONE}")"
+    elif (( passed == 0 )); then
+        printfooter "$(printStyled error "${RED}Failed → ${failed}${GREY} (100 %)${NONE}" 2>&1)"
+    else
+        local line1="$(printStyled success "${GREEN}Passed → ${passed}${GREY} (${winrate} %)${NONE}")"
+        local line2="$(printStyled info_tbd "${ORANGE}Failed → ${failed}${GREY} (${loserate} %)${NONE}")"
+        printfooter "${line1}\n${line2}"
+    fi
+}
