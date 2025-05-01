@@ -1,7 +1,3 @@
-# Uncomment and run :
-# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.fedora-sudo -t fedora-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
-# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared fedora-sudo
-
 FROM fedora
 
 # Add sudo

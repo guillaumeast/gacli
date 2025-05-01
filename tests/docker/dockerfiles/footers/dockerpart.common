@@ -1,8 +1,0 @@
-
-# Switch to non-root user
-RUN useradd -m -s /bin/sh appuser
-USER appuser
-WORKDIR /home/appuser
-
-# Run installer and return exit code
-CMD [ "sh", "/shared/install.sh" ]

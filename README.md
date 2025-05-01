@@ -74,7 +74,6 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/guillaumeast/gacli/master/
 [![Docker: archlinux](https://img.shields.io/badge/Linux-archlinux-blue)](https://hub.docker.com/_/archlinux)
 [![Docker: opensuse/leap](https://img.shields.io/badge/Linux-opensuse%2Fleap-blue)](https://hub.docker.com/r/opensuse/leap)
 [![Docker: gentoo/stage3](https://img.shields.io/badge/Linux-gentoo%2Fstage3-blue)](https://hub.docker.com/r/gentoo/stage3)
-[![Docker: vbatts/slackware](https://img.shields.io/badge/Linux-vbatts%2Fslackware-blue)](https://hub.docker.com/r/vbatts/slackware)
 
 [![Pkg: apt](https://img.shields.io/badge/Pkg-apt-purple)](https://wiki.debian.org/apt)
 [![Pkg: urpmi](https://img.shields.io/badge/Pkg-urpmi-purple)](https://wiki.mageia.org/en/URPMI)
@@ -450,7 +449,6 @@ my_module/
 [![Docker: archlinux](https://img.shields.io/badge/Docker-archlinux-blue)](https://hub.docker.com/_/archlinux)
 [![Docker: opensuse/leap](https://img.shields.io/badge/Docker-opensuse%2Fleap-blue)](https://hub.docker.com/r/opensuse/leap)
 [![Docker: gentoo/stage3](https://img.shields.io/badge/Docker-gentoo%2Fstage3-blue)](https://hub.docker.com/r/gentoo/stage3)
-[![Docker: vbatts/slackware](https://img.shields.io/badge/Docker-vbatts%2Fslackware-blue)](https://hub.docker.com/r/vbatts/slackware)
 
 [![Pkg: apt](https://img.shields.io/badge/Pkg-apt-purple)](https://wiki.debian.org/apt)
 [![Pkg: urpmi](https://img.shields.io/badge/Pkg-urpmi-purple)](https://wiki.mageia.org/en/URPMI)

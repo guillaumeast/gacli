@@ -3,7 +3,7 @@
 # FICHIER /tests/docker/dockerfiles/.tmp/docker_init.zsh
 ###############################
 
-# Summary: Merges Dockerfiles with common dockerpart
+# Summary: Merges Headers with footers into .tmp Dockerfiles
 
 # ────────────────────────────────────────────────────────────────
 # PATHS
@@ -47,21 +47,21 @@ main() {
     docker_init || exit 1
     docker_reset_tmp || exit 2
 
-    # Concatenate Dockerfiles with dockerparts into DIR_MERGED
+    # Concatenate headers and footers into DIR_MERGED
     docker_merge || exit 3
 
     # Build images
     docker_build_all || exit 4
 
     # Run containers
-    # docker_run || exit 6
+    docker_run || exit 6
 }
 
 # ────────────────────────────────────────────────────────────────
 # CORE
 # ────────────────────────────────────────────────────────────────
 
-# Merge Dockerfiles (headers) with dockerparts (footers)
+# Merge headers with footers
 docker_merge() {
 
     local header=""
@@ -72,7 +72,7 @@ docker_merge() {
     local failed=0
     local tmp_failed="false"
 
-    # Merge Dockerfiles (headers) with dockerparts (footers)
+    # Merge
     printheader "Generating Dockerfiles..."
     for header in "${DIR_HEADERS}"/*; do
 
@@ -187,19 +187,19 @@ docker_run() {
     printheader "Running images..."
     for image in "${IMAGES_BUILT[@]}"; do
 
+        # Log
+        printStyled wait "Running → ${image}..."
+
         # Copy origin INSTALLER into shared folder
-        mkdir -p "${VOLUME_LOCAL}" || return 1
-        if cp -r "${INSTALLER}" "${VOLUME_LOCAL}/${INSTALLER:t}" || {
-            printStyled error "Failed → ${RED}${image}${NONE} → Unable to copy installer"
-            return 1
-        }
+        mkdir -p "${VOLUME_LOCAL}" || printStyled warning "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
+        cp -r "${INSTALLER}" "${VOLUME_LOCAL}/${INSTALLER:t}" || printStyled warning "Unable to copy installer"
 
         # Run test
         if docker run -it --rm -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}"; then
-            printStyled success "Passed → ${GREEN}${image}${NONE}"
+            printStyled success "Passed  → ${GREEN}${image}${NONE}"
             (( passed++ ))
         else
-            printStyled warning "Failed → ${RED}${image}${NONE} → exit $?"
+            printStyled warning "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
             (( failed++ ))
         fi
     done

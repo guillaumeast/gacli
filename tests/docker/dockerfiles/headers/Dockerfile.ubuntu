@@ -1,7 +1,3 @@
-# Uncomment and run :
-# docker build -f /Users/gui/Repos/gacli/gacli/tests/docker/dockerfiles/Dockerfile.ubuntu-sudo -t ubuntu-sudo /Users/gui/Repos/gacli/gacli/tests/docker/context
-# docker run -it --rm -v /Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared ubuntu-sudo
-
 FROM ubuntu
 
 # Add sudo

@@ -3,17 +3,19 @@
 # FICHIER /installer/install.sh
 ###############################
 
+# TODO: create loader
+
 # ────────────────────────────────────────────────────────────────
 # POSIX SH GUARD — Ensure safe behavior when sourced
 # ────────────────────────────────────────────────────────────────
 
 # ZSH → Force local POSIX mode (Zsh is not POSIX by default)
-if [ "$(ps -p $$ -o comm=)" = "zsh" ]; then
+if [ "$(ps -p $$ -o comm= 2>/dev/null)" = "zsh" ]; then
   emulate -L sh
 fi
 
 # FISH → Abort if sourced (Fish is not POSIX-compatible)
-if [ "$(ps -p $$ -o comm=)" = "fish" ]; then
+if [ "$(ps -p $$ -o comm= 2>/dev/null)" = "fish" ]; then
   echo "❌ This script is POSIX. Run with: sh install.sh" >&2
   return 1
 fi
@@ -40,6 +42,7 @@ URL_ARCHIVE="${URL_REPO}/archive/refs/heads/dev.tar.gz"
 DIR_GACLI=".gacli"
 FILE_ENTRY_POINT="${DIR_GACLI}/main.zsh"
 FILE_ZSHRC=".zshrc"
+FILES_RC="/root/.profile /root/.kshrc /root/.bashrc /root/.zshrc /root/.dashrc /root/.tcshrc /root/.cshrc"
 
 # Temporary files
 DIR_TMP="/tmp"
@@ -62,7 +65,7 @@ BOLD="$(printf '\033[1m')"
 
 # Emojis
 EMOJI_SUCCESS="✓"
-EMOJI_WARN="⚠️"
+EMOJI_WARN="⚠️ "
 EMOJI_ERR="🛑"
 EMOJI_INFO="✧"
 EMOJI_TBD="⚐"
@@ -96,7 +99,6 @@ EMOJI_WAIT="✧ ⏳"
 #
 
 # TODO: make zsh default shell
-# TODO: add more package managers (apt-get, ziper...)
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -158,9 +160,7 @@ printStyled() {
             echo
             return ;;
         warning)
-            echo
-            printf "%s\n" "${EMOJI_WARN}  ${YELLOW}Warning: ${BOLD}${msg}${NONE}" >&2
-            echo
+            printf "%s\n" "${EMOJI_WARN} ${YELLOW}Warning: ${BOLD}${msg}${NONE}" >&2
             return ;;
         success)
             color_text=$GREY
@@ -245,6 +245,21 @@ resolve_paths() {
 # Detects OS, default shell and privilege
 check_env() {
 
+    # — Privilege escalation setup —
+    if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then
+            # Retry in sudo mode
+            printStyled warning "Retrying in sudo mode... → ${EMOJI_WARN} ${ORANGE}Password may be required${NONE}"
+            exec sudo -E sh "$0" "$@"
+        else
+            printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
+            printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
+            printStyled warning "Non-root install may fail"
+        fi
+    else
+        printStyled success "Privilege: ${GREEN}root${NONE}"
+    fi
+
     # Detect arch
     ARCH="$(uname -m)"
     printStyled success "Arch: ${GREEN}${ARCH}${NONE}"
@@ -297,24 +312,6 @@ check_env() {
         SHELL_NAME="unknwon"
     fi
     printStyled "${style}" "Default shell: ${color}${SHELL_NAME}${GREY} → ${CYAN}${SHELL_PATH}${NONE}"
-
-    # — Privilege escalation setup —
-    if [ "$(id -u)" -ne 0 ]; then
-        if command -v sudo >/dev/null 2>&1; then
-            # Retry in sudo mode
-            printStyled info_tbd "Detected : ${ORANGE}non-root user${NONE}"
-            printStyled success "Detected : ${GREEN}sudo${NONE}"
-            printStyled warning "Retrying in sudo mode..."
-            printStyled warning "Password may be required"
-            exec sudo -E sh "$0" "$@"
-        else
-            printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
-            printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
-            printStyled warning "Non-root install may fail"
-        fi
-    else
-        printStyled success "Privilege: ${GREEN}root${NONE}"
-    fi
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -333,7 +330,7 @@ install_brew() {
     # Install Homebrew dependencies
     install_brew_deps || return 1
 
-    # # Setup Linux env
+    # TODO (delete after fix): Setup Linux env
     # if [ "$IS_LINUX" = true ]; then
     #     mkdir -p /home/linuxbrew/.linuxbrew || {
     #         printStyled error "Unable to create Homebrew folder: /home/linuxbrew/.linuxbrew"
@@ -345,19 +342,28 @@ install_brew() {
     #     }
     # fi
 
-    # Install
-    printStyled wait "Downloading Homebrew..."
+    # TODO (delete after fix): old install command
+    # yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")"
+
+    # Try default install
+    printStyled wait "Installing Homebrew..."
     bash_path="$(command -v bash || printf %s '/bin/bash')"
     brew_installer_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-    yes '' | "${bash_path}" -c "$(curl -fsSL "${brew_installer_url}")" >/dev/null 2>&1 || {
-        printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
-        return 1
-    }
-    printStyled success "Downloaded: ${GREEN}Homebrew${NONE}"
+    local install_cmd="yes '' | ${bash_path} -c \"\$(curl -fsSL ${brew_installer_url})\" >/dev/null 2>&1" # TODO: 
+    if ! eval "${install_cmd}"; then
+        # Fallback on old school install (no API)
+        printStyled warning "Install failed → Fallback on API-less method..."
+        printStyled warning "${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
+        export HOMEBREW_NO_INSTALL_FROM_API=1
+        eval "${install_cmd}" || {
+            printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
+            return 1
+        }
+    fi
+    printStyled success "Installed: ${GREEN}Homebrew${NONE}"
     
     # Configure Linux env
     if [ "$IS_LINUX" = true ]; then
-        files="/root/.profile /root/.kshrc /root/.bashrc /root/.zshrc /root/.dashrc /root/.tcshrc /root/.cshrc"
         brew_path=""
         brew_shellenv=""
 
@@ -383,7 +389,7 @@ install_brew() {
 
         # Add Homebrew to all source files
         touch "/root/.zshrc"
-        for file in $files; do
+        for file in $FILES_RC; do
             [ ! -f "${file}" ] && continue
             echo "" >> "${file}"
             echo "eval \"${brew_shellenv}\"" >> "${file}"
@@ -409,18 +415,23 @@ install_brew() {
     fi
     
     # Success
-    printStyled success "Installed: ${GREEN}Homebrew${NONE}"
+    printStyled success "Configured: ${GREEN}Homebrew${NONE}"
 }
 
 # Installs Homebrew dependencies
 install_brew_deps() {
+
+    # Variables
+    local step_1=""
+    local step_2=""
+    local step_3=""
 
     # TODO: macOS default package manager ?
 
     # Variables
     default_deps="file git curl bash zsh coreutils jq"
 
-    # ✅ Supported
+    # ✅ Supported - Build update command
     if command -v brew >/dev/null 2>&1; then
         package_manager="brew"
         step_1="brew install coreutils"
@@ -470,7 +481,7 @@ install_brew_deps() {
         step_2="pkg install -y ${default_deps} procps gcc gmake binutils"
         cmd="${step_1} && ${step_2}"
 
-    # 🛑 Unsupported
+    # 🛑 Unsupported - Return 1
     elif command -v apk >/dev/null 2>&1; then
         printStyled error "Unsupported package manager: ${ORANGE}apk${RED} (glibc-based distribution required)"
         return 1
@@ -488,9 +499,9 @@ install_brew_deps() {
         return 1
     fi
 
-
+    # Run update command
     printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
-    printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN}  This may take a while, please wait...${NONE}"
+    printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN} This may take a while, please wait...${NONE}"
     eval "${cmd}" >/dev/null 2>&1 || {
         printStyled error "Unable to install Homebrew dependencies"
         return 1
@@ -554,7 +565,7 @@ install_gacli_deps() {
     }
 
     # Install dependencies
-    brew bundle --file="${BREWFILE_TMP}" >/dev/null 2>&1 || {
+    brew bundle --file="${BREWFILE_TMP}" >/dev/null || { # TODO: 2>&1
         printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
         return 1
     }
@@ -661,7 +672,7 @@ auto_launch() {
     printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀"
     echo ""
     if command -v zsh >/dev/null 2>&1; then
-        printStyled highlight "All done, ${ORANGE}restart your shell${NONE} or run ${ORANGE}exec zsh${NONE}"
+        printStyled success "👉 ${GREEN}restart your shell${GREY} or run ${GREEN}exec zsh${NONE}"
         echo ""
     else
         printStyled error "Missing dependencie: ${ORANGE}zsh${NONE}\n"
