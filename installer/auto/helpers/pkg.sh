@@ -107,7 +107,7 @@ _pkg_get_current() {
             continue
         fi
 
-        CURRENT_PKG=$pkg
+        CURRENT_PKG=$pkg_manager
 
         echo "${CURRENT_PKG}"
         return 0
@@ -115,8 +115,8 @@ _pkg_get_current() {
 
     for pkg_manager in $UNSUPPORTED_PKG; do # TODO: fix (items may contain spaces)
 
-        name="${pkg%%=*}"
-        issue="${pkg#*=}"
+        name="${pkg_manager%%=*}"
+        issue="${pkg_manager#*=}"
 
         if ! command -v "$name" >/dev/null 2>&1; then
             continue
