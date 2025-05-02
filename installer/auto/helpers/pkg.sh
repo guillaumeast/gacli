@@ -34,7 +34,7 @@ pkg_install() {
             ;;
         apt)
             apt-get update -y || return 1
-            apt-get install -y build-essential $packets || return 1
+            DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential $packets || return 1
             ;;
         urpmi)
             urpmi.update -a || return 1
