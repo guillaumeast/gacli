@@ -151,13 +151,15 @@ main() {
         exit 40
     }
 
-    echo ""
+    echo
     printStyled highlight "Installing Homebrew dependencies..."
     pkg_install $BREW_DEPS  || exit 50  # Implemented in pkg.sh
 
 
-    echo ""
+    echo
     printStyled highlight "Installing Homebrew..."
+    echo "🚧 WIP - Available SOON™️"
+    echo
     # brew_install            || exit 51  # Implemented in brew.sh
 
     ####################
@@ -177,18 +179,18 @@ main() {
     # OLD
 
     # # Install GACLI
-    # echo ""
+    # echo
     # printStyled highlight "Installing GACLI ${GREY}→${CYAN} ${DIR_DEST}${GREY}...${NONE}"
     # gacli_download      || exit 41
     # gacli_install_deps  || exit 42
     # gacli_config        || exit 43
 
     # # Success
-    # echo ""
+    # echo
     # printStyled success "${GREEN}GACLI successfully installed${NONE} 🚀"
-    # echo ""
+    # echo
     # printStyled success "👉 ${GREEN}restart your shell${GREY} or run ${GREEN}exec zsh${NONE}"
-    # echo ""
+    # echo
 
     # OLD
     ####################

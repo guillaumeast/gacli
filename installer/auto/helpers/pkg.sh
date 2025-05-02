@@ -5,12 +5,9 @@
 
 # Full POSIX sh script to abstract package managers handling
 
-# Supported package managers (TODO: add apk, yum, nix-env, xbps-installserver-side)
-SUPPORTED_PKG="brew apt urpmi dnf pacman zypper emerge slackpkg pkg"
-
-# Unsupported "<name>=<issue>" (TODO: it's GACLI specific → move it into install.sh)
-UNSUPPORTED_PKG='"apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not available" "nix-env=FHS required" "xbps-installserver-side SSL/TLS issues"'
-
+# Supported package managers (TODO: add apk, yum, nix-env, xbps-installserver-side ?)
+SUPPORTED_PKG="brew apt urpmi dnf pacman zypper slackpkg"
+UNSUPPORTED_PKG='"emerge=unpredictible packet names" "pkg=unpredictible packet names" "apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not available" "nix-env=FHS required" "xbps-installserver-side SSL/TLS issues"'
 CURRENT_PKG=""
 
 # ────────────────────────────────────────────────────────────────
@@ -56,33 +53,16 @@ pkg_install() {
             zypper refresh || return 1
             zypper install -y -t pattern devel_basis $packets || return 1
             ;;
-        emerge)
-            # TODO: do not support (unpredictible custom packet names ??)
-            emerge --sync || return 1
-            prefixed=""
-            for raw in $packets; do
-                prefixed+="sys-devel/${raw}"
-            done
-            emerge -n --quiet "${prefixed}" || return 1
-            ;;
         slackpkg)
             slackpkg update || return 1
             yes | slackpkg install $packets || return 1
             update-ca-certificates --fresh
-            ;;
-        pkg)
-            pkg update -f || return 1
-            pkg install -y $packets || return 1
             ;;
         *)
             printStyled error "Unsupported package manager: ${ORANGE}${pkg_manager}${RED}"
             return 1
             ;;
     esac
-
-    # TODO: Cleanup
-
-    # TODO: Check install (each packet one by one)
 }
 
 # ────────────────────────────────────────────────────────────────

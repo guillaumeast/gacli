@@ -5,7 +5,8 @@
 
 # Full POSIX sh script to abstract Homebrew handling
 
-BREW_DEPS="bash git curl file procps-ng gcc make binutils gawk gzip ruby nghttp2 brotli cyrus-sasl ca-certificates perl"
+BREW_DEPS_APT="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps libsasl2-2"
+BREW_DEPS_FULL="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps-ng cyrus-sasl"
 GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
 
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
@@ -25,7 +26,7 @@ brew_install() {
     fi
 
     # Install Homebrew dependencies
-    pkg_install $BREW_DEPS || {
+    pkg_install $BREW_DEPS_COMMON || {
         printStyled warning "Unable to update dependencies → ${ORANGE}install may fail${NONE}"
         return 1
     }
