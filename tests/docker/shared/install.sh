@@ -146,6 +146,7 @@ main() {
     echo
     printStyled highlight "Updating installer..."
     fetch_helpers           || {
+        echo
         printStyled highlight "Download autonomous offline installer at: ${URL_MANUAL_INSTALLER}"
         echo
         exit 40
@@ -352,6 +353,7 @@ _check_http_client() {
     done
 
     printStyled error "No ${ORANGE}HTTP client${RED} found"
+    echo
     printStyled highlight "Download autonomous offline installer at: ${CYAN}${URL_MANUAL_INSTALLER}${NONE}"
     echo
     return 1
@@ -459,7 +461,7 @@ _download_files() {
         fi
 
         [ "${HTTP_CLIENT}" = "curl" ] && curl -fsSL "${url}" > "${dest}" && continue
-        [ "${HTTP_CLIENT}" = "wget" ] && curl -qO- "${url}" > "${dest}" && continue
+        [ "${HTTP_CLIENT}" = "wget" ] && wget -qO- "${url}" > "${dest}" && continue
 
         if [ "${HTTP_CLIENT}" = "git" ]; then
             file_path_in_repo="$(printf '%s' "${url}" | sed -E "s|https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/||")"
