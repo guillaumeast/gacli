@@ -1,0 +1,18 @@
+FROM ubuntu
+
+# Add sudo
+RUN apt-get update && \
+    apt-get install -y sudo && \
+    apt-get clean
+
+# Create non-root user with sudo access
+RUN groupadd -f sudo
+RUN echo "%sudo ALL=(ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
+RUN useradd -m -s /bin/sh appuser -G sudo
+
+# Switch to non-root user
+USER appuser
+WORKDIR /home/appuser
+
+# Run installer and return exit code
+CMD [ "sh", "/shared/install.sh" ]

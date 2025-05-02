@@ -293,8 +293,6 @@ check_env() {
             return 1
         fi
 
-        # TODO: add other Distro exceptions ?
-
         # Success
         printStyled success "Distribution: ${GREEN}${distro}${NONE}"
     fi
@@ -377,6 +375,7 @@ install_brew() {
         }
 
         # Add Homebrew to all source files
+        touch "/root/.zshrc"
         for file in $FILES_RC; do
             [ ! -f "${file}" ] && continue
             echo "" >> "${file}"
@@ -552,23 +551,8 @@ install_gacli_deps() {
         return 1     
     }
 
-    ###############################
-    # WIP
-
-    # ==> Pouring coreutils--9.7.arm64_linux.bottle.tar.gz
-    #     Error: Could not rename binutils keg! Check/fix its permissions:
-    #     sudo chown -R root /home/linuxbrew/.linuxbrew/Cellar/binutils/2.44
-
-    # -> Permission is not the real issue
-    # -> Real issue: /home/linuxbrew/.linuxbrew/Cellar/binutils/2.44 does not exist
-
-    # ---> Try to find why binutils is not in linuxbrew ?
-
-    # WIP
-    ###############################
-
     # Install dependencies
-    brew bundle --file="${BREWFILE_TMP}" || { # TODO WIP: >/dev/null 2>&1
+    brew bundle --file="${BREWFILE_TMP}" || { # WIP: >/dev/null 2>&1
         printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
         return 1
     }

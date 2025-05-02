@@ -27,7 +27,7 @@ brew_bundle() {
     fi
 
     # Install/uninstall formulae & casks referring to the Brewfile
-    if ! brew bundle --file="${brewfile}" 1>/dev/null; then
+    if ! brew bundle --file="${brewfile}" >/dev/null; then
         printStyled error "Failed to run bundle Homebrew"
         return 1
     fi

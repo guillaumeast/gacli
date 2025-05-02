@@ -1,9 +1,7 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /<TODO: path>/arch.zsh (move to src/helpers ?)
+# FICHIER /<TODO: path>/arch.zsh (move to src/helpers or installer/ ?)
 ###############################
-
-# Arch resolver
 
 # Return the system architecture (normalized)
 get_arch() {
@@ -31,7 +29,7 @@ get_arch() {
 # Return 0 if amd64/v2 level is available
 _is_amd64_v2() {
 
-  [[ "$(uname -m)" != "x86_64" ]] && return 1
+  [ "$(uname -m)" != "x86_64" ] && return 1
   grep -q 'sse4_2' /proc/cpuinfo || return 1
 }
 
