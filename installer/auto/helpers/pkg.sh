@@ -20,26 +20,28 @@ CURRENT_PKG=""
 # Install packages
 pkg_install() {
 
-    packets="$@"
+    packets=$@
     if [ -z "${packets}" ]; then
         printStyled error "Expected: <@packet_names>; received: '$@'"
         return 1
     fi
 
-    pkg=$(_pkg_get_current) || return 1
+    printStyled debug "packets: --->$packets<---"
 
-    case "${pkg}" in # TODO: add >/dev/null 2>&1
+    pkg_manager=$(_pkg_get_current) || return 1
+
+    case "${pkg_manager}" in # TODO: add >/dev/null 2>&1
         brew)
             brew upgrade || return 1
-            brew install "${packets}" || return 1
+            brew install $packets || return 1
             ;;
         apt)
             apt-get update -y || return 1
-            apt-get install -y "${packets}" || return 1
+            apt-get install -y $packets || return 1
             ;;
         urpmi)
             urpmi.update -a || return 1
-            urpmi --auto "${packets}" || return 1
+            urpmi --auto $packets || return 1
             ;;
         dnf)
             if dnf --version 2>/dev/null | grep -q "5\."; then
@@ -47,14 +49,14 @@ pkg_install() {
             else
                 dnf group install -y "Development Tools" || return 1
             fi
-            dnf install -y "${packets}" || return 1
+            dnf install -y $packets || return 1
             ;;
         pacman)
-            pacman -Sy --noconfirm "${packets}" || return 1
+            pacman -Sy --noconfirm $packets || return 1
             ;;
         zypper)
             zypper refresh || return 1
-            zypper install -y -t pattern devel_basis "${packets}" || return 1
+            zypper install -y -t pattern devel_basis $packets || return 1
             ;;
         emerge)
             # TODO: do not support (unpredictible custom packet names ??)
@@ -67,21 +69,21 @@ pkg_install() {
             ;;
         slackpkg)
             slackpkg update || return 1
-            yes | slackpkg install "${packets}" || return 1
+            yes | slackpkg install $packets || return 1
             ;;
         pkg)
             pkg update -f || return 1
-            pkg install -y "${packets}" || return 1
+            pkg install -y $packets || return 1
             ;;
         *)
-            printStyled error "Unsupported package manager: ${ORANGE}${name}${RED}"
+            printStyled error "Unsupported package manager: ${ORANGE}${pkg_manager}${RED}"
             return 1
             ;;
     esac
 
     # TODO: Cleanup
 
-    # TODO: Check install
+    # TODO: Check install (each packet one by one)
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -99,7 +101,7 @@ _pkg_get_current() {
 
     for pkg in $SUPPORTED_PKG; do
 
-        if ! command -v "${pkg}" >/dev/null 2>&1; then
+        if ! command -v "${pkg_manager}" >/dev/null 2>&1; then
             continue
         fi
 
