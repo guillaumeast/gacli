@@ -6,10 +6,12 @@
 # Full POSIX sh script to abstract package managers handling
 
 # Supported package managers (TODO: add apk, yum, nix-env, xbps-installserver-side)
-SUPPORTED_PKG='brew apt urpmi dnf pacman zypper emerge slackpkg pkg'
+SUPPORTED_PKG="brew apt urpmi dnf pacman zypper emerge slackpkg pkg"
 
 # Unsupported "<name>=<issue>" (TODO: it's GACLI specific → move it into install.sh)
 UNSUPPORTED_PKG='"apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not available" "nix-env=FHS required" "xbps-installserver-side SSL/TLS issues"'
+
+CURRENT_PKG=""
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -25,6 +27,8 @@ pkg_install() {
     fi
 
     pkg="$(_pkg_get_current)" || return 1
+
+    printStyled debug "pkg: --->${pkg}<---"
 
     case "${pkg}" in
         brew)
@@ -95,13 +99,16 @@ _pkg_get_current() {
     fi
 
     for pkg in $SUPPORTED_PKG; do
-        command -v "$pkg" || continue
-        CURRENT_PKG=$pkg
+        
+        printStyled debug "Trying pkg: ${pkg}"
+
+        command -v "${pkg}" || continue
+        CURRENT_PKG="${pkg}"
         echo "${CURRENT_PKG}"
         return 0
     done
 
-    for pkg in "${UNSUPPORTED_PKG[@]}"; do
+    for pkg in $UNSUPPORTED_PKG; do # TODO: fix (items may contain spaces)
         [[ -n "$pkg" && $pkg == *=* ]] || continue
         name="${pkg%%=*}"
         issue="${pkg#*=}"
