@@ -101,7 +101,7 @@ _pkg_get_current() {
         return 0
     fi
 
-    for pkg in $SUPPORTED_PKG; do
+    for pkg_manager in $SUPPORTED_PKG; do
 
         if ! command -v "${pkg_manager}" >/dev/null 2>&1; then
             continue
@@ -113,7 +113,7 @@ _pkg_get_current() {
         return 0
     done
 
-    for pkg in $UNSUPPORTED_PKG; do # TODO: fix (items may contain spaces)
+    for pkg_manager in $UNSUPPORTED_PKG; do # TODO: fix (items may contain spaces)
 
         name="${pkg%%=*}"
         issue="${pkg#*=}"
