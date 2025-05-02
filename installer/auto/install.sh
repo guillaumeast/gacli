@@ -107,9 +107,7 @@ printStyled() {
             emoji=$EMOJI_HIGHLIGHT
             ;;
         debug)
-            color_text=$YELLOW
-            color_emoji=$NONE
-            emoji=$EMOJI_DEBUG
+            printf "%s\n" "${EMOJI_DEBUG} ${YELLOW}Debug: ${msg}${NONE}" >&2
             ;;
         *)
             emoji=""

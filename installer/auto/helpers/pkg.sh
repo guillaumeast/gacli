@@ -94,13 +94,16 @@ _pkg_get_current() {
 
     # Return cached value
     if [ -n "${CURRENT_PKG}" ]; then
+
+        printStyled debug "Cached: --->${CURRENT_PKG}<---"
+
         echo "${CURRENT_PKG}"
         return 0
     fi
 
     for pkg in $SUPPORTED_PKG; do
         
-        printStyled debug "Trying pkg: ${pkg}"
+        printStyled debug "Trying pkg: --->${pkg}<---"
 
         command -v "${pkg}" || continue
         CURRENT_PKG="${pkg}"
@@ -109,15 +112,17 @@ _pkg_get_current() {
     done
 
     for pkg in $UNSUPPORTED_PKG; do # TODO: fix (items may contain spaces)
-        [[ -n "$pkg" && $pkg == *=* ]] || continue
+
         name="${pkg%%=*}"
         issue="${pkg#*=}"
+
         command -v "$name" || continue
+
         printStyled error "Unsupported package manager: ${ORANGE}${name}${RED} → ${issue}"
         return 1
     done
 
-    printStyled error "Unsupported package manager: ${ORANGE}${name}${RED}"
+    printStyled error "Unsupported package manager"
     return 1
 }
 
