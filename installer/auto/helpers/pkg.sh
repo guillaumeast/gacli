@@ -30,6 +30,8 @@ pkg_install() {
 
     pkg_manager=$(_pkg_get_current) || return 1
 
+    printStyled debug "pkg_manager: --->${pkg_manager}<---"
+
     case "${pkg_manager}" in # TODO: add >/dev/null 2>&1
         brew)
             brew upgrade || return 1
