@@ -26,11 +26,11 @@ pkg_install() {
         return 1
     fi
 
-    pkg="$(_pkg_get_current)" || return 1
+    pkg=$(_pkg_get_current) || return 1
 
     printStyled debug "pkg: --->${pkg}<---"
 
-    case "${pkg}" in
+    case "${pkg}" in # TODO: add >/dev/null 2>&1
         brew)
             brew upgrade || return 1
             brew install "${packets}" || return 1
