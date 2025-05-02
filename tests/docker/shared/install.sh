@@ -135,17 +135,17 @@ display_logo() {
 main() {
 
     echo
-    init_script "$@"        || exit 10
-    check_env               || exit 20
+    init_script "$@"            || exit 10
+    check_env                   || exit 20
 
     echo
     printStyled highlight "Preparing install..."
-    resolve_paths           || exit 30
-    init_tmp_folder         || exit 31
+    resolve_paths               || exit 30
+    init_tmp_folder             || exit 31
 
     echo
     printStyled highlight "Updating installer..."
-    fetch_helpers           || {
+    fetch_helpers               || {
         printStyled highlight "Download autonomous offline installer at: ${URL_MANUAL_INSTALLER}"
         echo
         exit 40
@@ -153,8 +153,8 @@ main() {
 
     echo ""
     printStyled highlight "Installing dependencies..."
-    pkg_install $BREW_DEPS  || exit 50  # Implemented in pkg.sh
-    brew_install            || exit 51  # Implemented in brew.sh
+    pkg_install "${BREW_DEPS}"  || exit 50  # Implemented in pkg.sh
+    brew_install                || exit 51  # Implemented in brew.sh
 
     ####################
     # WIP
