@@ -35,7 +35,7 @@ pkg_install() {
             ;;
         apt)
             apt-get update -y || return 1
-            apt-get install -y $packets || return 1
+            apt-get install -y build-essential $packets || return 1
             ;;
         urpmi)
             urpmi.update -a || return 1
@@ -50,7 +50,7 @@ pkg_install() {
             dnf install -y $packets || return 1
             ;;
         pacman)
-            pacman -Sy --noconfirm $packets || return 1
+            pacman -Sy --noconfirm base-devel $packets || return 1
             ;;
         zypper)
             zypper refresh || return 1
@@ -68,6 +68,7 @@ pkg_install() {
         slackpkg)
             slackpkg update || return 1
             yes | slackpkg install $packets || return 1
+            update-ca-certificates --fresh
             ;;
         pkg)
             pkg update -f || return 1

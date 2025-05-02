@@ -152,9 +152,13 @@ main() {
     }
 
     echo ""
-    printStyled highlight "Installing dependencies..."
+    printStyled highlight "Installing Homebrew dependencies..."
     pkg_install $BREW_DEPS  || exit 50  # Implemented in pkg.sh
-    brew_install            || exit 51  # Implemented in brew.sh
+
+
+    echo ""
+    printStyled highlight "Installing Homebrew..."
+    # brew_install            || exit 51  # Implemented in brew.sh
 
     ####################
     # WIP

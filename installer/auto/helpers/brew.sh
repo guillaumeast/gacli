@@ -5,8 +5,9 @@
 
 # Full POSIX sh script to abstract Homebrew handling
 
-# Variables
-BREW_DEPS="bash curl" # TODO
+BREW_DEPS="bash git curl file procps-ng gcc make binutils gawk gzip ruby nghttp2 brotli cyrus-sasl ca-certificates perl"
+GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
+
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
 
