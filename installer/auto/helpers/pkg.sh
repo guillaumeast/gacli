@@ -18,52 +18,58 @@ UNSUPPORTED_PKG='"apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not 
 # Install packages
 pkg_install() {
 
-    # Paquets to install
     packets="$@"
-
-    # Check args
-    [ "${#packets[@]}" > 0 ] && [ -n "${packets[1]}" ] || {
+    if [ -z "${packets}" ]; then
         printStyled error "Expected: <@packet_names>; received: '$@'"
         return 1
-    }
+    fi
 
-    # Update package manager
-    _pkg_update || return 1
-
-    # Install packets
     pkg="$(_pkg_get_current)" || return 1
+
     case "${pkg}" in
         brew)
-            brew install "${packets}"
+            brew upgrade || return 1
+            brew install "${packets}" || return 1
             ;;
         apt)
-            apt-get install -y "${packets}"
+            apt-get update -y || return 1
+            apt-get install -y "${packets}" || return 1
             ;;
         urpmi)
-            urpmi --auto "${packets}"
+            urpmi.update -a || return 1
+            urpmi --auto "${packets}" || return 1
             ;;
         dnf)
-            dnf install -y "${packets}"
+            if dnf --version 2>/dev/null | grep -q "5\."; then
+                dnf install -y @development-tools || return 1
+            else
+                dnf group install -y "Development Tools" || return 1
+            fi
+            dnf install -y "${packets}" || return 1
             ;;
         pacman)
-            pacman -Sy --noconfirm "${packets}"
+            pacman -Sy --noconfirm "${packets}" || return 1
             ;;
         zypper)
-            zypper install -y -t pattern devel_basis "${packets}"
+            zypper refresh || return 1
+            zypper install -y -t pattern devel_basis "${packets}" || return 1
             ;;
         emerge)
             # TODO: do not support (unpredictible custom packet names ??)
+            emerge --sync || return 1
             prefixed=""
             for raw in $packets; do
                 prefixed+="sys-devel/${raw}"
             done
-            emerge -n --quiet "${prefixed}"
+            emerge -n --quiet "${prefixed}" || return 1
             ;;
         slackpkg)
-            yes | slackpkg install "${packets}"
+            slackpkg update || return 1
+            yes | slackpkg install "${packets}" || return 1
             ;;
         pkg)
-            pkg install -y "${packets}"
+            pkg update -f || return 1
+            pkg install -y "${packets}" || return 1
             ;;
         *)
             printStyled error "Unsupported package manager: ${ORANGE}${name}${RED}"
@@ -80,7 +86,6 @@ pkg_install() {
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-# PRIVATE - Detects current package manager
 _pkg_get_current() {
 
     # Return cached value
@@ -89,7 +94,6 @@ _pkg_get_current() {
         return 0
     fi
 
-    # Test supported package managers
     for pkg in $SUPPORTED_PKG; do
         command -v "$pkg" || continue
         CURRENT_PKG=$pkg
@@ -97,7 +101,6 @@ _pkg_get_current() {
         return 0
     done
 
-    # Test unsupported package managers
     for pkg in "${UNSUPPORTED_PKG[@]}"; do
         [[ -n "$pkg" && $pkg == *=* ]] || continue
         name="${pkg%%=*}"
@@ -107,61 +110,7 @@ _pkg_get_current() {
         return 1
     done
 
-    # Fallback - unknown package manager
     printStyled error "Unsupported package manager: ${ORANGE}${name}${RED}"
     return 1
 }
-
-# PRIVATE - Update package manager
-_pkg_update() {
-
-    pkg="$(_pkg_get_current)" || return 1
-    case "${pkg}" in
-        brew)
-            brew upgrade
-            ;;
-        apt)
-            apt-get update -y
-            ;;
-        urpmi)
-            urpmi.update -a
-            ;;
-        dnf)
-            # TODO: do nothing or dot the above ?!
-            if dnf --version 2>/dev/null | grep -q "5\."; then
-                package_manager="dnf v5"
-                step_1="dnf install -y @development-tools"
-            else
-                package_manager="dnf v4"
-                step_1="dnf group install -y \"Development Tools\""
-            fi
-            ;;
-        pacman)
-            # TODO: do nothing ?!
-            ;;
-        zypper)
-            zypper refresh
-            ;;
-        emerge)
-            emerge --sync
-            ;;
-        slackpkg)
-            slackpkg update
-            ;;
-        pkg)
-            pkg update -f
-            ;;
-        *)
-            printStyled error "Unsupported package manager: ${ORANGE}${name}${RED}"
-            return 1
-            ;;
-    esac
-
-    # Check success
-    if ( ${?} > 0 ); then
-        printStyled error "Install failed"
-        return 1
-    fi
-}
-
 

@@ -13,12 +13,6 @@
 # TODO: add git one-liner install cmd into README
 
 # ────────────────────────────────────────────────────────────────
-# POSIX SH GUARD — Ensure safe behavior when sourced
-# ────────────────────────────────────────────────────────────────
-
-
-
-# ────────────────────────────────────────────────────────────────
 # VARIABLES
 # ────────────────────────────────────────────────────────────────
 
@@ -37,7 +31,7 @@ REPO="guillaumeast/gacli"
 URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 URL_MANUAL_INSTALLER="https://github.com/${REPO}/blob/${BRANCH}/installer/manual/install.sh"
 URL_HELPERS_DIR="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/installer/auto/helpers"
-URL_HELPERS_FILES="${URL_HELPERS}/pkg.sh ${URL_HELPERS}brew.sh"
+URL_HELPERS_FILES="${URL_HELPERS_DIR}/pkg.sh ${URL_HELPERS_DIR}/brew.sh"
 
 # PATHs
 DIR_DEST=".gacli"
@@ -71,17 +65,6 @@ EMOJI_TBD="⚐"
 EMOJI_HIGHLIGHT="→"
 EMOJI_DEBUG="🔎"
 EMOJI_WAIT="✧ ⏳"
-
-# Prints ASCII banner and activates emoji styling when UTF‑8 is supported
-display_logo() {
-    printf "%s\n" "${ORANGE}  _____          _____ _      _____ ${NONE}"
-    printf "%s\n" "${ORANGE} / ____|   /\\   / ____| |    |_   _|${NONE}"
-    printf "%s\n" "${ORANGE}| |  __   /  \\ | |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| | |_ | / /\\ \\| |    | |      | |  ${NONE}"
-    printf "%s\n" "${ORANGE}| |__| |/ ____ \\ |____| |____ _| |_ ${NONE}"
-    printf "%s\n" "${ORANGE} \\_____/_/    \\_\\_____|______|_____|${NONE}"
-    printf "%s\n" ""
-}
 
 # Centralised formatter to colour‑code and emoji log messages by severity
 printStyled() {
@@ -123,11 +106,28 @@ printStyled() {
             color_emoji=$NONE
             emoji=$EMOJI_HIGHLIGHT
             ;;
+        debug)
+            color_text=$YELLOW
+            color_emoji=$NONE
+            emoji=$EMOJI_DEBUG
+            ;;
         *)
             emoji=""
             ;;
     esac
     printf "%s\n" "${color_emoji}${emoji} ${color_text}${msg}${NONE}"
+}
+
+# Prints ASCII banner and activates emoji styling when UTF‑8 is supported
+display_logo() {
+    printf "%s\n" "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    printf "%s\n" "${ORANGE} / ____|   /\\   / ____| |    |_   _|${NONE}"
+    printf "%s\n" "${ORANGE}| |  __   /  \\ | |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| | |_ | / /\\ \\| |    | |      | |  ${NONE}"
+    printf "%s\n" "${ORANGE}| |__| |/ ____ \\ |____| |____ _| |_ ${NONE}"
+    printf "%s\n" "${ORANGE} \\_____/_/    \\_\\_____|______|_____|${NONE}"
+    printf "%s\n" ""
+    printStyled highlight "Checking environment..."
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -136,23 +136,31 @@ printStyled() {
 
 main() {
 
-    display_logo
-    printStyled highlight "Initializing..."
-    posix_guard                 || exit 11
-    parse_args "$@"             || exit 12
-    resolve_paths               || exit 13
-    check_env                   || exit 14
+    echo
+    init_script "$@"            || exit 10
+    check_env                   || exit 20
 
+    echo
+    printStyled highlight "Preparing install..."
+    resolve_paths               || exit 30
+    init_tmp_folder             || exit 31
+
+    echo
     printStyled highlight "Updating installer..."
     fetch_helpers               || {
         printStyled highlight "Download autonomous offline installer at: ${URL_MANUAL_INSTALLER}"
-        exit 21
+        echo
+        exit 40
     }
 
     echo ""
     printStyled highlight "Installing dependencies..."
-    pkg_install "${BREW_DEPS}"  || exit 31  # Implemented in pkg.sh
-    brew_install                || exit 32  # Implemented in brew.sh
+
+    printStyled debug "BREW_DEPS: --->${BREW_DEPS}<---"
+    printStyled debug "pkg_install: --->$(command -v pkg_install)<---"
+
+    pkg_install "${BREW_DEPS}"  || exit 50  # Implemented in pkg.sh
+    brew_install                || exit 51  # Implemented in brew.sh
 
     ####################
     # WIP
@@ -189,10 +197,17 @@ main() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# INIT
+# INIT SCRIPT
 # ────────────────────────────────────────────────────────────────
 
-posix_guard() {
+init_script() {
+
+    _posix_guard        || return 1
+    _parse_args "$@"    || return 1
+    _force_sudo         || return 1
+}
+
+_posix_guard() {
 
     shell_name="$(ps -p $$ -o comm= 2>/dev/null)"
 
@@ -206,12 +221,10 @@ posix_guard() {
             echo "❌ This script is POSIX. Run with: sh install.sh" >&2
             return 1
         ;;
-        *)
-        ;;
     esac
 }
 
-parse_args() {
+_parse_args() {
     
     for arg in "$@"; do
         case "${arg}" in
@@ -224,30 +237,30 @@ parse_args() {
                 ;;
         esac
     done
-    printStyled success "Arguments: ${GREEN}parsed${NONE}"
 }
 
-resolve_paths() {
+_force_sudo() {
 
-    [ -n "${HOME}" ] || {
-        printStyled error "\$HOME not set"
-        return 1
-    }
+    # Root → fine
+    if [ "$(id -u)" -eq 0 ]; then
+        display_logo
+        printStyled success "Privilege: ${GREEN}root${NONE}"
+        return 0
+    fi
 
-    # Destination
-    DIR_DEST="${HOME}/${DIR_DEST}"
-    ENTRY_POINT="${HOME}/${ENTRY_POINT}"
-    SYMDIR="${HOME}/${SYMDIR}"
-    SYMLINK="${HOME}/${SYMLINK}"
+    # Sudo → Retry in sudo mode
+    if command -v sudo >/dev/null 2>&1; then
+        printStyled warning "Enabling sudo mode..."
+        echo
+        echo "🔐 ${YELLOW}Password may be required${NONE}"
+        exec sudo -E sh "$0" "$@"
+    fi
 
-    # Shell config files
-    FILE_ZSHRC="${HOME}/${FILE_ZSHRC}"
-    raw=$RC_FILES && RC_FILES=""
-    for file in $raw; do
-        RC_FILES+="${HOME}/${file}"
-    done
-
-    printStyled success "Paths: ${GREEN}resolved${NONE}"
+    # No sudo → Warn install may fail
+    display_logo
+    printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
+    printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
+    printStyled warning "Non-root install may fail"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -256,34 +269,10 @@ resolve_paths() {
 
 check_env() {
 
-    _check_privilege   || return 1
-    _check_arch        || return 1
-    _check_os          || return 1
-    _check_shell       || return 1
-    _check_http_client || return 1
-    _init_tmp_folder   || return 1
-}
-
-_check_privilege() {
-
-    # Root → fine
-    if [ "$(id -u)" -eq 0 ]; then
-        printStyled success "Privilege: ${GREEN}root${NONE}"
-        return 0
-    fi
-
-    # Sudo → Retry in sudo mode
-    if command -v sudo >/dev/null 2>&1; then
-        printStyled warning "Retrying in sudo mode..."
-        echo
-        echo "🔐 ${YELLOW}Password may be required${NONE}"
-        exec sudo -E sh "$0" "$@"
-    fi
-
-    # No sudo → Warn install may fail
-    printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
-    printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
-    printStyled warning "Non-root install may fail"
+    _check_arch         || return 1
+    _check_os           || return 1
+    _check_shell        || return 1
+    _check_http_client  || return 1
 }
 
 _check_arch() {
@@ -300,14 +289,15 @@ _check_os() {
 
     # Check OS
     os=$(uname -s)
-    if [ "${os}" != "Darwin" ] && [ "${os}" != "Darwin" ]; then
+    if [ "${os}" != "Darwin" ] && [ "${os}" != "Linux" ]; then
         printStyled error "Unsupported OS: ${RED}${os}${NONE}"
-        return 1 ;;
+        return 1
     fi
     printStyled success "OS: ${GREEN}${os}${NONE}"
 
     # Linux → Check distribution
-    if [ "${os}" != "Linux" ]; then
+    if [ "${os}" = "Linux" ]; then
+
         # Read /etc/os-release to get the distro pretty-name (fallback to ID)
         if [ -r /etc/os-release ]; then
             . /etc/os-release
@@ -323,7 +313,6 @@ _check_os() {
             return 1
         fi
 
-        # Success
         printStyled success "Distribution: ${GREEN}${distro}${NONE}"
     fi
 }
@@ -354,24 +343,62 @@ _check_http_client() {
 
     for client in $HTTP_CLIENTS; do
 
-        ! command -v "$client" && continue
+        ! command -v "$client" >/dev/null 2>&1 && continue
 
         HTTP_CLIENT="$client"
-        printStyled success "Http client: ${GREEN}${HTTP_CLIENT}${GREY}"
+
+        color=$ORANGE
+        style="info_tbd"
+        if [ "${HTTP_CLIENT}" = "curl" ]; then
+            color=$GREEN
+            style="success"
+        fi
+
+        printStyled "${style}" "HTTP client: ${color}${HTTP_CLIENT}${GREY}"
         return 0
     done
 
-    printStyled error "No ${ORANGE}http client${NONE} found"
-    printStyled highlight "Download autonomous offline installer at: ${URL_MANUAL_INSTALLER}"
+    printStyled error "No ${ORANGE}HTTP client${RED} found"
+    printStyled highlight "Download autonomous offline installer at: ${CYAN}${URL_MANUAL_INSTALLER}${NONE}"
+    echo
     return 1
 }
 
-_init_tmp_folder() {
+# ────────────────────────────────────────────────────────────────
+# PREPARE INSTALL
+# ────────────────────────────────────────────────────────────────
 
-    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}" || {
-        printStyled error "Unable to delete old temporary files: ${CYAN}${DIR_TMP}${NONE}"
+resolve_paths() {
+
+    [ -n "${HOME}" ] || {
+        printStyled error "\$HOME not set"
         return 1
     }
+
+    # Destination
+    DIR_DEST="${HOME}/${DIR_DEST}"
+    ENTRY_POINT="${HOME}/${ENTRY_POINT}"
+    SYMDIR="${HOME}/${SYMDIR}"
+    SYMLINK="${HOME}/${SYMLINK}"
+
+    # Shell config files
+    FILE_ZSHRC="${HOME}/${FILE_ZSHRC}"
+    raw=$RC_FILES && RC_FILES=""
+    for file in $raw; do
+        RC_FILES+="${HOME}/${file}"
+    done
+
+    printStyled success "Paths: ${GREEN}resolved${NONE}"
+}
+
+init_tmp_folder() {
+
+    if [ -d "${DIR_TMP}" ]; then
+        rm -rf "${DIR_TMP}" || {
+            printStyled error "Unable to delete old temporary files: ${CYAN}${DIR_TMP}${NONE}"
+            return 1
+        }
+    fi
 
     DIR_TMP=$(mktemp -d "${DIR_TMP}".XXXXXX) || {
         printStyled error "Unable to create temporary folder: ${CYAN}${DIR_TMP}${NONE}"
@@ -390,10 +417,18 @@ fetch_helpers() {
     
     dir_tmp_helpers="${DIR_TMP}/helpers"
 
-    _download_files "${dir_tmp_helpers}" "${URL_HELPERS_FILES}" || return 1
+    mkdir -p "${dir_tmp_helpers}" || {
+        printStyled error "Unable to create temporary folder: ${dir_tmp_helpers}"
+        return 1
+    }
 
-    for url in "${URL_HELPERS_FILES}"; do
-        . "${dir_tmp_helpers}/$(basename "${url}")" || return 1
+    _download_files "${dir_tmp_helpers}" $URL_HELPERS_FILES || return 1
+    printStyled success "Downloaded: ${GREEN}helpers${NONE}"
+
+    for url in $URL_HELPERS_FILES; do
+        filename=$(basename "${url}")
+        . "${dir_tmp_helpers}/${filename}" || return 1
+        printStyled success "Loaded: ${GREEN}${filename}${NONE}"
     done
 }
 
@@ -413,6 +448,9 @@ _download_files() {
     fi
 
     if [ "${HTTP_CLIENT}" = "git" ]; then
+
+        printStyled wait "Downloading: helpers..."
+
         tmp_repo="${DIR_TMP}/gitclone"
         git clone --depth=1 --branch="${BRANCH}" "https://github.com/${REPO}.git" "${tmp_repo}" >/dev/null 2>&1 || return 1
     fi
@@ -438,7 +476,7 @@ _download_files() {
         printStyled error "Unable to download file"
         printStyled info_tbd "→ with: ${ORANGE}${HTTP_CLIENT}${NONE}"
         printStyled info_tbd "→ from: ${CYAN}${url}${NONE}"
-        printStyled info_tbd "→ to: ${CYAN}${dest}${NONE}"
+        printStyled info_tbd "→ to:   ${CYAN}${dest}${NONE}"
         return 1
     done
 }
