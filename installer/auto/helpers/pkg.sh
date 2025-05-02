@@ -5,10 +5,12 @@
 
 # Full POSIX sh script to abstract package managers handling
 
-# Supported package managers (TODO: add apk, yum, nix-env, xbps-installserver-side ?)
+# TODO: add apk, yum, nix-env, xbps-installserver-side to SUPPORTED_PKG ?
 SUPPORTED_PKG="brew apt urpmi dnf pacman zypper slackpkg"
 UNSUPPORTED_PKG='"emerge=unpredictible packet names" "pkg=unpredictible packet names" "apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not available" "nix-env=FHS required" "xbps-installserver-side SSL/TLS issues"'
 CURRENT_PKG=""
+
+GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -23,7 +25,7 @@ pkg_install() {
         return 1
     fi
 
-    pkg_manager=$(_pkg_get_current) || return 1
+    pkg_manager=$(pkg_get_current) || return 1
 
     case "${pkg_manager}" in # TODO: add >/dev/null 2>&1
         brew)
@@ -65,11 +67,7 @@ pkg_install() {
     esac
 }
 
-# ────────────────────────────────────────────────────────────────
-# PRIVATE
-# ────────────────────────────────────────────────────────────────
-
-_pkg_get_current() {
+pkg_get_current() {
 
     # Return cached value
     if [ -n "${CURRENT_PKG}" ]; then

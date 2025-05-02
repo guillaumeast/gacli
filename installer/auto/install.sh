@@ -152,15 +152,8 @@ main() {
     }
 
     echo
-    printStyled highlight "Installing Homebrew dependencies..."
-    pkg_install $BREW_DEPS  || exit 50  # Implemented in pkg.sh
-
-
-    echo
-    printStyled highlight "Installing Homebrew..."
-    echo "🚧 WIP - Available SOON™️"
-    echo
-    # brew_install            || exit 51  # Implemented in brew.sh
+    printStyled highlight "Checking package manager..."
+    check_brew              || exit 50
 
     ####################
     # WIP
@@ -410,7 +403,7 @@ init_tmp_folder() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# DOWNLOAD
+# HELPERS
 # ────────────────────────────────────────────────────────────────
 
 fetch_helpers() {
@@ -479,6 +472,33 @@ _download_files() {
         printStyled info_tbd "→ to:   ${CYAN}${dest}${NONE}"
         return 1
     done
+}
+
+# ────────────────────────────────────────────────────────────────
+# HOMEBREW
+# ────────────────────────────────────────────────────────────────
+
+check_brew() {
+
+    package_manager=$(pkg_get_current) || return 1
+
+    if [ "${package_manager}" = "brew" ]; then
+        printStyled success "Detected: ${GREEN}${package_manager}${GREY}"
+        return 0
+    fi
+    printStyled info_tbd "Package manager: ${ORANGE}${package_manager}${GREY}"
+
+    if [ "${package_manager}" = "apt" ]; then
+        pkg_install $BREW_DEPS_APT    || return 1
+    else
+        pkg_install $BREW_DEPS_OTHERS || return 1
+    fi
+
+    echo
+    printStyled highlight "Installing Homebrew..."
+    # brew_install || return 1  # Implemented in brew.sh
+    echo "🚧 WIP - Available SOON™️"
+    echo
 }
 
 # ────────────────────────────────────────────────────────────────

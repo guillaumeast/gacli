@@ -5,12 +5,11 @@
 
 # Full POSIX sh script to abstract Homebrew handling
 
-BREW_DEPS_APT="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps libsasl2-2"
-BREW_DEPS_FULL="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps-ng cyrus-sasl"
-GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
-
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
+
+BREW_DEPS_APT="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps libsasl2-2"
+BREW_DEPS_OTHERS="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps-ng cyrus-sasl"
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
