@@ -97,17 +97,23 @@ _pkg_get_current() {
     # Return cached value
     if [ -n "${CURRENT_PKG}" ]; then
 
+        printStyled debug "Returned cached pkg_manager: --->${CURRENT_PKG}<---"
+
         echo "${CURRENT_PKG}"
         return 0
     fi
 
     for pkg_manager in $SUPPORTED_PKG; do
 
+        printStyled debug "Trying: --->${pkg_manager}<---"
+
         if ! command -v "${pkg_manager}" >/dev/null 2>&1; then
             continue
         fi
 
         CURRENT_PKG=$pkg_manager
+
+        printStyled debug "Succes → CURRENT_PKG: --->${CURRENT_PKG}<---"
 
         echo "${CURRENT_PKG}"
         return 0
