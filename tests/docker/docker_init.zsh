@@ -10,7 +10,7 @@ DIR_DOCKERFILES="${DIR_DOCKER}/dockerfiles"
 DIR_CONTEXT="${DIR_DOCKER}/context"
 
 DIR_LOCAL_GACLI="${DIR_DOCKER}/../.."
-FILE_INSTALLER="${DIR_LOCAL_GACLI}/installer/install.sh"
+FILE_INSTALLER="${DIR_LOCAL_GACLI}/installer/manual/install.sh"
 
 VOLUME_LOCAL="${DIR_DOCKER}/shared"
 VOLUME_VIRTUAL="/shared"
@@ -112,9 +112,13 @@ docker_build_images() {
     local passed=0
     local failed=0
 
+    echo ""
+    print -n "👉 ${BOLD}Rebuild images? [y/n] ${NONE}"
+    read -r answer
+    [[ "${answer}" != "y" && "${answer}" != "Y" ]] && return 0
+
     printheader "Building images..."
-    # (.om) → only regular files, sorted by name
-    for file in "${DIR_MERGED}"/**/*(.om); do
+    for file in "${DIR_DOCKERFILES}"/**/*; do
 
         [[ ! -f "${file}" ]] && continue
         image="${${file:t}#Dockerfile.}"
@@ -175,12 +179,21 @@ docker_run() {
     local failed=0
 
     printheader "Running images..."
-    for image in "${IMAGES_BUILT[@]}"; do
+    for file in "${DIR_DOCKERFILES}"/**/*; do
+
+        [[ ! -f "${file}" ]] && continue
+        image="${${file:t}#Dockerfile.}"
 
         printStyled wait "Running → ${image}..."
 
-        mkdir -p "${VOLUME_LOCAL}" || printStyled warning "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
-        cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}" || printStyled warning "Unable to copy installer"
+        mkdir -p "${VOLUME_LOCAL}" || {
+            printStyled error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
+            return 1
+        }
+        cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}" || {
+            printStyled error "Unable to copy installer"
+            return 1
+        }
 
         if docker run -it --rm -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}"; then
             printStyled success "Passed  → ${GREEN}${image}${NONE}"

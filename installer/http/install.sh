@@ -30,7 +30,7 @@ HTTP_CLIENT=""
 REPO="guillaumeast/gacli"
 URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 URL_MANUAL_INSTALLER="https://github.com/${REPO}/blob/${BRANCH}/installer/manual/install.sh"
-URL_HELPERS_DIR="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/installer/auto/helpers"
+URL_HELPERS_DIR="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/installer/http/helpers"
 URL_HELPERS_FILES="${URL_HELPERS_DIR}/pkg.sh ${URL_HELPERS_DIR}/brew.sh"
 
 # PATHs
