@@ -101,10 +101,12 @@ _pkg_get_current() {
 
     for pkg in $SUPPORTED_PKG; do
 
-        ! command -v "${pkg}" && continue
+        if ! command -v "${pkg}" >/dev/null 2>&1; then
+            continue
+        fi
 
         CURRENT_PKG=$pkg
-        
+
         echo "${CURRENT_PKG}"
         return 0
     done
@@ -114,7 +116,9 @@ _pkg_get_current() {
         name="${pkg%%=*}"
         issue="${pkg#*=}"
 
-        ! command -v "$name" && continue
+        if ! command -v "$name" >/dev/null 2>&1; then
+            continue
+        fi
 
         printStyled error "Unsupported package manager: ${ORANGE}${name}${RED} → ${issue}"
         return 1

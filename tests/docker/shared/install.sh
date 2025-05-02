@@ -107,9 +107,7 @@ printStyled() {
             emoji=$EMOJI_HIGHLIGHT
             ;;
         debug)
-            color_text=$YELLOW
-            color_emoji=$NONE
-            emoji=$EMOJI_DEBUG
+            printf "%s\n" "${EMOJI_DEBUG} ${YELLOW}Debug: ${msg}${NONE}" >&2
             ;;
         *)
             emoji=""
@@ -155,10 +153,6 @@ main() {
 
     echo ""
     printStyled highlight "Installing dependencies..."
-
-    printStyled debug "BREW_DEPS: --->${BREW_DEPS}<---"
-    printStyled debug "pkg_install: --->$(command -v pkg_install)<---"
-
     pkg_install "${BREW_DEPS}"  || exit 50  # Implemented in pkg.sh
     brew_install                || exit 51  # Implemented in brew.sh
 
