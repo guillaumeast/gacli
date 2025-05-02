@@ -1,0 +1,14 @@
+FROM fedora
+
+# Add sudo
+RUN dnf install -y sudo git && \
+    dnf clean all
+
+RUN groupadd -f sudo
+RUN echo "%sudo ALL=(ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
+
+RUN useradd -m -s /bin/sh appuser -G sudo
+USER appuser
+WORKDIR /home/appuser
+
+CMD ["sh", "-c", "git clone --depth=1 --branch=dev https://github.com/guillaumeast/gacli.git /tmp/gacli-repo && sh /tmp/gacli-repo/installer/http/install.sh && rm -rf /tmp/gacli-repo"]

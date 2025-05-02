@@ -1,12 +1,14 @@
+FROM opensuse/leap
 
-# Create non-root user with sudo access
+# Add sudo
+RUN zypper refresh && \
+    zypper install -y sudo
+
 RUN groupadd -f sudo
 RUN echo "%sudo ALL=(ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
-RUN useradd -m -s /bin/sh appuser -G sudo
 
-# Switch to non-root user
+RUN useradd -m -s /bin/sh appuser -G sudo
 USER appuser
 WORKDIR /home/appuser
 
-# Run installer and return exit code
 CMD [ "sh", "/shared/install.sh" ]

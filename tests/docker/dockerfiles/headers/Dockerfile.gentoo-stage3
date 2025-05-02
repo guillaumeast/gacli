@@ -1,5 +1,0 @@
-FROM gentoo/stage3
-
-# Add sudo
-RUN emerge --sync && \
-    emerge --quiet sudo

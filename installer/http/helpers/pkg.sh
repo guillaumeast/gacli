@@ -35,10 +35,12 @@ pkg_install() {
         apt)
             apt-get update -y || return 1
             DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential $packets || return 1
+            apt-get clean
             ;;
         urpmi)
             urpmi.update -a || return 1
             urpmi --auto $packets || return 1
+            urpme --auto-orphans
             ;;
         dnf)
             if dnf --version 2>/dev/null | grep -q "5\."; then
@@ -47,6 +49,7 @@ pkg_install() {
                 dnf group install -y "Development Tools" || return 1
             fi
             dnf install -y $packets || return 1
+            dnf clean all
             ;;
         pacman)
             pacman -Sy --noconfirm base-devel $packets || return 1

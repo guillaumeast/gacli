@@ -1,6 +1,0 @@
-FROM mageia
-
-# Add sudo
-RUN urpmi.update -a && \
-    urpmi --auto sudo && \
-    urpme --auto-orphans

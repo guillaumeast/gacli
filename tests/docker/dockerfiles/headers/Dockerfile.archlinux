@@ -1,4 +1,0 @@
-FROM archlinux
-
-# Add sudo
-RUN pacman -Sy --noconfirm sudo

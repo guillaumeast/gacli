@@ -1,0 +1,15 @@
+FROM mageia
+
+# Add sudo
+RUN urpmi.update -a && \
+    urpmi --auto sudo wget && \
+    urpme --auto-orphans
+
+RUN groupadd -f sudo
+RUN echo "%sudo ALL=(ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
+
+RUN useradd -m -s /bin/sh appuser -G sudo
+USER appuser
+WORKDIR /home/appuser
+
+CMD ["sh", "-c", "wget -qO- https://raw.githubusercontent.com/guillaumeast/gacli/refs/heads/dev/installer/http/install.sh | sh"]

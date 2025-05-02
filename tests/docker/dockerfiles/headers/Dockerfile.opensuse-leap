@@ -1,5 +1,0 @@
-FROM opensuse/leap
-
-# Add sudo
-RUN zypper refresh && \
-    zypper install -y sudo

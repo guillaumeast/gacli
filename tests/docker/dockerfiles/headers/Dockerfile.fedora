@@ -1,5 +1,0 @@
-FROM fedora
-
-# Add sudo
-RUN dnf install -y sudo && \
-    dnf clean all
