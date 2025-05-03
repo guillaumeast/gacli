@@ -112,7 +112,6 @@ docker_build_images() {
     local passed=0
     local failed=0
 
-    echo ""
     print -n "👉 ${BOLD}Rebuild images? [y/n] ${NONE}"
     read -r answer
     [[ "${answer}" != "y" && "${answer}" != "Y" ]] && return 0
@@ -148,11 +147,9 @@ _docker_build() {
     }
 
     if docker build -f "${file}" -t "${image}" "${DIR_CONTEXT}" > /dev/null 2>&1; then
-
         printStyled success "Passed   → ${GREEN}${image}${NONE}"
         return 0
     else
-
         fallbacks=("$(get_arch_fallbacks)") || return 1
         for arch in "${fallbacks[@]}"; do
             [[ -z "$arch" ]] && continue
@@ -184,7 +181,7 @@ docker_run() {
         [[ ! -f "${file}" ]] && continue
         image="${${file:t}#Dockerfile.}"
 
-        printStyled wait "Running → ${image}..."
+        # printStyled wait "Running → ${image}..."
 
         mkdir -p "${VOLUME_LOCAL}" || {
             printStyled error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
@@ -195,11 +192,11 @@ docker_run() {
             return 1
         }
 
-        if docker run -it --rm -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}"; then
+        if docker run -it --rm -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" >/dev/null 2>&1; then
             printStyled success "Passed  → ${GREEN}${image}${NONE}"
             (( passed++ ))
         else
-            printStyled warning "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}" || return 1
+            printStyled error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
             (( failed++ ))
         fi
     done

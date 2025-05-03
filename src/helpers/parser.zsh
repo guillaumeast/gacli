@@ -29,7 +29,7 @@ file_read() {
   fi
 
   # Get extension
-  if ! extension=$(_get_extension $file); then
+  if ! extension=$(get_extension $file); then
     printStyled error "Unable to detect file format: ${file}"
     return 1
   fi
@@ -70,7 +70,7 @@ file_write() {
   fi
 
   # Get extension
-  if ! extension=$(_get_extension $file); then
+  if ! extension=$(get_extension $file); then
     printStyled error "Unable to detect file format: ${file}"
     return 1
   fi
@@ -109,7 +109,7 @@ file_reset() {
   fi
 
   # Get extension
-  if ! extension=$(_get_extension $file); then
+  if ! extension=$(get_extension $file); then
     printStyled error "Unable to detect file format: ${file}"
     return 1
   fi
@@ -150,7 +150,7 @@ file_add() {
   fi
 
   # Get extension
-  if ! extension=$(_get_extension $file); then
+  if ! extension=$(get_extension $file); then
     printStyled error "Unable to detect file format: ${file}"
     return 1
   fi
@@ -195,7 +195,7 @@ file_rm() {
   fi
 
   # Get extension
-  if ! extension=$(_get_extension $file); then
+  if ! extension=$(get_extension $file); then
     printStyled error "Unable to detect file format: ${file}"
     return 1
   fi
@@ -224,7 +224,7 @@ file_rm() {
 # ────────────────────────────────────────────────────────────────
 
 # PUBLIC - Return file extension in lowercase (special case for Brewfile)
-# __get_extension <file>
+# get_extension <file>
 get_extension() {
     local file="${1}"
     local file_name="${file##*/}"
