@@ -247,7 +247,16 @@ _force_sudo() {
         printStyled warning "Enabling sudo mode..."
         echo
         echo "🔐 ${YELLOW}Password may be required${NONE}"
-        exec sudo -E sh "$0" "$@"
+
+        # If script is not a file (pipe), dump it to tmp and re-run
+        if [ ! -f "$0" ]; then
+            tmp_script="$(mktemp)"
+            cat > "$tmp_script"
+            chmod +x "$tmp_script"
+            exec sudo -E sh "$tmp_script" "$@"
+        else
+            exec sudo -E sh "$0" "$@"
+        fi
     fi
 
     # No sudo → Warn install may fail
