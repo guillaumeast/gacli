@@ -7,10 +7,7 @@
 
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
-
-BREW_DEPS_APT="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps libsasl2-2"
-BREW_DEPS_PACMAN="bash git curl file gcc make binutils gawk gzip ruby brotli ca-certificates perl procps-ng cyrus-sasl"
-BREW_DEPS_OTHERS="bash git curl file gcc make binutils gawk gzip ruby nghttp2 brotli ca-certificates perl procps-ng cyrus-sasl"
+BREW_DEPS="bash git curl file gcc make binutils gawk gzip ruby ca-certificates perl brotli procps cyrus-sasl nghttp2"
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
@@ -25,28 +22,15 @@ brew_install() {
         return 0
     fi
 
-    # Install Homebrew dependencies
-    pkg_install $BREW_DEPS_COMMON || {
-        printStyled warning "Unable to update dependencies → ${ORANGE}install may fail${NONE}"
+    # Install dependencies
+    if ! pkg_install $BREW_DEPS; then
+        printStyled error "Unable to install Homebrew dependencies"
         return 1
-    }
-
-    # Build install command
-    bash_path="$(command -v bash || printf %s '/bin/bash')"
-    install_cmd="yes '' | ${bash_path} -c \"\$(curl -fsSL ${BREW_INSTALL_URL})\"" # TODO WIP: >/dev/null 2>&1
-
-    # Try default install + NO_API fallback
-    printStyled wait "Installing Homebrew..."
-    if ! eval "${install_cmd}"; then
-        # Fallback → NO_API
-        printStyled warning "Install failed → Fallback on API-less method..."
-        printStyled warning "${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
-        export HOMEBREW_NO_INSTALL_FROM_API=1
-        eval "${install_cmd}" || {
-            printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
-            return 1
-        }
     fi
+    printStyled success "Installed: ${GREEN}dependencies${NONE}"
+
+    # Install Homebrew
+    _brew_install_with_fallback || return 1
     printStyled success "Installed: ${GREEN}Homebrew${NONE}"
     
     # Configure env
@@ -54,18 +38,37 @@ brew_install() {
     printStyled success "Configured: ${GREEN}Linuxbrew${NONE}"
 
     # Check install
-    if command -v brew >/dev/null 2>&1; then
-        printStyled success "Ready: ${GREEN}Homebrew${NONE}"
-        return 0
-    else
+    if ! command -v brew >/dev/null 2>&1; then
         printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
         return 1
     fi
+
+    printStyled success "Ready: ${GREEN}Homebrew${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
+
+_brew_install_with_fallback() {
+
+    bash_path="$(command -v bash || printf %s '/bin/bash')"
+    install_cmd="yes '' | ${bash_path} -c \"\$(curl -fsSL ${BREW_INSTALL_URL})\"" # TODO WIP: >/dev/null 2>&1
+
+
+    printStyled wait "Installing Homebrew..."
+    if ! eval "${install_cmd}"; then
+
+        printStyled warning "Install failed → Fallback on API-less method..."
+        printStyled warning "${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
+
+        export HOMEBREW_NO_INSTALL_FROM_API=1
+        eval "${install_cmd}" || {
+            printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
+            return 1
+        }
+    fi
+}
 
 _brew_config() {
 

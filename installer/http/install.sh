@@ -12,12 +12,12 @@
 # TODO: add wget one-liner install cmd into README
 # TODO: add git one-liner install cmd into README
 
+BRANCH="dev" # TODO: make it "master" for prod (via ENV variable ?)
+GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
+
 # ────────────────────────────────────────────────────────────────
 # VARIABLES
 # ────────────────────────────────────────────────────────────────
-
-# TODO: make it "master" for prod (via ENV variable ?)
-BRANCH="dev"
 
 # Options
 FORCE_MODE="false"
@@ -484,28 +484,17 @@ _download_files() {
 check_brew() {
 
     package_manager=$(pkg_get_current) || return 1
-
     if [ "${package_manager}" = "brew" ]; then
         printStyled success "Detected: ${GREEN}${package_manager}${GREY}"
         return 0
     fi
     printStyled info_tbd "Package manager: ${ORANGE}${package_manager}${GREY}"
 
-    case "${package_manager}" in
-        apt)
-            pkg_install $BREW_DEPS_APT    || return 1
-        ;;
-        pacman)
-            pkg_install $BREW_DEPS_PACMAN || return 1
-        ;;
-        *)
-            pkg_install $BREW_DEPS_OTHERS || return 1
-        ;;
-    esac
-
     echo
     printStyled highlight "Installing Homebrew..."
-    # brew_install || return 1  # Implemented in brew.sh
+    brew_install || return 1
+
+    # TODO: WIP
     echo "🚧 WIP - Available SOON™️"
     echo
 }
