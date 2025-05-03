@@ -175,13 +175,11 @@ docker_run() {
     local passed=0
     local failed=0
 
-    printheader "Running images..."
+    printheader "Running containers..."
     for file in "${DIR_DOCKERFILES}"/**/*; do
 
         [[ ! -f "${file}" ]] && continue
         image="${${file:t}#Dockerfile.}"
-
-        # printStyled wait "Running → ${image}..."
 
         mkdir -p "${VOLUME_LOCAL}" || {
             printStyled error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
@@ -192,7 +190,7 @@ docker_run() {
             return 1
         }
 
-        if docker run -it --rm -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" >/dev/null 2>&1; then
+        if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" >/dev/null 2>&1; then
             printStyled success "Passed  → ${GREEN}${image}${NONE}"
             (( passed++ ))
         else

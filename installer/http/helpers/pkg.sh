@@ -56,7 +56,8 @@ pkg_install() {
             ;;
         zypper)
             zypper refresh || return 1
-            zypper install -y -t pattern devel_basis $packets || return 1
+            zypper install -y -t pattern devel_basis || return 1
+            zypper install -y $packets || return 1
             ;;
         slackpkg)
             slackpkg update || return 1

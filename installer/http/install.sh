@@ -247,6 +247,7 @@ _force_sudo() {
         printStyled warning "Enabling sudo mode..."
         echo
         echo "🔐 ${YELLOW}Password may be required${NONE}"
+        # TODO: fix pipe support ! (fails on archlinux when `... | sh`)
         exec sudo -E sh "$0" "$@"
     fi
 
