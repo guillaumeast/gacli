@@ -247,16 +247,7 @@ _force_sudo() {
         printStyled warning "Enabling sudo mode..."
         echo
         echo "🔐 ${YELLOW}Password may be required${NONE}"
-
-        # If script is not a file (pipe), dump it to tmp and re-run
-        if [ ! -f "$0" ]; then
-            tmp_script="$(mktemp)"
-            cat > "$tmp_script"
-            chmod +x "$tmp_script"
-            exec sudo -E sh "$tmp_script" "$@"
-        else
-            exec sudo -E sh "$0" "$@"
-        fi
+        exec sudo -E sh "$0" "$@"
     fi
 
     # No sudo → Warn install may fail
@@ -499,11 +490,17 @@ check_brew() {
     fi
     printStyled info_tbd "Package manager: ${ORANGE}${package_manager}${GREY}"
 
-    if [ "${package_manager}" = "apt" ]; then
-        pkg_install $BREW_DEPS_APT    || return 1
-    else
-        pkg_install $BREW_DEPS_OTHERS || return 1
-    fi
+    case "${package_manager}" in
+        apt)
+            pkg_install $BREW_DEPS_APT    || return 1
+        ;;
+        pacman)
+            pkg_install $BREW_DEPS_PACMAN || return 1
+        ;;
+        *)
+            pkg_install $BREW_DEPS_OTHERS || return 1
+        ;;
+    esac
 
     echo
     printStyled highlight "Installing Homebrew..."
