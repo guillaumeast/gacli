@@ -238,7 +238,7 @@ printStyled() {
             color_emoji=$GREY
             emoji=$EMOJI_INFO
             ;;
-        info_tbd)
+        fallback)
             color_text=$GREY
             color_emoji=$ORANGE
             emoji=$EMOJI_TBD
@@ -290,14 +290,14 @@ _pkg_test() {
         if [ "$result" = "${expected}" ]; then
             printStyled success "→ test 1   --->${result}<---"
         else
-            printStyled info_tbd "→ test 1   --->${result}<---"
+            printStyled fallback "→ test 1   --->${result}<---"
         fi
 
         result=$(_pkg_format_deps "${pkg}" $TEST_DEPS_2)
         if [ "$result" = "${expected}" ]; then
             printStyled success "→ test 2   --->${result}<---"
         else
-            printStyled info_tbd "→ test 2   --->${result}<---"
+            printStyled fallback "→ test 2   --->${result}<---"
         fi
     done
 

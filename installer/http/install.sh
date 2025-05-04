@@ -96,7 +96,7 @@ printStyled() {
             color_emoji=$GREY
             emoji=$EMOJI_INFO
             ;;
-        info_tbd)
+        fallback)
             color_text=$GREY
             color_emoji=$ORANGE
             emoji=$EMOJI_TBD
@@ -253,8 +253,8 @@ _force_sudo() {
 
     # No sudo → Warn install may fail
     display_logo
-    printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
-    printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
+    printStyled fallback "Privilege: ${ORANGE}non-root user${NONE}"
+    printStyled fallback "Not detected : ${ORANGE}sudo${NONE}"
     printStyled warning "Non-root install may fail"
 }
 
@@ -276,7 +276,7 @@ _check_arch() {
     if [ -n "$arch" ]; then
         printStyled success "Arch: ${GREEN}${arch}${NONE}"
     else
-        printStyled info_tbd "Arch: ${ORANGE}unknown${NONE}"
+        printStyled fallback "Arch: ${ORANGE}unknown${NONE}"
     fi
 }
 
@@ -326,12 +326,12 @@ _check_shell() {
 
     # Other → tbd
     if [ -n "${shell_name}" ]; then
-        printStyled info_tbd "Default shell: ${ORANGE}${shell_name}${GREY} → ${CYAN}${shell_path}${NONE}"
+        printStyled fallback "Default shell: ${ORANGE}${shell_name}${GREY} → ${CYAN}${shell_path}${NONE}"
         return 0
     fi
 
     # Unknown → warn
-    printStyled info_tbd "Default shell: ${RED}unknown${GREY} → path: '${CYAN}${shell_path}${NONE}'"
+    printStyled fallback "Default shell: ${RED}unknown${GREY} → path: '${CYAN}${shell_path}${NONE}'"
 }
 
 _check_http_client() {
@@ -343,7 +343,7 @@ _check_http_client() {
         HTTP_CLIENT="$client"
 
         color=$ORANGE
-        style="info_tbd"
+        style="fallback"
         if [ "${HTTP_CLIENT}" = "curl" ]; then
             color=$GREEN
             style="success"
@@ -470,9 +470,9 @@ _download_files() {
         fi
         
         printStyled error "Unable to download file"
-        printStyled info_tbd "→ with: ${ORANGE}${HTTP_CLIENT}${NONE}"
-        printStyled info_tbd "→ from: ${CYAN}${url}${NONE}"
-        printStyled info_tbd "→ to:   ${CYAN}${dest}${NONE}"
+        printStyled fallback "→ with: ${ORANGE}${HTTP_CLIENT}${NONE}"
+        printStyled fallback "→ from: ${CYAN}${url}${NONE}"
+        printStyled fallback "→ to:   ${CYAN}${dest}${NONE}"
         return 1
     done
 }
@@ -488,7 +488,7 @@ check_brew() {
         printStyled success "Detected: ${GREEN}${package_manager}${GREY}"
         return 0
     fi
-    printStyled info_tbd "Package manager: ${ORANGE}${package_manager}${GREY}"
+    printStyled fallback "Package manager: ${ORANGE}${package_manager}${GREY}"
 
     echo
     printStyled highlight "Installing Homebrew..."

@@ -177,7 +177,7 @@ printStyled() {
             color_emoji=$GREY
             emoji=$EMOJI_INFO
             ;;
-        info_tbd)
+        fallback)
             color_text=$GREY
             color_emoji=$ORANGE
             emoji=$EMOJI_TBD
@@ -254,8 +254,8 @@ check_env() {
             echo "🔐 ${YELLOW}Password may be required${NONE}"
             exec sudo -E sh "$0" "$@"
         else
-            printStyled info_tbd "Privilege: ${ORANGE}non-root user${NONE}"
-            printStyled info_tbd "Not detected : ${ORANGE}sudo${NONE}"
+            printStyled fallback "Privilege: ${ORANGE}non-root user${NONE}"
+            printStyled fallback "Not detected : ${ORANGE}sudo${NONE}"
             printStyled warning "Non-root install may fail"
         fi
     else
@@ -308,7 +308,7 @@ check_env() {
         style="success"
         color="${GREEN}"
     elif [ -n "${SHELL_NAME}" ]; then
-        style="info_tbd"
+        style="fallback"
         color="${ORANGE}"
     else
         style="info"
@@ -488,7 +488,7 @@ install_brew_deps() {
     fi
 
     # Run update command
-    printStyled info_tbd "Current package manager: ${ORANGE}${package_manager}${NONE}"
+    printStyled fallback "Current package manager: ${ORANGE}${package_manager}${NONE}"
     printStyled wait "Installing Homebrew dependencies → ${ORANGE}${EMOJI_WARN} This may take a while, please wait...${NONE}"
     eval "${cmd}" >/dev/null 2>&1 || {
         printStyled error "Unable to install Homebrew dependencies"
