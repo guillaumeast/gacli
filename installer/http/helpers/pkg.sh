@@ -15,7 +15,10 @@ FORMAT_DEFAULT="libsasl2-2=cyrus-sasl procps=procps-ng"
 
 # 2. Package manager specific rules
 FORMAT_APT="procps-ng=procps cyrus-sasl=libsasl2-2"
-FORMAT_PACMAN="nghttp2="
+FORMAT_PACMAN="nghttp2= 'ruby=ruby-stdlib'"
+# WIP: 🚧 fixing archlinux (all other distros green)
+# WIP: try 1 → ruby-erb     → ✅ manual    → ❌ auto
+# WIP: try 2 → ruby-stdlib  → 🚧 manual    → ✅ auto
 FORMAT_ZYPPER="procps-ng=procps nghttp2="
 
 # ────────────────────────────────────────────────────────────────
