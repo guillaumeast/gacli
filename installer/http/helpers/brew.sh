@@ -7,7 +7,7 @@
 
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
-BREW_DEPS="bash git curl file gcc make binutils gawk gzip ruby ca-certificates perl brotli procps cyrus-sasl nghttp2"
+BREW_DEPS="bash git curl file gcc make binutils gawk gzip ca-certificates perl brotli ruby procps cyrus-sasl nghttp2"
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC

@@ -11,11 +11,11 @@ UNSUPPORTED_PKG='"emerge=unpredictible packet names" "pkg=unpredictible packet n
 CURRENT_PKG=""
 
 # 1. Default formatting rules
-FORMAT_DEFAULT="libsasl2-2=cyrus-sasl procps=procps-ng"
+FORMAT_DEFAULT="ruby-stdlib=ruby libsasl2-2=cyrus-sasl procps=procps-ng"
 
 # 2. Package manager specific rules
 FORMAT_APT="procps-ng=procps cyrus-sasl=libsasl2-2"
-FORMAT_PACMAN="nghttp2= 'ruby=ruby-stdlib'"
+FORMAT_PACMAN="ruby=ruby-stdlib nghttp2="
 # WIP: 🚧 fixing archlinux (all other distros green)
 # WIP: try 1 → ruby-erb     → ✅ manual    → ❌ auto
 # WIP: try 2 → ruby-stdlib  → 🚧 manual    → ✅ auto
@@ -188,10 +188,81 @@ _pkg_format_deps() {
 # TESTS (TODO: create zunit test)
 # ────────────────────────────────────────────────────────────────
 
+printStyled() {
+
+    # Colors
+    RED="$(printf '\033[31m')"
+    GREEN="$(printf '\033[32m')"
+    YELLOW="$(printf '\033[33m')"
+    CYAN="$(printf '\033[36m')"
+    ORANGE="$(printf '\033[38;5;208m')"
+    GREY="$(printf '\033[90m')"
+    NONE="$(printf '\033[0m')"
+    BOLD="$(printf '\033[1m')"
+
+    # Emojis
+    EMOJI_SUCCESS="✓"
+    EMOJI_WARN="⚠️ "
+    EMOJI_ERR="🛑"
+    EMOJI_INFO="✧"
+    EMOJI_TBD="⚐"
+    EMOJI_HIGHLIGHT="→"
+    EMOJI_DEBUG="🔎"
+    EMOJI_WAIT="✧ ⏳"
+
+    style=$1
+    msg=$2
+    color_text=$GREY
+    color_emoji=$GREY
+    case "${style}" in
+        error)
+            echo
+            printf "%s\n" "${EMOJI_ERR} ${RED}Error: ${BOLD}${msg}${NONE}" >&2
+            echo
+            return ;;
+        warning)
+            printf "%s\n" "${EMOJI_WARN} ${YELLOW}Warning: ${BOLD}${msg}${NONE}" >&2
+            return ;;
+        success)
+            color_text=$GREY
+            color_emoji=$GREEN
+            emoji=$EMOJI_SUCCESS
+            ;;
+        wait)
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_WAIT
+            ;;
+        info)
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_INFO
+            ;;
+        info_tbd)
+            color_text=$GREY
+            color_emoji=$ORANGE
+            emoji=$EMOJI_TBD
+            ;;
+        highlight)
+            color_text=$NONE
+            color_emoji=$NONE
+            emoji=$EMOJI_HIGHLIGHT
+            ;;
+        debug)
+            printf "%s\n" "${EMOJI_DEBUG} ${YELLOW}Debug: ${msg}${NONE}" >&2
+            return ;;
+        *)
+            emoji=""
+            ;;
+    esac
+    printf "%s\n" "${color_emoji}${emoji} ${color_text}${msg}${NONE}"
+}
+
 _pkg_test() {
 
-    TEST_DEPS_1="bash procps cyrus-sasl nghttp2"
-    TEST_DEPS_2="bash procps-ng libsasl2-2 nghttp2"
+    BREW_DEPS="bash ruby procps cyrus-sasl nghttp2"
+    TEST_DEPS_1="bash ruby procps cyrus-sasl nghttp2"
+    TEST_DEPS_2="bash ruby-stdlib procps-ng libsasl2-2 nghttp2"
 
     for pkg in $SUPPORTED_PKG; do
 
@@ -201,16 +272,16 @@ _pkg_test() {
         expected=""
         case "${pkg}" in
             apt)
-                expected="bash procps libsasl2-2 nghttp2"
+                expected="bash ruby procps libsasl2-2 nghttp2"
             ;;
             pacman)
-                expected="bash procps-ng cyrus-sasl"
+                expected="bash ruby-stdlib procps-ng cyrus-sasl"
             ;;
             zypper)
-                expected="bash procps cyrus-sasl"
+                expected="bash ruby procps cyrus-sasl"
             ;;
             *)
-                expected="bash procps-ng cyrus-sasl nghttp2"
+                expected="bash ruby procps-ng cyrus-sasl nghttp2"
             ;;
         esac
         printStyled info "→ expected --->${expected}<---"
@@ -231,5 +302,5 @@ _pkg_test() {
     done
 
     echo
-}
+}; _pkg_test
 
