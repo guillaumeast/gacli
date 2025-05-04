@@ -36,6 +36,9 @@ pkg_install() {
 
     pkg_manager=$(pkg_get_current) || return 1
     formatted_deps=$(_pkg_format_deps "${pkg_manager}" $raw_deps) || return 1
+
+    # TODO: wip
+    printStyled debug "Installing deps --->${formatted_deps}<---"
     
     case "${pkg_manager}" in # TODO: add >/dev/null 2>&1
         brew)
@@ -302,5 +305,5 @@ _pkg_test() {
     done
 
     echo
-}; _pkg_test
+}
 
