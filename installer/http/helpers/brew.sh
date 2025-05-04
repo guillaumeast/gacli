@@ -7,7 +7,8 @@
 
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
-BREW_DEPS="bash git curl file gcc make binutils gawk gzip ruby ca-certificates perl brotli procps cyrus-sasl nghttp2"
+BREW_DEPS="bash git curl file gcc make binutils gawk gzip ruby ca-certificates perl brotli procps cyrus-sasl nghttp2 ruby-erb"
+# TODO: ruby-erb added to fix archlinux (all others were ok before this addition)
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
