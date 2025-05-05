@@ -123,6 +123,7 @@ _print_styled() {
     echo "${color_emoji}${emoji}${color_text}${text}${NONE}"
 }
 
+# TODO: handle multi-line input
 # _print_formatted <format> <color> <text>
 _print_formatted() {
 
@@ -283,11 +284,12 @@ _print_results() {
 
     # Align in a row
     local row=$(_print_row " " $blocks)
-    # local width=$(str_width $row)
-    # echo "width → ${width}"
+    local width=$(str_width $row)
+    echo "width → ${width}"
     # TODO: wrap row into header (need to update _print_format before to handle multi_lines input)
     printui mid "${GREY}------------------------------------------------${NONE}"
     printui "${position}" "${row}"
+    # printui "${position}-header" "${row}"
 }
 
 # _print_row <str:separator> <@pointer:blocks>
@@ -413,7 +415,6 @@ str_height() {
     echo $line_count
 }
 
-# TODO: si string contient plusieurs lignes => Renvoyer la width de la plus grande ligne
 str_width() {
 
     local block="${1}"
