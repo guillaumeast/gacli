@@ -417,8 +417,10 @@ str_height() {
 str_width() {
 
   local string="$1"
-  local length=0
   # TODO: split string into `local lines=()`
+  local debug=false
+  local length=0
+
 
   if [[ -z "$string" ]]; then
     printui error "Expected: <string>; received: '$1'"
