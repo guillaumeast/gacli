@@ -3,113 +3,76 @@
 # FICHIER /src/helpers/time.zsh
 ###############################
 
-TIME_CMD=""
+# TODO: coreutils no more required thanks to gdate → date fallback ??
+TIME_DEPS=("coreutils")
 
-# ────────────────────────────────────────────────────────────────
-# INIT
-# ────────────────────────────────────────────────────────────────
-
-# Set TIME_CMD depending on platform (gdate or date)
-time_init() {
-
-    if command -v gdate > /dev/null 2>&1; then
-        TIME_CMD="gdate"
-    elif command -v date > /dev/null 2>&1; then
-        TIME_CMD="date"
-    else
-        printui error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
-        return 1
-    fi
-}
+TIME_CMD="gdate"
+TIME_CMD_FALLBACK="date"
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Returns current timestamp
+# time_get_current => timestamp
 time_get_current() {
 
-    # Variables
     local current_ts
 
-    # Resolve TIME_CMD depending on platform
-    time_init || return 1
+    current_ts="$("${TIME_CMD}" +%s)" && echo "${current_ts}" && return
 
-    # Fetch current date
-    if ! current_ts="$("${TIME_CMD}" +%s)"; then
-        printui error "Failed to get current timestamp"
-        return 1
-    fi
+    current_ts="$("${TIME_CMD_FALLBACK}" +%s)" && echo "${current_ts}" && return
 
-    # Return value
-    echo "${current_ts}"
+    printui error "Failed to get current timestamp"
+    return 1
 }
 
-# Add a number of days to a timestamp and return result as timestamp
+# time_add_days <timestamp:date> <int:add> => timestamp
 time_add_days() {
 
-    # Variables
     local start_ts="$1"
     local add="$2"
 
-    # Resolve TIME_CMD depending on platform
-    time_init || return 1
-
-    # Arguments checks
     if [[ -z "${start_ts}" || -z "${add}" ]]; then
         printui error "Expected : <start_ts> <add> (received : ${1} ${2})"
         return 1
     fi
+
     if ! [[ "${start_ts}" =~ ^[0-9]+$ && "${add}" =~ ^[0-9]+$ ]]; then
         printui error "Both arguments must be positive integers"
         return 1
     fi
 
-    # Compute
     echo $((86400 * $add + $start_ts))
 }
 
-# Convert UNIX timestamp to YYYY-MM-DD
+# time_to_human <timestamp:date> => YYYY-MM-DD
 time_to_human() {
 
-    # Variables
     local ts="$1"
 
-    # Resolve TIME_CMD depending on platform
-    time_init || return 1
-
-    # Arguments checks
     if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
         printui error "Expected a timestamp (received: ${1})"
         return 1
     fi
 
-    # Convert
-    if ! "${TIME_CMD}" -u -d "@$ts" "+%Y-%m-%d"; then
+    if ! "${TIME_CMD}" -u -d "@$ts" "+%Y-%m-%d" && ! "${TIME_CMD_FALLBACK}" -u -d "@$ts" "+%Y-%m-%d"; then
         printui error "Conversion failed"
         return 1
     fi
 }
 
-# Convert YYYY-MM-DD to UNIX timestamp
+# time_from_human <YYYY-MM-DD:date> => timestamp
 time_from_human() {
 
-    # Variables
     local date_str="${1}"
 
-    # Resolve TIME_CMD depending on platform
-    time_init || return 1
-
-    # Arguments checks
     if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
         printui error "Expected format: YYYY-MM-DD (received: ${1})"
         return 1
     fi
 
-    # Convert
-    if ! "${TIME_CMD}" -u -d "${date_str}" +%s; then
+    if ! "${TIME_CMD}" -u -d "${date_str}" +%s && ! "${TIME_CMD_FALLBACK}" -u -d "${date_str}" +%s; then
         printui error "Conversion failed"
         return 1
     fi
 }
-

@@ -20,8 +20,8 @@ gacli_uninstall() {
         }
 
         # Remove all GACLI lines (header + source + alias)
-        local grep_1="^export PATH=\"${DIR_ROOT}/.local/bin:\$PATH\""
-        local grep_2="^source \"${DIR_ROOT}/.gacli/main.zsh\""
+        local grep_1="^export PATH=\"${DIR_GACLI}/.local/bin:\$PATH\""
+        local grep_2="^source \"${DIR_GACLI}/.gacli/main.zsh\""
         local grep="${grep_1}\$|${grep_2}\$"
         grep -vE "${grep}" "${zshrc_file}" > "${zshrc_file}.tmp" || {
             printui error "Failed to parse zshrc file"
@@ -53,13 +53,13 @@ gacli_uninstall() {
     # Delete GACLI directory
     print ""
     printui info "Deleting GACLI files... ⏳"
-    if [[ -d "${DIR_ROOT}" ]]; then
-        rm -rf "${DIR_ROOT}" || {
-            printui error "Failed to delete directory ${DIR_ROOT}"
+    if [[ -d "${DIR_GACLI}" ]]; then
+        rm -rf "${DIR_GACLI}" || {
+            printui error "Failed to delete directory ${DIR_GACLI}"
             return 1
         }
     else
-        printui error "Unable to find GACLI directory: ${DIR_ROOT}"
+        printui error "Unable to find GACLI directory: ${DIR_GACLI}"
         return 1
     fi
     printui success "Deleted"

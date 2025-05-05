@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 ###############################
-# FICHIER /<TODO: path>/style.zsh (move to src/helpers or installer/ ?)
+# FICHIER /src/helpers/style.zsh
 ###############################
 # I/O formatter
 
@@ -59,10 +59,110 @@ ICON_ON="⊙"
 ICON_OFF="○"
 
 # ────────────────────────────────────────────────────────────────
+# PUBLIC
+# ────────────────────────────────────────────────────────────────
+
+# Usage 1 → printui <opt:FORMATS|-|STYLES|-|POSITIONS|-|COLORS> <str:text>
+# Usage 2 → printui results <opt:POSITION> <int:passed> <int:fallback> <int:failed>
+printui() {
+
+    local text="${2}"
+
+    if (( $# != 2 )) && (( $# != 4 )) && (( $# != 5 )); then
+        echo "${YELLOW}${EMOJI_WARN} [printui] Warning: Usage 1 → printui <opt:FORMAT-STYLE-POSITION-COLORS> <text>" >&2
+        echo "${YELLOW}${EMOJI_WARN} [printui] Warning: Usage 2 → printui results <opt:position> <int:success> <int:fallback> <int:failed>" >&2
+        echo "${RED}${EMOJI_ERR} [printui] Error: Received: '$@'" >&2
+        return 1
+    fi
+
+    local parts=("${(s:-:)1}")  # Split first arg using '-' as separator
+    local format=""
+    local style=""
+    local position=""
+    local border_color=""
+    
+    for part in "${parts[@]}"; do
+
+        if [[ "${part}" == "results" ]]; then
+            shift
+            _print_results "$@"
+            return $?
+        fi
+
+        (( ${FORMATS[(I)$part]} )) && format=$part && continue          # format
+        (( ${STYLES[(I)$part]} )) && style=$part && continue            # style    
+        (( ${POSITIONS[(I)$part]} )) && position=$part && continue      # position
+        (( ${COLORS[(I)$part]} )) && border_color="${border_color}${(P)part}" && continue   # border color
+    done
+
+    [[ -z "${border_color}" ]] && border_color=$GREY
+    [[ -n "${style}" ]] && text=$(_print_styled "${style}" "${text}")
+    [[ -n "${format}" ]] && text=$(_print_formatted "${format}" "${border_color}" "${text}")
+    [[ -n "${position}" ]] && text=$(_print_positionned "${position}" "${border_color}" "${text}")
+
+    # stdout vs stderr
+    local output_stream=1
+    [[ "${style}" == (warning|error|debug) ]] && output_stream=2
+
+    ! loader_is_activ && print -u$output_stream -- "${text}" && return
+
+    loader_pause
+    print -u$output_stream -- "${text}"
+    loader_start
+}
+
+# print_row <str:separator> <@pointer:blocks>
+print_row() {
+
+    local separator="$1" && shift
+    local blocks=()
+    local block width height max_height line char out i
+
+    for block in "$@"; do
+        block=("$(eval 'printf "%s\n" "${'"$block"'[@]}"')")
+        blocks+=("$block")
+    done
+
+    max_height=0
+    for block in "${blocks[@]}"; do
+        height=$(str_height "${block}")
+        (( height > max_height )) && max_height=$height
+    done
+
+    out=""
+    for (( i=1; i <= max_height; i++ )); do
+        for block in "${blocks[@]}"; do
+            line=${${(f)block}[$i]}
+            height=$(str_height "${block}")
+            width=$(str_width "${block}")
+
+            if (( i > height )); then
+                out="$(str_repeat $width '' " ")${separator}"
+            else
+                out="${out}${line}${separator}"
+            fi
+        done
+        out="${out%%${separator}}"
+        (( i < max_height )) && out="${out}\n"
+    done
+    echo $out
+}
+
+print_logo() {
+    print "${ORANGE}  _____          _____ _      _____ ${NONE}"
+    print "${ORANGE} / ____|   /\\\\   / ____| |    |_   _|${NONE}"
+    print "${ORANGE}| |  __   /  \\\\ | |    | |      | |  ${NONE}"
+    print "${ORANGE}| | |_ | / /\\\\ \\\\| |    | |      | |  ${NONE}"
+    print "${ORANGE}| |__| |/ ____ \\\\ |____| |____ _| |_ ${NONE}"
+    print "${ORANGE} \\\\_____/_/    \\\\_\\\\_____|______|_____|${NONE}"
+    print ""
+}
+
+# ────────────────────────────────────────────────────────────────
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-# _print_styled <style> <text>
+# _print_styled <STYLE> <str:text>
 _print_styled() {
 
     local style="${1}"
@@ -124,7 +224,7 @@ _print_styled() {
 }
 
 # TODO: handle multi-line input
-# _print_formatted <format> <color> <text>
+# _print_formatted <FORMAT> <COLOR> <str:text>
 _print_formatted() {
 
     local format="${1}"
@@ -165,7 +265,7 @@ _print_formatted() {
     echo "${border_bot}"
 }
 
-# _print_positionned <position> <color> <text>
+# _print_positionned <POSITION> <COLOR> <str:text>
 _print_positionned() {
     
     local position="${1}"
@@ -222,6 +322,7 @@ _print_positionned() {
     echo $text
 }
 
+# _print_results <opt:POSITION> <int:passed> <int:fallback> <int:failed>
 _print_results() {
 
     local position=""
@@ -268,7 +369,7 @@ _print_results() {
         color_passed_text="${NONE}${GREEN_BG}"
     else
         color_fallback_border="ORANGE"
-        color_fallback_text="${NONE}${ORANGE_BG}"
+        color_fallback_text="${RED}${ORANGE_BG}"
     fi    
 
     # Text
@@ -283,235 +384,14 @@ _print_results() {
     local blocks=("block_passed" "block_fallback" "block_failed")
 
     # Align in a row
-    local row=$(_print_row " " $blocks)
-    local width=$(str_width $row)
-    echo "width → ${width}"
-    # TODO: wrap row into header (need to update _print_format before to handle multi_lines input)
-    printui mid "${GREY}------------------------------------------------${NONE}"
+    local row=$(print_row " " $blocks)
     printui "${position}" "${row}"
+    # TODO: wrap row into header (need to update _print_format before to handle multi_lines input)
     # printui "${position}-header" "${row}"
 }
 
-# _print_row <str:separator> <@pointer:blocks>
-_print_row() {
-
-    local separator="$1" && shift
-    local blocks=()
-    local block width height max_height line char out i
-
-    for block in "$@"; do
-        block=("$(eval 'printf "%s\n" "${'"$block"'[@]}"')")
-        blocks+=("$block")
-    done
-
-    max_height=0
-    for block in "${blocks[@]}"; do
-        height=$(str_height "${block}")
-        (( height > max_height )) && max_height=$height
-    done
-
-    out=""
-    for (( i=1; i <= max_height; i++ )); do
-        for block in "${blocks[@]}"; do
-            line=${${(f)block}[$i]}
-            height=$(str_height "${block}")
-            width=$(str_width "${block}")
-
-            if (( i > height )); then
-                out="$(str_repeat $width '' " ")${separator}"
-            else
-                out="${out}${line}${separator}"
-            fi
-        done
-        out="${out%%${separator}}"
-        (( i < max_height )) && out="${out}\n"
-    done
-    echo $out
-}
-
-# Usage 1 → printui <FORMATS|-|STYLES|-|POSITIONS|-|COLORS> <text>
-# Usage 2 → printui results <position> <success_count> <fallback_count> <failed_count>
-printui() {
-
-    local text="${2}"
-
-    if (( $# != 2 )) && (( $# != 4 )) && (( $# != 5 )); then
-        echo "${YELLOW}${EMOJI_WARN} [printui] Warning: Usage 1 → printui <opt:FORMAT-STYLE-POSITION-COLORS> <text>" >&2
-        echo "${YELLOW}${EMOJI_WARN} [printui] Warning: Usage 2 → printui results <opt:position> <int:success> <int:fallback> <int:failed>" >&2
-        echo "${RED}${EMOJI_ERR} [printui] Error: Received: '$@'" >&2
-        return 1
-    fi
-
-    local parts=("${(s:-:)1}")  # Split first arg using '-' as separator
-    local format=""
-    local style=""
-    local position=""
-    local border_color=""
-    
-    for part in "${parts[@]}"; do
-
-        if [[ "${part}" == "results" ]]; then
-            shift
-            _print_results "$@"
-            return $?
-        fi
-
-        (( ${FORMATS[(I)$part]} )) && format=$part && continue          # format
-        (( ${STYLES[(I)$part]} )) && style=$part && continue            # style    
-        (( ${POSITIONS[(I)$part]} )) && position=$part && continue      # position
-        (( ${COLORS[(I)$part]} )) && border_color="${border_color}${(P)part}" && continue   # border color
-        _print_styled warning "[printui] Unknown arg → '${part}'"       # unknown
-    done
-
-    [[ -z "${border_color}" ]] && border_color=$GREY
-    [[ -n "${style}" ]] && text=$(_print_styled "${style}" "${text}")
-
-    if [[ "${style}" == "warning" || "${style}" == "error" || "${style}" == "debug" ]]; then
-        echo "${text}" >&2
-        return
-    fi
-
-    [[ -n "${format}" ]] && text=$(_print_formatted "${format}" "${border_color}" "${text}")
-    [[ -n "${position}" ]] && text=$(_print_positionned "${position}" "${border_color}" "${text}")
-
-    echo "${text}"
-}
-
 # ────────────────────────────────────────────────────────────────
-# TODO: move into some helper file
-# ────────────────────────────────────────────────────────────────
-
-# str_repeat <int:count> <str:separator> <text>
-str_repeat() {
-
-    local count=$1
-    local separator="${2}"
-    local text="${3}"
-    local out=""
-
-    if ! (( count > 0 )); then
-        printui error "Expected: <int:count> <str:separator> <text>; received '$@'"
-        return 1
-    fi
-
-    local i
-    for (( i=1; i < count; i++ )); do
-        out="${out}${text}${separator}"
-    done
-    out="${out}${text}"
-
-    echo "${out}"
-}
-
-str_height() {
-
-    local string="${1}"
-    local line_count=0
-
-    [[ -z "$string" ]] && echo 0 && return
-
-    line_count=$(printf "%s\n" "$string" | wc -l | tr -d ' ')
-
-    echo $line_count
-}
-
-str_width() {
-
-    local block="${1}"
-    local max_width=0
-    local width=0
-    local line=""
-
-    while IFS= read -r line; do
-        width=$(_line_width "${line}")
-        (( width > max_width )) && max_width=$width
-    done <<< "${block}"
-
-    echo $max_width
-}
-
-_line_width() {
-
-    local string="$1"
-    local length=0
-
-    if [[ -z "$string" ]]; then
-        printui error "Expected: <string>; received: '$1'"
-        return 1
-    fi
-
-    # Remove ANSI escape sequences
-    local clean=$(echo "$string" | sed -E $'s/\x1B\\[[0-9;]*[mK]//g')
-
-    # Extract grapheme clusters: base char + modifiers (VS16, ZWJ, etc.)
-    local -a graphemes
-    local grapheme=""
-    local i char next
-
-    for (( i = 1; i <= ${#clean}; i++ )); do
-        char="${clean[i]}"
-        next="${clean[i+1]}"
-
-        grapheme+="$char"
-
-        # If next char is VS16 or ZWJ, keep building the cluster
-        if [[ "$next" == $'\uFE0F' || "$next" == $'\u200D' ]]; then
-        continue
-        fi
-
-        # End of grapheme cluster
-        graphemes+=("$grapheme")
-        grapheme=""
-    done
-
-    # Compute display width
-    for graph in "${graphemes[@]}"; do
-        local char_len=$(char_width "$graph")
-        (( length += char_len ))
-    done
-
-    echo $length
-}
-
-char_width() {
-
-    local char="$1"
-
-    # Ignore non-visible emoji modifiers
-    [[ "$char" == $'\uFE0F' || "$char" == $'\u200D' ]] && echo 0 && return
-    [[ -z "${char}" ]] && echo 0 && return
-    [[ "${char}" == " " ]] && echo 1 && return
-
-    # Double length emojis
-    local -a wide_chars=(
-        "✅" "⚠" "${EMOJI_WARN}" "❌" "🛑" "🛑" "⛔" "🚫" "📛" "👉" "🔎" "⏳" \
-        "💡" "🔥" "💥" "🌟" "🌈" "🎯" "🎉" "🎁" "🎲" "🎮" \
-        "🚀" "🧠" "👀" "👓" "🦾" "🧪" "🧩" "📦" "📁" "📂" \
-        "😄" "😁" "😆" "😅" "😂" "🤣" "🙂" "🙃" "😎" "😐" "🤯" \
-        "🙈" "🙉" "🙊" "🐵" "🐶" "🐱" "🦊" "🐻" "🐼" \
-        "🔴" "🟠" "🟡" "🟢" "🔵" "🟣" "⚫" "⚪" "🟤" \
-        "➕" "➖" "➗" "❓" "❗" \
-    )
-
-    (( ${wide_chars[(I)$char]} )) && echo 2 && return
-    
-    echo 1
-}
-
-is_int() {
-
-    case "$1" in
-        ''|*[!0-9-]*|*-*-*)
-            ;; # Ignore non numeric parts
-        *)
-            return 0 ;;
-    esac
-
-    return 1
-}
-
-# ────────────────────────────────────────────────────────────────
-# TESTS
+# TODO: TESTS
 # ────────────────────────────────────────────────────────────────
 
 tmp_test_bg() {
@@ -528,19 +408,27 @@ tmp_test_bg() {
     #     done
     # done
 
-    printui header-highlight "Testing the test manager... 🤯"
-    printui passed-mid Passed
-    printui results mid 0 0 1
-    printui results mid 0 1 0
-    printui results mid 0 1 1
-    printui results mid 1 0 0
-    printui results mid 1 0 1
-    printui results mid 1 1 0
-    printui results mid 1 1 1
-    printui results mid 1 1 2
-    printui results mid 1 2 1
-    printui results bot 2 1 1
-    printui results 0 0 0
+    # printui header-highlight "Testing the test manager... 🤯"
+    # printui passed-mid Passed
+    # printui fallback-mid Fallback
+    # printui passed-mid Passed
+    # printui results bot 0 0 1
+    # printui results top 0 1 0
+    # printui results mid 0 1 1
+    # printui results mid 1 0 0
+    # printui results mid 1 0 1
+    # printui results mid 1 1 0
+    # printui results mid 1 1 1
+    # printui results mid 1 1 2
+    # printui results mid 1 2 1
+    # printui results bot 2 1 1
+    # printui results 0 0 0
+
+    source /Users/gui/Repos/gacli/gacli/tmp_ga/docker_wip/loader.zsh
+    loader_start "Testing loader..."
+    trap 'loader_stop' EXIT
+    sleep 2
+    return
 }
 
 tmp_test_bg
