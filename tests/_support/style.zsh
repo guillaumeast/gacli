@@ -416,49 +416,60 @@ str_height() {
 # TODO: si string contient plusieurs lignes => Renvoyer la width de la plus grande ligne
 str_width() {
 
-  local string="$1"
-  # TODO: split string into `local lines=()`
-  local debug=false
-  local length=0
+    local block="${1}"
+    local max_width=0
+    local width=0
+    local line=""
 
+    while IFS= read -r line; do
+        width=$(_line_width "${line}")
+        (( width > max_width )) && max_width=$width
+    done <<< "${block}"
 
-  if [[ -z "$string" ]]; then
-    printui error "Expected: <string>; received: '$1'"
-    return 1
-  fi
+    echo $max_width
+}
 
-  # Remove ANSI escape sequences
-  local clean=$(echo "$string" | sed -E $'s/\x1B\\[[0-9;]*[mK]//g')
+_line_width() {
 
-  # Extract grapheme clusters: base char + modifiers (VS16, ZWJ, etc.)
-  local -a graphemes
-  local grapheme=""
-  local i char next
+    local string="$1"
+    local length=0
 
-  for (( i = 1; i <= ${#clean}; i++ )); do
-    char="${clean[i]}"
-    next="${clean[i+1]}"
-
-    grapheme+="$char"
-
-    # If next char is VS16 or ZWJ, keep building the cluster
-    if [[ "$next" == $'\uFE0F' || "$next" == $'\u200D' ]]; then
-      continue
+    if [[ -z "$string" ]]; then
+        printui error "Expected: <string>; received: '$1'"
+        return 1
     fi
 
-    # End of grapheme cluster
-    graphemes+=("$grapheme")
-    grapheme=""
-  done
+    # Remove ANSI escape sequences
+    local clean=$(echo "$string" | sed -E $'s/\x1B\\[[0-9;]*[mK]//g')
 
-  # Compute display width
-  for graph in "${graphemes[@]}"; do
-    local char_len=$(char_width "$graph")
-    (( length += char_len ))
-    $debug && printf "%-10s → %s\n" "$graph" "$char_len"
-  done
+    # Extract grapheme clusters: base char + modifiers (VS16, ZWJ, etc.)
+    local -a graphemes
+    local grapheme=""
+    local i char next
 
-  echo $length
+    for (( i = 1; i <= ${#clean}; i++ )); do
+        char="${clean[i]}"
+        next="${clean[i+1]}"
+
+        grapheme+="$char"
+
+        # If next char is VS16 or ZWJ, keep building the cluster
+        if [[ "$next" == $'\uFE0F' || "$next" == $'\u200D' ]]; then
+        continue
+        fi
+
+        # End of grapheme cluster
+        graphemes+=("$grapheme")
+        grapheme=""
+    done
+
+    # Compute display width
+    for graph in "${graphemes[@]}"; do
+        local char_len=$(char_width "$graph")
+        (( length += char_len ))
+    done
+
+    echo $length
 }
 
 char_width() {
