@@ -29,11 +29,11 @@ main() {
     source "${DIR_DOCKER}/../_support/style.zsh" # TODO: "{DIR_LOCAL_GACLI}/src/helpers/style.zsh" ?
     source "${DIR_DOCKER}/../_support/arch.zsh" # TODO: "{DIR_LOCAL_GACLI}/src/helpers/arch.zsh" ?
 
-    printheader "Building images..."
+    printui block-highlight "Building images..."
     docker_init         || exit 1
     docker_build_images || exit 2
 
-    printheader "Running tests into containers..."
+    printui block-highlight "Running tests into containers..."
     # TODO: uncomment after style.zsh tests
     # docker_run          || exit 3
 }
@@ -51,28 +51,28 @@ docker_init() {
 _docker_install() {
 
     if command -v docker >/dev/null 2>&1; then
-        printStyled info "Detected → Docker"
+        printui info "Detected → Docker"
         return 0
     fi
 
     if ! command -v brew >/dev/null 2>&1; then
-        printStyled error "Unable to install ${ORANGE}Docker${NONE} → ${ORANGE}Homebrew${NONE} is missing"
+        printui error "Unable to install ${ORANGE}Docker${NONE} → ${ORANGE}Homebrew${NONE} is missing"
         return 1
     fi
 
-    printStyled wait "Installing Docker with Homebrew..."
+    printui wait "Installing Docker with Homebrew..."
     if ! brew install --cask docker >/dev/null 2>&1; then
-        printStyled error "Unable to install ${ORANGE}Docker${NONE}"
+        printui error "Unable to install ${ORANGE}Docker${NONE}"
         return 1
     fi
 
-    printStyled success "Installed: ${GREEN}Docker${NONE}"
+    printui success "Installed: ${GREEN}Docker${NONE}"
 }
 
 _docker_install_buildx() {
 
     if docker buildx version >/dev/null 2>&1; then
-        printStyled info "Detected → Docker Buildx"
+        printui info "Detected → Docker Buildx"
         return 0
     fi
 
@@ -83,27 +83,27 @@ _docker_install_buildx() {
     local url="https://github.com/docker/buildx/releases/latest/download/buildx-linux-${arch}"
 
     mkdir -p "${plugin_dir}" || {
-        printStyled error "Failed to create plugin dir: ${CYAN}${plugin_dir}${NONE}"
+        printui error "Failed to create plugin dir: ${CYAN}${plugin_dir}${NONE}"
         return 1
     }
 
-    printStyled wait "Downloading Docker Buildx for ${arch}..."
+    printui wait "Downloading Docker Buildx for ${arch}..."
     if ! curl -fsSL "${url}" -o "${plugin_path}"; then
-        printStyled error "Failed to download ${ORANGE}buildx${NONE} binary"
+        printui error "Failed to download ${ORANGE}buildx${NONE} binary"
         return 1
     fi
 
     chmod +x "${plugin_path}" || {
-        printStyled error "Failed to make binary ${ORANGE}executable${NONE}"
+        printui error "Failed to make binary ${ORANGE}executable${NONE}"
         return 1
     }
 
     if ! docker buildx version >/dev/null 2>&1; then
-        printStyled error "Install failed: ${ORANGE}Buildx${NONE}"
+        printui error "Install failed: ${ORANGE}Buildx${NONE}"
         return 1
     fi
 
-    printStyled success "Installed: ${ORANGE}Docker Buildx${NONE}"
+    printui success "Installed: ${ORANGE}Docker Buildx${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -121,9 +121,9 @@ docker_build_images() {
         _docker_build_distro "${distro}"
         result=$?
         if (( $result == 0 )); then
-            printStyled success "Built    → ${GREEN}${distro}${NONE}"
+            printui success "Built    → ${GREEN}${distro}${NONE}"
         elif (( $result == 1 )); then
-            printStyled fallback "Fallback → ${GREEN}${distro} ${ORANGE}${ARCH_FALLBACK}${NONE}"
+            printui fallback "Fallback → ${GREEN}${distro} ${ORANGE}${ARCH_FALLBACK}${NONE}"
         fi
     done
 
@@ -138,7 +138,7 @@ _docker_build_distro() {
     local return_value=0
 
     if [ -z "${distro}" ]; then
-        printStyled error "Expected: <distro>; received: '${1}'"
+        printui error "Expected: <distro>; received: '${1}'"
         return 1
     fi
 
@@ -168,7 +168,7 @@ _docker_build_with_fallback() {
     local platform=""
 
     [[ ! -f "${file}" || -z "${image}" ]] && {
-        printStyled error "[_docker_build_with_fallback] Expected: <file> <image> (received: '${1}' '${2}')"
+        printui error "[_docker_build_with_fallback] Expected: <file> <image> (received: '${1}' '${2}')"
         return 1
     }
 
@@ -189,7 +189,7 @@ _docker_build_with_fallback() {
         fi
     done
 
-    printStyled error "Failed → ${image}"
+    printui error "Failed → ${image}"
     (( failed++ ))
     return 2
 }
@@ -205,7 +205,7 @@ docker_run() {
     local failed=0
 
     for distro in "${SUPPORTED_DISTROS[@]}"; do
-        _docker_run_distro "${distro}" && printStyled success "Passed  → ${GREEN}${distro}${NONE}"
+        _docker_run_distro "${distro}" && printui success "Passed  → ${GREEN}${distro}${NONE}"
     done
 
     print_results $passed $fallback $failed
@@ -219,7 +219,7 @@ _docker_run_distro() {
     local return_value=0
 
     if [ -z "${distro}" ]; then
-        printStyled error "Expected: <distro>; received: '${1}'"
+        printui error "Expected: <distro>; received: '${1}'"
         return 1
     fi
 
@@ -231,18 +231,18 @@ _docker_run_distro() {
         image="${${file:t}#Dockerfile.}"
 
         mkdir -p "${VOLUME_LOCAL}" || {
-            printStyled error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
+            printui error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
             return 1
         }
         cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}" || {
-            printStyled error "Unable to copy installer"
+            printui error "Unable to copy installer"
             return 1
         }
 
         if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" >/dev/null 2>&1; then
             (( passed++ ))
         else
-            printStyled error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
+            printui error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
             return_value=1
             (( failed++ ))
         fi

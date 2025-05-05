@@ -13,34 +13,34 @@ brew_bundle() {
 
     # Install Homebrew if missing
     _brew_install || {
-        printStyled error "Missing required dependencie: Homebrew"
+        printui error "Missing required dependencie: Homebrew"
         return 1
     }
 
     # Loading mesage
     print ""
-    printStyled "info" "Updating... (this may take a few minutes) ⏳"
+    printui "info" "Updating... (this may take a few minutes) ⏳"
 
     # Update Homebrew
     if ! brew update  > /dev/null 2>&1; then
-        printStyled warning "Failed to update Homebrew"
+        printui warning "Failed to update Homebrew"
     fi
 
     # Install/uninstall formulae & casks referring to the Brewfile
     if ! brew bundle --file="${brewfile}" >/dev/null; then
-        printStyled error "Failed to run bundle Homebrew"
+        printui error "Failed to run bundle Homebrew"
         return 1
     fi
 
     # Upgrade
     if ! brew upgrade 1>/dev/null; then
-        printStyled error "Failed to upgrade Homebrew packages"
+        printui error "Failed to upgrade Homebrew packages"
         return 1
     fi
 
     # Cleanup
     if ! brew cleanup 1>/dev/null; then
-        printStyled warning "Failed to cleanup Homebrew packages"
+        printui warning "Failed to cleanup Homebrew packages"
     fi
 }
 
@@ -49,7 +49,7 @@ brew_is_f_active() {
 
     # Install Homebrew if missing
     _brew_install || {
-        printStyled error "Missing required dependencie: Homebrew"
+        printui error "Missing required dependencie: Homebrew"
         return 1
     }
 
@@ -65,7 +65,7 @@ brew_is_c_active() {
 
     # Install Homebrew if missing
     _brew_install || {
-        printStyled error "Missing required dependencie: Homebrew"
+        printui error "Missing required dependencie: Homebrew"
         return 1
     }
 
@@ -88,7 +88,7 @@ _brew_install() {
     if command -v brew > /dev/null 2>&1; then
         return 0
     fi
-    printStyled info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
+    printui info "Installing ${ORANGE}Homebrew${GREY}... ⏳"
 
     # Resolve install command
     local install_cmd="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
@@ -97,32 +97,32 @@ _brew_install() {
             install_cmd="NONINTERACTIVE=1 ${install_cmd}"
         fi
     else
-        printStyled error "Unsupported OS: ${OSTYPE}"
+        printui error "Unsupported OS: ${OSTYPE}"
         return 1
     fi
 
     # Execute install command
     if ! eval "$install_cmd"; then
-        printStyled error "Homebrew installation failed"
+        printui error "Homebrew installation failed"
         return 1
     fi
 
     # Add Homebrew to PATH
     local brew_exec_path
     if ! brew_exec_path="$(command -v brew)"; then
-        printStyled error "Failed to detect brew after installation"
+        printui error "Failed to detect brew after installation"
         return 1
     fi
 
     # Check if install is successful
     if ! eval "$("$brew_exec_path" shellenv)"; then
-        printStyled error "Failed to set Homebrew environment"
+        printui error "Failed to set Homebrew environment"
         return 1
     fi
 
     # Refresh command hash table
     if ! hash -r; then
-        printStyled warning "Failed to refresh shell hash table"
+        printui warning "Failed to refresh shell hash table"
     fi
 }
 

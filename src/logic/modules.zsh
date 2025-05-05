@@ -70,25 +70,25 @@ _module_download() {
 
         # Download descriptor file (abstract curl / get handling into a /.helpers/http.zsh file)
         curl "${descriptor_url}" > "${tmp_descriptor}" || {
-            printStyled error "Unable to download descriptor of: ${module}"
-            printStyled error "→ url: ${descriptor_url}"
-            printStyled error "Check module descriptor at: ${descriptor_url}"
+            printui error "Unable to download descriptor of: ${module}"
+            printui error "→ url: ${descriptor_url}"
+            printui error "Check module descriptor at: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
 
         # Check descriptor integrity
         [[ -f "${tmp_descriptor}" ]] || {
-            printStyled error "Unable to download descriptor of: ${module}"
-            printStyled error "→ url: ${descriptor_url}"
-            printStyled error "Check module descriptor at: ${descriptor_url}"
+            printui error "Unable to download descriptor of: ${module}"
+            printui error "→ url: ${descriptor_url}"
+            printui error "Check module descriptor at: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
 
         # Get archive url
         module_url=$(file_read "${tmp_descriptor}" module_url) || {
-            printStyled error "Unable to parse descriptor of: ${module}"
+            printui error "Unable to parse descriptor of: ${module}"
             rm -f "${tmp_descriptor}"
             return 1
         }
@@ -96,8 +96,8 @@ _module_download() {
 
         # Check url integrity
         [[ -n "${module_url}" ]] || {
-            printStyled error "Unable to extract url of: ${module}"
-            printStyled error "→ Check module descriptor at: ${descriptor_url}"
+            printui error "Unable to extract url of: ${module}"
+            printui error "→ Check module descriptor at: ${descriptor_url}"
             rm -f "$tmp_descriptor"
             return 1
         }
@@ -105,22 +105,22 @@ _module_download() {
         # Download module archive
         local tmp_archive="$(mktemp)"
         if ! curl -sL "${module_url}" --output "${tmp_archive}"; then
-            printStyled error "Unable to download module archive"
-            printStyled error "→ url: ${module_url}"
+            printui error "Unable to download module archive"
+            printui error "→ url: ${module_url}"
             rm -f "$tmp_archive"
             return 1
         fi
 
         # Create target directory
         mkdir -p "${DIR_MODS}/${module}" || {
-            printStyled error "Failed to create module directory: ${DIR_MODS}/${module}"
+            printui error "Failed to create module directory: ${DIR_MODS}/${module}"
             rm -f "$tmp_archive"
             return 1
         }
 
         # Extract archive to module directory
         if ! tar --strip-components=1 -xzf "$tmp_archive" -C "${DIR_MODS}/${module}"; then
-            printStyled error "Failed to extract archive: ${tmp_archive}"
+            printui error "Failed to extract archive: ${tmp_archive}"
             rm -f "$tmp_archive"
             return 1
         fi
@@ -130,7 +130,7 @@ _module_download() {
 
         # Check integrity
         _module_is_downloaded "${module}" || {
-            printStyled error "Unable to recognize module: ${module}"
+            printui error "Unable to recognize module: ${module}"
             return 1
         }
     fi
@@ -142,7 +142,7 @@ _module_download() {
         [[ -z "${nested_module}" ]] && continue
         if ! _module_is_downloaded "${nested_module}"; then
             _module_download "${nested_module}" || {
-                printStyled error "Unable to download nested module: ${nested_module}"
+                printui error "Unable to download nested module: ${nested_module}"
                 return 1
             }
         fi
@@ -154,17 +154,17 @@ _module_download() {
     # Merge dependencies
     list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" formulae)}")
     file_add "${FILE_TOOLS_MODULES}" formulae "${list[@]}" || {
-        printStyled error "Unable to merge modules dependencies"
+        printui error "Unable to merge modules dependencies"
         return 1
     }
     list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" casks)}")
     file_add "${FILE_TOOLS_MODULES}" casks "${list[@]}"|| {
-        printStyled error "Unable to merge modules dependencies"
+        printui error "Unable to merge modules dependencies"
         return 1
     }
     list=("${(@f)$(file_read "${DIR_MODS}/${module}/${CONFIG_FILE}" modules)}")
     file_add "${FILE_TOOLS_MODULES}" modules "${list[@]}"|| {
-        printStyled error "Unable to merge modules dependencies"
+        printui error "Unable to merge modules dependencies"
         return 1
     }
 }
@@ -197,11 +197,11 @@ modules_load() {
         entry_point="${DIR_MODS}/${module}/${ENTRY_POINT}"
         [[ ! -f "${entry_point}" ]] && continue
         source "${entry_point}" || {
-            printStyled warning "Unable to load module: ${module}"
+            printui warning "Unable to load module: ${module}"
             continue
         }
         _module_get_commands "${entry_point}" || {
-            printStyled warning "Unable to fetch module commands: ${module}"
+            printui warning "Unable to fetch module commands: ${module}"
             continue
         }
         MODULES_ACTIV+=("${module}")
@@ -215,7 +215,7 @@ _module_get_commands() {
 
     # Argument check
     if [[ ! -f "$file" ]]; then
-        printStyled error "Incorrect file : ${1}"
+        printui error "Incorrect file : ${1}"
         return 1
     fi
 
@@ -227,7 +227,7 @@ _module_get_commands() {
     # Source module file (TODO: do it in a subshell to avoid double sourcing issues ?)
     source "${file}"
     if (( $? != 0 )); then
-        printStyled error "Failed to load file : ${1}"
+        printui error "Failed to load file : ${1}"
         return 1
     fi
 

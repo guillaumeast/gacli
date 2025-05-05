@@ -18,19 +18,19 @@ file_read() {
 
   # Check file integrity
   if [[ ! -f $file ]]; then
-    printStyled error "Unable to find file: ${file}"
+    printui error "Unable to find file: ${file}"
     return 1
   fi
 
   # Check key intergity
   if [[ -z $key ]]; then
-    printStyled error "Incorrect key: '${key}'"
+    printui error "Incorrect key: '${key}'"
     return 1
   fi
 
   # Get extension
   if ! extension=$(get_extension $file); then
-    printStyled error "Unable to detect file format: ${file}"
+    printui error "Unable to detect file format: ${file}"
     return 1
   fi
 
@@ -43,7 +43,7 @@ file_read() {
       echo "$(_brew_read "${file}" "${key}")" || return 1
       ;;
     *)
-      printStyled error "Format not supported: ${extension}"
+      printui error "Format not supported: ${extension}"
       return 1
       ;;
   esac
@@ -59,19 +59,19 @@ file_write() {
 
   # Check file integrity
   if [[ ! -f $file ]]; then
-    printStyled error "Unable to find file: ${file}"
+    printui error "Unable to find file: ${file}"
     return 1
   fi
 
   # Check key intergity
   if [[ -z $key ]]; then
-    printStyled error "Incorrect key: '${key}'"
+    printui error "Incorrect key: '${key}'"
     return 1
   fi
 
   # Get extension
   if ! extension=$(get_extension $file); then
-    printStyled error "Unable to detect file format: ${file}"
+    printui error "Unable to detect file format: ${file}"
     return 1
   fi
 
@@ -84,7 +84,7 @@ file_write() {
       _brew_add "${file}" "${key}" "${value}" || return 1
       ;;
     *)
-      printStyled error "Format not supported: ${extension}"
+      printui error "Format not supported: ${extension}"
       return 1
       ;;
   esac
@@ -98,19 +98,19 @@ file_reset() {
 
   # Check file integrity
   if [[ ! -f $file ]]; then
-    printStyled error "Unable to find file: ${file}"
+    printui error "Unable to find file: ${file}"
     return 1
   fi
 
   # Check key intergity
   if [[ -z $key ]]; then
-    printStyled error "Incorrect key: '${key}'"
+    printui error "Incorrect key: '${key}'"
     return 1
   fi
 
   # Get extension
   if ! extension=$(get_extension $file); then
-    printStyled error "Unable to detect file format: ${file}"
+    printui error "Unable to detect file format: ${file}"
     return 1
   fi
 
@@ -123,7 +123,7 @@ file_reset() {
       _brew_reset "${file}" "${key}" || return 1
       ;;
     *)
-      printStyled error "Format not supported: ${extension}"
+      printui error "Format not supported: ${extension}"
       return 1
       ;;
   esac
@@ -139,19 +139,19 @@ file_add() {
 
   # Check file integrity
   if [[ ! -f $file ]]; then
-    printStyled error "Unable to find file: ${file}"
+    printui error "Unable to find file: ${file}"
     return 1
   fi
 
   # Check key intergity
   if [[ -z $key ]]; then
-    printStyled error "Incorrect key: '${key}'"
+    printui error "Incorrect key: '${key}'"
     return 1
   fi
 
   # Get extension
   if ! extension=$(get_extension $file); then
-    printStyled error "Unable to detect file format: ${file}"
+    printui error "Unable to detect file format: ${file}"
     return 1
   fi
 
@@ -168,7 +168,7 @@ file_add() {
         done
         ;;
     *)
-      printStyled error "Format not supported: ${extension}"
+      printui error "Format not supported: ${extension}"
       return 1
       ;;
   esac
@@ -184,19 +184,19 @@ file_rm() {
 
   # Check file integrity
   if [[ ! -f $file ]]; then
-    printStyled error "Unable to find file: ${file}"
+    printui error "Unable to find file: ${file}"
     return 1
   fi
 
   # Check key intergity
   if [[ -z $key ]]; then
-    printStyled error "Incorrect key: '${key}'"
+    printui error "Incorrect key: '${key}'"
     return 1
   fi
 
   # Get extension
   if ! extension=$(get_extension $file); then
-    printStyled error "Unable to detect file format: ${file}"
+    printui error "Unable to detect file format: ${file}"
     return 1
   fi
 
@@ -213,7 +213,7 @@ file_rm() {
         done
         ;;
     *)
-      printStyled error "Format not supported: ${extension}"
+      printui error "Format not supported: ${extension}"
       return 1
       ;;
   esac
@@ -344,7 +344,7 @@ _brew_read() {
       output=("${(@f)$(grep '^cask "' "$file" | cut -d'"' -f2 2>/dev/null)}")
       ;;
     *)
-      printStyled error "Unknown key for brewfile: '${key}'"
+      printui error "Unknown key for brewfile: '${key}'"
       return 1
       ;;
   esac
@@ -362,27 +362,27 @@ _brew_reset() {
   case "${key}" in
       formulae)
           grep -v '^brew "' "${file}" > "${tmp_file}" || {
-              printStyled error "Failed to clean formulae from ${file}"
+              printui error "Failed to clean formulae from ${file}"
               rm -f "$tmp_file"
               return 1
           }
           ;;
       casks)
           grep -v '^cask "' "${file}" > "${tmp_file}" || {
-              printStyled error "Failed to clean casks from ${file}"
+              printui error "Failed to clean casks from ${file}"
               rm -f "$tmp_file"
               return 1
           }
           ;;
       *)
-          printStyled error "Unknown key for Brewfile: ${key}"
+          printui error "Unknown key for Brewfile: ${key}"
           rm -f "$tmp_file"
           return 1
           ;;
   esac
 
   command mv -f "${tmp_file}" "${file}" || {
-    printStyled error "Failed to overwrite ${file}"
+    printui error "Failed to overwrite ${file}"
     rm -f "$tmp_file"
     return 1
   }
@@ -404,7 +404,7 @@ _brew_add() {
       line="cask \"${value}\""
       ;;
     *)
-      printStyled error "Unknown key for brewfile: '${key}'"
+      printui error "Unknown key for brewfile: '${key}'"
       return 1
       ;;
   esac
@@ -415,7 +415,7 @@ _brew_add() {
 
     # Append value
     echo "${line}" >> "${file}" || {
-      printStyled error "Failed to append line to ${file}"
+      printui error "Failed to append line to ${file}"
       return 1
     }
   fi
@@ -437,18 +437,18 @@ _brew_rm() {
       pattern="^cask \"${value}\""
       ;;
     *)
-      printStyled error "Unknown key for brewfile: '${key}'"
+      printui error "Unknown key for brewfile: '${key}'"
       return 1
       ;;
   esac
 
   grep -v "${pattern}" "$file" > "${file}.tmp" || {
-    printStyled error "Failed to remove line from ${file}"
+    printui error "Failed to remove line from ${file}"
     return 1
   }
 
   command mv -f "${file}.tmp" "${file}" || {
-    printStyled error "Failed to overwrite ${file} after removal"
+    printui error "Failed to overwrite ${file} after removal"
     return 1
   }
 }

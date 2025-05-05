@@ -92,8 +92,8 @@ main() {
 
     # Check gacli install
     if ! command -v gacli > /dev/null 2>&1; then
-        printStyled error "gacli command not found"
-        printStyled highlight "Try to restart your terminal or run: exec zsh"
+        printui error "gacli command not found"
+        printui highlight "Try to restart your terminal or run: exec zsh"
         return 1
     fi
 
@@ -105,7 +105,7 @@ main() {
     local script
     for script in "${SCRIPTS[@]}"; do
         if ! source "${script}"; then
-            printStyled error "Unable to load required script: ${script}"
+            printui error "Unable to load required script: ${script}"
             abort "3" || return 1
         fi
     done
@@ -127,7 +127,7 @@ main() {
 # TODO: delete (useless to recreate an existing env variable)
 _gacli_check_system() {
     if [[ -z "$OSTYPE" ]]; then
-        printStyled error "\$OSTYPE is not set" >&2
+        printui error "\$OSTYPE is not set" >&2
         return 1
     fi
 
@@ -135,7 +135,7 @@ _gacli_check_system() {
         darwin*) IS_MACOS=true ;;
         linux*)  IS_LINUX=true ;;
         *)
-            printStyled error "Unknown OS type: $OSTYPE" >&2
+            printui error "Unknown OS type: $OSTYPE" >&2
             return 1
             ;;
     esac
@@ -149,7 +149,7 @@ _gacli_check_files() {
     # Check directories integrity
     for dir in "${DIRS[@]}"; do
         mkdir -p "${dir}" || {
-            printStyled error "Unable to resolve dir: ${dir}"
+            printui error "Unable to resolve dir: ${dir}"
             return 1
         }
     done
@@ -157,7 +157,7 @@ _gacli_check_files() {
     # Check files integrity
     for file in "${files[@]}"; do
         touch "${file}" || {
-            printStyled error "Unable to resolve file: ${file}"
+            printui error "Unable to resolve file: ${file}"
             return 1
         }
     done
@@ -190,7 +190,7 @@ _gacli_dispatch() {
             done
 
             # No command matched
-            printStyled error "Unknown command '$1'" >&2
+            printui error "Unknown command '$1'" >&2
             modules_print_commands
             return 1
             ;;
@@ -223,7 +223,7 @@ style_ascii_logo() {
 }
 
 # PUBLIC - Display formatted message
-printStyled() {
+printui() {
     # Variables
     local style=$1
     local raw_message=$2
@@ -232,7 +232,7 @@ printStyled() {
 
     # Argument check
     if [[ -z "$style" || -z "$raw_message" ]]; then
-        echo "❌ [printStyled] Expected: <style> <message>"
+        echo "❌ [printui] Expected: <style> <message>"
         return 1
     fi
 

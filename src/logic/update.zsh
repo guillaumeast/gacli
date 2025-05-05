@@ -22,20 +22,20 @@ update_init() {
 
     # Get config values
     _update_get_config || {
-        printStyled error "Unable to load config"
+        printui error "Unable to load config"
         return 1
     }
 
     # Merge dependencies
     update_merge_into "${tmp_brewfile}" || {
-        printStyled error "Unable to merge dependencies"
+        printui error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     # Run update if needed
     if [[ $(_update_is_reached) || $(_update_is_required "${tmp_brewfile}") ]]; then
-        _update_run_from "${tmp_brewfile}" || printStyled warning "Unable to run update"
+        _update_run_from "${tmp_brewfile}" || printui warning "Unable to run update"
     fi
 
     # Delete temporary Brewfile
@@ -50,7 +50,7 @@ _update_is_reached() {
 
     # Check if next_update is defined
     if [[ -z "$NEXT_UPDATE" || ! "$NEXT_UPDATE" =~ ^[0-9]+$ ]]; then
-        printStyled warning "Unable to parse next update date: '${NEXT_UPDATE}' \n    └→ Auto-update disabled"
+        printui warning "Unable to parse next update date: '${NEXT_UPDATE}' \n    └→ Auto-update disabled"
         AUTO_UPDATE="false" && NEXT_UPDATE=""
         _update_set_config
         return 1
@@ -93,13 +93,13 @@ _update_manual() {
 
     # Merge all dependencies
     update_merge_into "${tmp_brewfile}" || {
-        printStyled error "Unable to merge dependencies"
+        printui error "Unable to merge dependencies"
         rm -f "${tmp_brewfile}"
         return 1
     }
 
     _update_run_from "${tmp_brewfile}" || {
-        printStyled error "Update failed"
+        printui error "Update failed"
         rm -f "${tmp_brewfile}"
         return 1
     }
@@ -116,13 +116,13 @@ update_merge_into() {
 
     # Check arguments
     if [[ -z "${output_brewfile}" ]]; then
-        printStyled error "Expected : <output_brewfile> (received : ${1})"
+        printui error "Expected : <output_brewfile> (received : ${1})"
         return 1
     fi
 
     # Reset merged file
     echo "" > "${output_brewfile}" || {
-        printStyled error "Unable to create merged Brewfile: ${output_brewfile}"
+        printui error "Unable to create merged Brewfile: ${output_brewfile}"
         return 1
     }
 
@@ -138,7 +138,7 @@ update_merge_into() {
             echo "############################################"
             echo "# Dependencies from ${descriptor}:"
             echo ""
-        } >> "${output_brewfile}" || printStyled warning "Unable to write into: ${output_brewfile}"
+        } >> "${output_brewfile}" || printui warning "Unable to write into: ${output_brewfile}"
 
         # Content
         file_add "${output_brewfile}" formulae "${formulae[@]}"
@@ -159,8 +159,8 @@ _update_run_from() {
     LAST_UPDATE="${TODAY}"
     if [[ $AUTO_UPDATE = true ]]; then
         if ! NEXT_UPDATE="$(time_add_days "${LAST_UPDATE}" "${FREQ_DAYS}")"; then
-            printStyled warning "Failed to compute next update date"
-            printStyled warning "Auto-update disabled"
+            printui warning "Failed to compute next update date"
+            printui warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
         fi
@@ -170,7 +170,7 @@ _update_run_from() {
     _update_set_config
 
     # Display result
-    printStyled success "Updated 🚀"
+    printui success "Updated 🚀"
     _update_display_next
 }
 
@@ -210,8 +210,8 @@ update_edit_config() {
         NEXT_UPDATE=""
     else
         if ! NEXT_UPDATE="$(time_add_days "${TODAY}" "${FREQ_DAYS}")"; then
-            printStyled warning "Failed to compute next update date"
-            printStyled warning "Auto-update disabled"
+            printui warning "Failed to compute next update date"
+            printui warning "Auto-update disabled"
             AUTO_UPDATE=false
             NEXT_UPDATE=""
         else
@@ -252,7 +252,7 @@ _update_ask_freq() {
         if [[ "$FREQ_DAYS" =~ ^[0-9]+$ ]]; then
             break
         else
-            printStyled "error" "⛔ Invalid input. Please enter a number\n"
+            printui "error" "⛔ Invalid input. Please enter a number\n"
         fi
     done
 }
@@ -261,9 +261,9 @@ _update_ask_freq() {
 _update_display_next() {
     # Display next update date
     if [[ $AUTO_UPDATE = true ]]; then
-        printStyled info "Next update on: $(time_to_human "${NEXT_UPDATE}")"
+        printui info "Next update on: $(time_to_human "${NEXT_UPDATE}")"
     else
-        printStyled info "Auto updates disabled"
+        printui info "Auto updates disabled"
     fi
 }
 

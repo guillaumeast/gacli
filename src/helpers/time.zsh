@@ -17,7 +17,7 @@ time_init() {
     elif command -v date > /dev/null 2>&1; then
         TIME_CMD="date"
     else
-        printStyled error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
+        printui error "Unable to find ${ORANGE}gdate${NONE} or ${ORANGE}date${NONE}"
         return 1
     fi
 }
@@ -37,7 +37,7 @@ time_get_current() {
 
     # Fetch current date
     if ! current_ts="$("${TIME_CMD}" +%s)"; then
-        printStyled error "Failed to get current timestamp"
+        printui error "Failed to get current timestamp"
         return 1
     fi
 
@@ -57,11 +57,11 @@ time_add_days() {
 
     # Arguments checks
     if [[ -z "${start_ts}" || -z "${add}" ]]; then
-        printStyled error "Expected : <start_ts> <add> (received : ${1} ${2})"
+        printui error "Expected : <start_ts> <add> (received : ${1} ${2})"
         return 1
     fi
     if ! [[ "${start_ts}" =~ ^[0-9]+$ && "${add}" =~ ^[0-9]+$ ]]; then
-        printStyled error "Both arguments must be positive integers"
+        printui error "Both arguments must be positive integers"
         return 1
     fi
 
@@ -80,13 +80,13 @@ time_to_human() {
 
     # Arguments checks
     if [[ -z "$ts" || ! "$ts" =~ ^[0-9]+$ ]]; then
-        printStyled error "Expected a timestamp (received: ${1})"
+        printui error "Expected a timestamp (received: ${1})"
         return 1
     fi
 
     # Convert
     if ! "${TIME_CMD}" -u -d "@$ts" "+%Y-%m-%d"; then
-        printStyled error "Conversion failed"
+        printui error "Conversion failed"
         return 1
     fi
 }
@@ -102,13 +102,13 @@ time_from_human() {
 
     # Arguments checks
     if [[ -z "${date_str}" || ! "${date_str}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-        printStyled error "Expected format: YYYY-MM-DD (received: ${1})"
+        printui error "Expected format: YYYY-MM-DD (received: ${1})"
         return 1
     fi
 
     # Convert
     if ! "${TIME_CMD}" -u -d "${date_str}" +%s; then
-        printStyled error "Conversion failed"
+        printui error "Conversion failed"
         return 1
     fi
 }
