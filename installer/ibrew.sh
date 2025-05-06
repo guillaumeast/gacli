@@ -23,6 +23,8 @@ main() {
 
     # TODO: Linux only ??
     printStyled wait "Installing Homebrew dependencies..."
+
+    # TODO: waiting for ipkg auto-install update then replace 'pkg_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
     if ! pkg_install $BREW_DEPS; then
         printStyled error "Unable to install Homebrew dependencies"
         return 1

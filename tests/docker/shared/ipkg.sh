@@ -481,26 +481,34 @@ INSTALLER_BREW="${GH_RAW_URL}/installer/ibrew.sh"
 
 install_brew() {
     
-    # TODO: use mktemp
-    tmp_installer="/tmp/install_brew.sh"
+    tmp_installer="/tmp/ibrew.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
     
     http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
 
     echo
-    printStyled highlight "Launching installer..."
+    echo "------------------------------------------"
+    echo
+    printStyled highlight "Launching Homebrew installer..."
     echo
     echo "------------------------------------------"
     echo
 
     . "${tmp_installer}" || return 1
+
+    echo
+    echo "------------------------------------------"
+    echo
+    echo "🎉 ${GREEN}Homebrew is ready!${NONE} 🚀"
+    echo
+    echo "------------------------------------------"
+    echo
 }
 
 INSTALLER_GACLI="${GH_RAW_URL}/installer/igacli.sh"
 
 install_gacli() {
 
-    # TODO: use mktemp
     tmp_installer="/tmp/install_gacli.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
 
@@ -585,7 +593,7 @@ EMOJI_INFO="✧"
 EMOJI_TBD="⚐"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
-EMOJI_WAIT="✧ ⏳"
+EMOJI_WAIT="⏳"
 
 printStyled() {
 
@@ -594,14 +602,14 @@ printStyled() {
 
     case "${style}" in
         error)
-            prefix="Error: "
+            prefix="Error       → "
             color_text=$RED
             color_emoji=$RED
             emoji=$EMOJI_ERR
             output_stream=2
             ;;
         warning)
-            prefix="Warning: "
+            prefix="Warning     → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_WARN
@@ -643,7 +651,7 @@ printStyled() {
             output_stream=1
             ;;
         debug)
-            prefix="Debug: "
+            prefix="Debug       → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_DEBUG

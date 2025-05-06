@@ -465,11 +465,11 @@ _http_check() {
         ! command -v "$client" >/dev/null 2>&1 && continue
 
         HTTP_CLIENT="$client"
-        printStyled success "HTTP client → ${HTTP_CLIENT}"
+        printStyled success "HTTP client  → ${HTTP_CLIENT}"
         return 0
     done
 
-    printStyled fallback "No HTTP client found"
+    printStyled fallback "Missing     → ${ORANGE}HTTP client${NONE}"
     return 1
 }
 
@@ -487,12 +487,22 @@ install_brew() {
     http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
 
     echo
-    printStyled highlight "Launching installer..."
+    echo "------------------------------------------"
+    echo
+    printStyled highlight "Launching Homebrew installer..."
     echo
     echo "------------------------------------------"
     echo
 
     . "${tmp_installer}" || return 1
+
+    echo
+    echo "------------------------------------------"
+    echo
+    echo "🎉 ${GREEN}Homebrew is ready!${NONE} 🚀"
+    echo
+    echo "------------------------------------------"
+    echo
 }
 
 INSTALLER_GACLI="${GH_RAW_URL}/installer/igacli.sh"
@@ -583,7 +593,7 @@ EMOJI_INFO="✧"
 EMOJI_TBD="⚐"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
-EMOJI_WAIT="✧ ⏳"
+EMOJI_WAIT="⏳"
 
 printStyled() {
 
