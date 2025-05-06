@@ -4,7 +4,7 @@
 # FICHIER /installer/ipkg.sh
 ###############################
 
-# Interface for Native Package Managers
+# Interface for Package Managers
 
 REPO="guillaumeast/gacli" # TODO: Create own repo ?
 BRANCH="dev"
@@ -25,11 +25,11 @@ GH_RAW_URL="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
 main() {
 
     raw_packets="$@"
-
+    
     echo
-
     posix_guard     || exit 1
     force_sudo "$@" || exit 2
+    echo
 
     install_brew="false"
     install_gacli="false"
@@ -45,176 +45,17 @@ main() {
 
     if [ -n "${formatted_packets}" ]; then
         pkg_install "$formatted_packets" || exit 3
+        echo
     fi
 
     if [ $install_brew = "true" ]; then
         install_brew || exit 4
+        echo
     fi
 
     if [ $install_gacli = "true" ]; then
         install_gacli || exit 5
-    fi
-
-    echo
-}
-
-# ────────────────────────────────────────────────────────────────
-# LOADER
-# ────────────────────────────────────────────────────────────────
-
-FRAMES="⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏"
-DELAY=0.05
-PAUSED="false"
-DEFAULT_MESSAGE="Loading..."
-MESSAGE=""
-SPINNER_PID=""
-
-# ⚠️ Don't forget in calling function → trap 'loader_stop' EXIT
-loader_start() {
-
-    message="${1:-$DEFAULT_MESSAGE}"
-
-    [ "${PAUSED}" = "false" ] && MESSAGE="${message}"
-
-    # Kill previous loader process if exists
-    PAUSED="false"
-    loader_stop
-
-    # Create process
-    {
-        while true; do
-            for frame in $FRAMES; do
-                printf "\r\033[K%s %s" "${ORANGE}${frame}${NONE}" "${ORANGE}${MESSAGE}${NONE}"
-                sleep $DELAY
-            done
-        done
-    } &
-
-    # Save process ID
-    SPINNER_PID=$!
-}
-
-loader_pause() {
-    
-    PAUSED="true"
-    loader_stop
-}
-
-loader_stop() {
-
-    if [ -n "$SPINNER_PID" ] && kill -0 "$SPINNER_PID" 2>/dev/null; then
-        kill "$SPINNER_PID" 2>/dev/null
-        wait "$SPINNER_PID" 2>/dev/null
-        SPINNER_PID=""
-        printf "\r\033[K"
-    fi
-}
-
-loader_is_active() {
-
-    [ -n "$SPINNER_PID" ] || return 1
-}
-
-# ────────────────────────────────────────────────────────────────
-# I/O FORMATTING
-# ────────────────────────────────────────────────────────────────
-
-RED="$(printf '\033[31m')"
-GREEN="$(printf '\033[32m')"
-YELLOW="$(printf '\033[33m')"
-CYAN="$(printf '\033[36m')"
-ORANGE="$(printf '\033[38;5;208m')"
-GREY="$(printf '\033[90m')"
-NONE="$(printf '\033[0m')"
-
-EMOJI_SUCCESS="✓"
-EMOJI_WARN="⚠️ "
-EMOJI_ERR="🛑"
-EMOJI_INFO="✧"
-EMOJI_TBD="⚐"
-EMOJI_HIGHLIGHT="→"
-EMOJI_DEBUG="🔎"
-EMOJI_WAIT="✧ ⏳"
-
-printStyled() {
-
-    style=$1
-    text=$2
-
-    case "${style}" in
-        error)
-            prefix="Error: "
-            color_text=$RED
-            color_emoji=$RED
-            emoji=$EMOJI_ERR
-            output_stream=2
-            ;;
-        warning)
-            prefix="Warning: "
-            color_text=$YELLOW
-            color_emoji=$YELLOW
-            emoji=$EMOJI_WARN
-            output_stream=2
-            ;;
-        success)
-            prefix=""
-            color_text=$GREY
-            color_emoji=$GREEN
-            emoji=$EMOJI_SUCCESS
-            output_stream=1
-            ;;
-        wait)
-            prefix=""
-            color_text=$GREY
-            color_emoji=$GREY
-            emoji=$EMOJI_WAIT
-            output_stream=1
-            ;;
-        info)
-            prefix=""
-            color_text=$GREY
-            color_emoji=$GREY
-            emoji=$EMOJI_INFO
-            output_stream=1
-            ;;
-        fallback)
-            prefix=""
-            color_text=$GREY
-            color_emoji=$ORANGE
-            emoji=$EMOJI_TBD
-            output_stream=1
-            ;;
-        highlight)
-            prefix=""
-            color_text=$NONE
-            color_emoji=$NONE
-            emoji=$EMOJI_HIGHLIGHT
-            output_stream=1
-            ;;
-        debug)
-            prefix="Debug: "
-            color_text=$YELLOW
-            color_emoji=$YELLOW
-            emoji=$EMOJI_DEBUG
-            output_stream=2
-            ;;
-        *)
-            prefix=""
-            color_text=$NONE
-            color_emoji=$NONE
-            emoji=""
-            output_stream=1
-            ;;
-    esac
-
-    text="${color_emoji}${emoji} ${color_text}${prefix}${text}${NONE}"
-
-    if loader_is_active; then
-        loader_pause
-        echo "$text" >&"$output_stream"
-        loader_start
-    else
-        echo "$text" >&"$output_stream"
+        echo
     fi
 }
 
@@ -286,11 +127,8 @@ pkg_install() {
     fi
 
     pkg_manager=$(pkg_get_current) || return 1
-    printStyled success "Pkg manager → ${pkg_manager}"
 
-    printStyled success "Raw         → ${raw_deps}"
     formatted_deps=$(_pkg_format_deps "${pkg_manager}" $raw_deps) || return 1
-    printStyled success "Formatted   → ${formatted_deps}"
 
     echo
     return_value=0
@@ -470,7 +308,6 @@ _pkg_install() {
         return 1
     fi
 
-    are_all_installed="true"
     for dep in $deps; do
         loader_start "Installing  → ${dep}"
         trap 'loader_stop' EXIT
@@ -509,12 +346,9 @@ _pkg_install() {
         if [ $is_installed = "true" ]; then
             printStyled success "Installed   → ${GREEN}${dep}${NONE}"
         else
-            are_all_installed="false"
             printStyled warning "  → ${RED}${dep}${YELLOW} install failed"
         fi
     done
-
-    [ $are_all_installed = "false" ] && return 1
 }
 
 _pkg_clean() {
@@ -551,7 +385,6 @@ _pkg_clean() {
             ;;
         slackpkg)
             # no reliable clean command for slackpkg
-            # update-ca-certificates --fresh >/dev/null 2>&1 # TODO: where to put it ? install_brew.sh ..?
             ;;
         *)
             printStyled error "Unsupported package manager: ${ORANGE}${pkg_manager}${RED}"
@@ -601,7 +434,7 @@ http_download() {
     loader_start "Downloading from '${CYAN}${url}${ORANGE}'..."
     trap 'loader_stop' EXIT
 
-    if ! "${download_cmd}" "${url}" > "${destination}" > /dev/null 2>&1; then
+    if ! ${download_cmd} "${url}" > "${destination}"; then # TODO: > /dev/null 2>&1
         loader_stop
         printStyled error "Failed to download from '${CYAN}${url}${NONE}'"
         echo
@@ -650,9 +483,15 @@ install_brew() {
     
     # TODO: use mktemp
     tmp_installer="/tmp/install_brew.sh"
-    trap 'rm -f ${tmp_installer}' EXIT
-
+    trap 'rm -f "${tmp_installer}"' EXIT
+    
     http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
+
+    echo
+    printStyled highlight "Launching installer..."
+    echo
+    echo "------------------------------------------"
+    echo
 
     . "${tmp_installer}" || return 1
 }
@@ -663,11 +502,171 @@ install_gacli() {
 
     # TODO: use mktemp
     tmp_installer="/tmp/install_gacli.sh"
-    trap 'rm -f ${tmp_installer}' EXIT
+    trap 'rm -f "${tmp_installer}"' EXIT
 
     http_download "${INSTALLER_GACLI}" "${tmp_installer}" || return 1
 
     . "${tmp_installer}" || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# LOADER
+# ────────────────────────────────────────────────────────────────
+
+FRAMES="⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏"
+DELAY=0.05
+PAUSED="false"
+DEFAULT_MESSAGE="Loading..."
+MESSAGE=""
+SPINNER_PID=""
+
+# ⚠️ Don't forget in calling function → trap 'loader_stop' EXIT
+loader_start() {
+
+    message="${1:-$DEFAULT_MESSAGE}"
+
+    [ "${PAUSED}" = "false" ] && MESSAGE="${message}"
+
+    # Kill previous loader process if exists
+    PAUSED="false"
+    loader_stop
+
+    # Create process
+    {
+        while true; do
+            for frame in $FRAMES; do
+                printf "\r\033[K%s %s" "${ORANGE}${frame}${NONE}" "${ORANGE}${MESSAGE}${NONE}"
+                sleep $DELAY
+            done
+        done
+    } &
+
+    # Save process ID
+    SPINNER_PID=$!
+}
+
+loader_pause() {
+    
+    PAUSED="true"
+    loader_stop
+}
+
+loader_stop() {
+
+    if [ -n "$SPINNER_PID" ] && kill -0 "$SPINNER_PID" 2>/dev/null; then
+        kill "$SPINNER_PID" 2>/dev/null
+        wait "$SPINNER_PID" 2>/dev/null
+        SPINNER_PID=""
+        printf "\r\033[K"
+    fi
+}
+
+loader_is_active() {
+
+    [ -n "$SPINNER_PID" ] || return 1
+}
+
+# ────────────────────────────────────────────────────────────────
+# I/O FORMATTING
+# ────────────────────────────────────────────────────────────────
+
+RED="$(printf '\033[31m')"
+GREEN="$(printf '\033[32m')"
+YELLOW="$(printf '\033[33m')"
+CYAN="$(printf '\033[36m')"
+ORANGE="$(printf '\033[38;5;208m')"
+GREY="$(printf '\033[90m')"
+NONE="$(printf '\033[0m')"
+
+EMOJI_SUCCESS="✓"
+EMOJI_WARN="⚠️ "
+EMOJI_ERR="🛑"
+EMOJI_INFO="✧"
+EMOJI_TBD="⚐"
+EMOJI_HIGHLIGHT="👉"
+EMOJI_DEBUG="🔎"
+EMOJI_WAIT="✧ ⏳"
+
+printStyled() {
+
+    style=$1
+    text=$2
+
+    case "${style}" in
+        error)
+            prefix="Error: "
+            color_text=$RED
+            color_emoji=$RED
+            emoji=$EMOJI_ERR
+            output_stream=2
+            ;;
+        warning)
+            prefix="Warning: "
+            color_text=$YELLOW
+            color_emoji=$YELLOW
+            emoji=$EMOJI_WARN
+            output_stream=2
+            ;;
+        success)
+            prefix=""
+            color_text=$GREY
+            color_emoji=$GREEN
+            emoji=$EMOJI_SUCCESS
+            output_stream=1
+            ;;
+        wait)
+            prefix=""
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_WAIT
+            output_stream=1
+            ;;
+        info)
+            prefix=""
+            color_text=$GREY
+            color_emoji=$GREY
+            emoji=$EMOJI_INFO
+            output_stream=1
+            ;;
+        fallback)
+            prefix=""
+            color_text=$GREY
+            color_emoji=$ORANGE
+            emoji=$EMOJI_TBD
+            output_stream=1
+            ;;
+        highlight)
+            prefix=""
+            color_text=$NONE
+            color_emoji=$NONE
+            emoji=$EMOJI_HIGHLIGHT
+            output_stream=1
+            ;;
+        debug)
+            prefix="Debug: "
+            color_text=$YELLOW
+            color_emoji=$YELLOW
+            emoji=$EMOJI_DEBUG
+            output_stream=2
+            ;;
+        *)
+            prefix=""
+            color_text=$NONE
+            color_emoji=$NONE
+            emoji=""
+            output_stream=1
+            ;;
+    esac
+
+    text="${color_emoji}${emoji} ${color_text}${prefix}${text}${NONE}"
+
+    if loader_is_active; then
+        loader_pause
+        echo "$text" >&"$output_stream"
+        loader_start
+    else
+        echo "$text" >&"$output_stream"
+    fi
 }
 
 # ────────────────────────────────────────────────────────────────
