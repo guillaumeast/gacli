@@ -501,22 +501,10 @@ install_brew() {
     http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
 
     echo
-    echo "------------------------------------------"
-    echo
     printStyled highlight "Launching Homebrew installer..."
-    echo
-    echo "------------------------------------------"
     echo
 
     . "${tmp_installer}" || return 1
-
-    echo
-    echo "------------------------------------------"
-    echo
-    echo "→ 🎉 Homebrew is ready! 🚀"
-    echo
-    echo "------------------------------------------"
-    echo
 }
 
 INSTALLER_GACLI="${GH_RAW_URL}/installer/igacli.sh"

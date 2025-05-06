@@ -130,7 +130,7 @@ docker_build_images() {
         if (( $result == 0 )); then
             printui passed "Built    → ${GREEN}${distro}${NONE}"
         elif (( $result == 1 )); then
-            printui fallback "Fallback → ${distro} ${ARCH_FALLBACK}"
+            printui fallback "Fallback → ${GREEN}${distro} ${ORANGE}${ARCH_FALLBACK}${NONE}"
         fi
     done
 

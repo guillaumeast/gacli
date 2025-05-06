@@ -3,7 +3,6 @@
 # FICHIER /installer/ibrew.sh
 ###############################
 
-# Full POSIX sh script to abstract Homebrew handling
 # Requires ipkg (Interface for Package Managers)
 
 BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"

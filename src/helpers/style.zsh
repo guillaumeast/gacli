@@ -162,6 +162,7 @@ print_logo() {
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
+# TODO: add prefix (cf ipkg.sh) → passed|fallback|failed → prefix = $GREY, text = $GREEN|ORANGE|RED
 # _print_styled <STYLE> <str:text>
 _print_styled() {
 
@@ -202,17 +203,17 @@ _print_styled() {
             emoji="${EMOJI_INFO} "
             ;;
         passed)
-            color_text=$GREEN
+            color_text=$GREY
             color_emoji=$GREEN
             emoji="${EMOJI_PASSED} ${NONE}"
             ;;
         fallback)
-            color_text=$ORANGE
+            color_text=$GREY
             color_emoji=$ORANGE
             emoji="${EMOJI_FALLBACK} ${NONE}"
             ;;
         failed)
-            color_text=$RED
+            color_text=$GREY
             color_emoji=$RED
             emoji="${EMOJI_FAILED} ${NONE}"
             ;;
