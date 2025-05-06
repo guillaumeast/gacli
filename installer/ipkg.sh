@@ -442,7 +442,7 @@ http_download() {
     fi
     
     loader_stop
-    printStyled success "Downloaded"
+    printStyled success "Downloaded  → ${url}"
 }
 
 _http_install() {
@@ -481,8 +481,7 @@ INSTALLER_BREW="${GH_RAW_URL}/installer/ibrew.sh"
 
 install_brew() {
     
-    # TODO: use mktemp
-    tmp_installer="/tmp/install_brew.sh"
+    tmp_installer="/tmp/ibrew.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
     
     http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
@@ -500,7 +499,6 @@ INSTALLER_GACLI="${GH_RAW_URL}/installer/igacli.sh"
 
 install_gacli() {
 
-    # TODO: use mktemp
     tmp_installer="/tmp/install_gacli.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
 
@@ -594,14 +592,14 @@ printStyled() {
 
     case "${style}" in
         error)
-            prefix="Error: "
+            prefix="Error       → "
             color_text=$RED
             color_emoji=$RED
             emoji=$EMOJI_ERR
             output_stream=2
             ;;
         warning)
-            prefix="Warning: "
+            prefix="Warning     → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_WARN
@@ -643,7 +641,7 @@ printStyled() {
             output_stream=1
             ;;
         debug)
-            prefix="Debug: "
+            prefix="Debug       → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_DEBUG

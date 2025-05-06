@@ -21,26 +21,24 @@ main() {
         return 0
     fi
 
+    # TODO: Linux only ??
+    printStyled wait "Installing Homebrew dependencies..."
     if ! pkg_install $BREW_DEPS; then
         printStyled error "Unable to install Homebrew dependencies"
         return 1
     fi
-    
-    [ "$(pkg_get_current)" = "slackpkg" ] && update-ca-certificates --fresh >/dev/null 2>&1
-    printStyled success "Installed: ${GREEN}dependencies${NONE}"
+    update-ca-certificates --fresh >/dev/null 2>&1
 
     _brew_install_with_fallback || return 1
-    printStyled success "Installed: ${GREEN}Homebrew${NONE}"
     
     _brew_config || return 1
-    printStyled success "Configured: ${GREEN}Linuxbrew${NONE}"
 
     if ! command -v brew >/dev/null 2>&1; then
         printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
         return 1
     fi
 
-    printStyled success "Ready: ${GREEN}Homebrew${NONE}"
+    printStyled success "Ready       → ${GREEN}Homebrew${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -50,21 +48,25 @@ main() {
 _brew_install_with_fallback() {
 
     bash_path="$(command -v bash || printf %s '/bin/bash')"
-    install_cmd="yes '' | ${bash_path} -c \"\$(curl -fsSL ${BREW_INSTALL_URL})\"" # TODO WIP: >/dev/null 2>&1
+    install_cmd="yes '' | ${bash_path} -c \"\$(curl -fsSL ${BREW_INSTALL_URL})\" >/dev/null 2>&1"
 
 
-    printStyled wait "Installing Homebrew..."
+    loader_start "Installing  → Homebrew"
     if ! eval "${install_cmd}"; then
 
-        printStyled warning "Install failed → Fallback on API-less method..."
+        loader_stop
+        printStyled warning "Failed      → Fallback on API-less method..."
         printStyled warning "${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
+        loader_start "Installing  → Homebrew API-less (fallback)"
 
-        export HOMEBREW_NO_INSTALL_FROM_API=1
-        eval "${install_cmd}" || {
+        eval "HOMEBREW_NO_INSTALL_FROM_API=1 ${install_cmd}" || {
+            loader_stop
             printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
             return 1
         }
     fi
+
+    printStyled success "Installed   → ${GREEN}Homebrew${NONE}"
 }
 
 _brew_config() {
@@ -94,6 +96,8 @@ _brew_config() {
             return 1
         }
     fi
+
+    printStyled success "Configured  → ${GREEN}Linux env${NONE}"
 }
 
 _brew_get_path() {

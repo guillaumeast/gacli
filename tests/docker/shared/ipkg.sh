@@ -442,7 +442,7 @@ http_download() {
     fi
     
     loader_stop
-    printStyled success "Downloaded"
+    printStyled success "Downloaded  → ${url}"
 }
 
 _http_install() {
