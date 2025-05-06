@@ -32,7 +32,7 @@
 - 🚧 `wip(scope)`      → Work in progress random snapshot, "just in case"
 - 🧪 `test(scope)`     → Adding/modifying tests (unit, end-to-end, etc.)
 - 🐛 `fix(scope)`      → Bug fix or unexpected behavior correction
-- 🏗️ `refacto(scope)`  → Code rewrite without behavior change (structure, naming…)
+- 🏗️ `refactor(scope)` → Code rewrite without behavior change (structure, naming…)
 
 #### Adding value
 - ⚡️ `perf(scope)`     → Performance improvement (optimization, caching…)

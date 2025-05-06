@@ -1,6 +1,6 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env sh
 ###############################
-# FICHIER /<TODO: path>/pkg.zsh (move to src/helpers or installer/ ?)
+# FICHIER /installer/http/helpers/install.sh
 ###############################
 
 # Full POSIX sh script to abstract package managers handling
@@ -10,22 +10,15 @@ SUPPORTED_PKG="brew apt urpmi dnf pacman zypper slackpkg" # slackpkg really sypp
 UNSUPPORTED_PKG='"emerge=unpredictible packet names" "pkg=unpredictible packet names" "apk=glibc-based distribution required" "yum=git ≥ 2.7.0 not available" "nix-env=FHS required" "xbps-installserver-side SSL/TLS issues"'
 CURRENT_PKG=""
 
-# 1. Default formatting rules
 FORMAT_DEFAULT="ruby-stdlib=ruby libsasl2-2=cyrus-sasl procps=procps-ng"
-
-# 2. Package manager specific rules
 FORMAT_APT="procps-ng=procps cyrus-sasl=libsasl2-2"
 FORMAT_PACMAN="ruby=ruby-stdlib nghttp2="
-# WIP: 🚧 fixing archlinux (all other distros green)
-# WIP: try 1 → ruby-erb     → ✅ manual    → ❌ auto
-# WIP: try 2 → ruby-stdlib  → 🚧 manual    → ✅ auto
 FORMAT_ZYPPER="procps-ng=procps nghttp2="
 
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-# Install packages
 pkg_install() {
 
     raw_deps=$@

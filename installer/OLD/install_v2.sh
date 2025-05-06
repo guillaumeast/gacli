@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 ###############################
-# FICHIER /installer/install.sh
+# FICHIER /installer/http/install.sh
 ###############################
 
 # ────────────────────────────────────────────────────────────────
@@ -8,7 +8,7 @@
 # ────────────────────────────────────────────────────────────────
 
 # TODO: make zsh default shell
-# TODO: create loader
+# TODO: add loader
 # TODO: add wget one-liner install cmd into README
 # TODO: add git one-liner install cmd into README
 
@@ -198,7 +198,7 @@ init_script() {
 
     _posix_guard        || return 1
     _parse_args "$@"    || return 1
-    _force_sudo         || return 1
+    _force_sudo "$@"    || return 1
 }
 
 _posix_guard() {
