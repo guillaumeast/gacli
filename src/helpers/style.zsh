@@ -16,29 +16,29 @@ COLORS=( \
 )
 
 # Background
-BLACK_BG='\033[40m'
-RED_BG='\033[41m'
-GREEN_BG='\033[42m'
-YELLOW_BG='\033[43m'
-BLUE_BG='\033[44m'
-PURPLE_BG='\033[45m'
-CYAN_BG='\033[46m'
-ORANGE_BG='\033[48;5;208m'
-GREY_BG='\033[100m'
+BLACK_BG="$(printf '\033[40m')"
+RED_BG="$(printf '\033[41m')"
+GREEN_BG="$(printf '\033[42m')"
+YELLOW_BG="$(printf '\033[43m')"
+BLUE_BG="$(printf '\033[44m')"
+PURPLE_BG="$(printf '\033[45m')"
+CYAN_BG="$(printf '\033[46m')"
+ORANGE_BG="$(printf '\033[48;5;208m')"
+GREY_BG="$(printf '\033[100m')"
 
 # Text
-BOLD="\033[1m"
-UNDERLINE="\033[4m"
-BLACK='\033[30m'
-RED='\033[31m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-PURPLE='\033[35m'
-CYAN='\033[36m'
-ORANGE='\033[38;5;208m'
-GREY='\033[90m'
-NONE='\033[0m'
+BOLD="$(printf '\033[1m')"
+UNDERLINE="$(printf '\033[4m')"
+BLACK="$(printf '\033[30m')"
+RED="$(printf '\033[31m')"
+GREEN="$(printf '\033[32m')"
+YELLOW="$(printf '\033[33m')"
+BLUE="$(printf '\033[34m')"
+PURPLE="$(printf '\033[35m')"
+CYAN="$(printf '\033[36m')"
+ORANGE="$(printf '\033[38;5;208m')"
+GREY="$(printf '\033[90m')"
+NONE="$(printf '\033[0m')"
 COLOR_FORMULAE="${BLUE}"
 COLOR_CASKS="${CYAN}"
 COLOR_MODS="${PURPLE}"
@@ -394,42 +394,42 @@ _print_results() {
 # TODO: TESTS
 # ────────────────────────────────────────────────────────────────
 
-tmp_test_bg() {
+# tmp_test_bg() {
 
-    # local style=""
-    # local format=""
-    # local position=""
-    # local color=""
-    # for style in $STYLES; do
-    #     for format in $FORMATS; do
-    #         for position in $POSITIONS; do
-    #             printui "${style}-${format}-GREEN-BLUE_BG-${position}" "${style}-${format}-GREEN-BLUE_BG-${position}"
-    #         done
-    #     done
-    # done
+#     # local style=""
+#     # local format=""
+#     # local position=""
+#     # local color=""
+#     # for style in $STYLES; do
+#     #     for format in $FORMATS; do
+#     #         for position in $POSITIONS; do
+#     #             printui "${style}-${format}-GREEN-BLUE_BG-${position}" "${style}-${format}-GREEN-BLUE_BG-${position}"
+#     #         done
+#     #     done
+#     # done
 
-    # printui header-highlight "Testing the test manager... 🤯"
-    # printui passed-mid Passed
-    # printui fallback-mid Fallback
-    # printui passed-mid Passed
-    # printui results bot 0 0 1
-    # printui results top 0 1 0
-    # printui results mid 0 1 1
-    # printui results mid 1 0 0
-    # printui results mid 1 0 1
-    # printui results mid 1 1 0
-    # printui results mid 1 1 1
-    # printui results mid 1 1 2
-    # printui results mid 1 2 1
-    # printui results bot 2 1 1
-    # printui results 0 0 0
+#     # printui header-highlight "Testing the test manager... 🤯"
+#     # printui passed-mid Passed
+#     # printui fallback-mid Fallback
+#     # printui passed-mid Passed
+#     # printui results bot 0 0 1
+#     # printui results top 0 1 0
+#     # printui results mid 0 1 1
+#     # printui results mid 1 0 0
+#     # printui results mid 1 0 1
+#     # printui results mid 1 1 0
+#     # printui results mid 1 1 1
+#     # printui results mid 1 1 2
+#     # printui results mid 1 2 1
+#     # printui results bot 2 1 1
+#     # printui results 0 0 0
 
-    source /Users/gui/Repos/gacli/gacli/tmp_ga/docker_wip/loader.zsh
-    loader_start "Testing loader..."
-    trap 'loader_stop' EXIT
-    sleep 2
-    return
-}
+#     source /Users/gui/Repos/gacli/gacli/tmp_ga/docker_wip/loader.zsh
+#     loader_start "Testing loader..."
+#     trap 'loader_stop' EXIT
+#     sleep 2
+#     return
+# }
 
-tmp_test_bg
+# tmp_test_bg
 

@@ -29,7 +29,8 @@ main() {
     echo
     posix_guard     || exit 1
     force_sudo "$@" || exit 2
-    echo
+    pkg_check       || exit 3
+    http_check
 
     install_brew="false"
     install_gacli="false"
@@ -44,17 +45,19 @@ main() {
     done
 
     if [ -n "${formatted_packets}" ]; then
-        pkg_install "$formatted_packets" || exit 3
+        echo
+        printStyled wait "Installing packages..."
+        pkg_install "$formatted_packets" || exit 4
         echo
     fi
 
     if [ $install_brew = "true" ]; then
-        install_brew || exit 4
+        install_brew || exit 5
         echo
     fi
 
     if [ $install_gacli = "true" ]; then
-        install_gacli || exit 5
+        install_gacli || exit 6
         echo
     fi
 }
@@ -177,6 +180,13 @@ pkg_get_current() {
     return 1
 }
 
+pkg_check() {
+
+    pkg_manager="$(pkg_get_current)" || return 1
+    
+    printStyled success "Pkg manager → ${GREEN}${pkg_manager}${NONE}"
+}
+
 _pkg_format_deps() {
 
     pkg_manager=$1
@@ -276,7 +286,7 @@ _pkg_update() {
             fi
             ;;
         pacman)
-            pacman -Syu --noconfirm --needed base-devel || return 1
+            pacman -Syu --noconfirm --needed base-devel >/dev/null 2>&1 || return 1
             ;;
         zypper)
             zypper refresh >/dev/null 2>&1 || return 1
@@ -293,7 +303,7 @@ _pkg_update() {
     esac
 
     loader_stop
-    printStyled success "Updated     → ${pkg_manager}"
+    printStyled success "Updated     → ${GREEN}${pkg_manager}${NONE}"
 }
 
 _pkg_install() {
@@ -327,7 +337,7 @@ _pkg_install() {
                 dnf install -y $dep >/dev/null 2>&1 || is_installed="false"
                 ;;
             pacman)
-                pacman --noconfirm --needed $dep >/dev/null 2>&1 || is_installed="false"
+                pacman -Syu --noconfirm --needed $dep >/dev/null 2>&1 || is_installed="false"
                 ;;
             zypper)
                 zypper install -y $dep >/dev/null 2>&1 || is_installed="false"
@@ -441,16 +451,20 @@ http_download() {
         return 1
     fi
     
-    loader_stop
-    printStyled success "Downloaded  → ${url}"
+    loader_stop && printStyled success "Downloaded  → ${CYAN}${url}${NONE}"
 }
 
 _http_install() {
 
-    _http_check && return 0
+    http_check >/dev/null && return 0
 
+    echo
+    printStyled wait "Installing HTTP client..."
     for client in $HTTP_CLIENTS; do
-        pkg_install "${client}" && HTTP_CLIENT="$client" && return 0
+        if pkg_install "${client}"; then
+            HTTP_CLIENT="$client"
+            return 0
+        fi
     done
 
     printStyled error "Unable to install http client (tried: ${ORANGE}${HTTP_CLIENTS}${YELLOW})${NONE}"
@@ -458,18 +472,18 @@ _http_install() {
     return 1
 }
 
-_http_check() {
+http_check() {
 
     for client in $HTTP_CLIENTS; do
 
         ! command -v "$client" >/dev/null 2>&1 && continue
 
         HTTP_CLIENT="$client"
-        printStyled success "HTTP client  → ${HTTP_CLIENT}"
+        printStyled success "HTTP client → ${GREEN}${HTTP_CLIENT}${NONE}"
         return 0
     done
 
-    printStyled fallback "Missing     → ${ORANGE}HTTP client${NONE}"
+    printStyled fallback "HTTP client → ${ORANGE}missing${NONE}"
     return 1
 }
 
@@ -499,7 +513,7 @@ install_brew() {
     echo
     echo "------------------------------------------"
     echo
-    echo "🎉 ${GREEN}Homebrew is ready!${NONE} 🚀"
+    echo "→ 🎉 Homebrew is ready! 🚀"
     echo
     echo "------------------------------------------"
     echo
@@ -561,9 +575,9 @@ loader_pause() {
 
 loader_stop() {
 
-    if [ -n "$SPINNER_PID" ] && kill -0 "$SPINNER_PID" 2>/dev/null; then
-        kill "$SPINNER_PID" 2>/dev/null
-        wait "$SPINNER_PID" 2>/dev/null
+    if [ -n "$SPINNER_PID" ] && kill -0 "$SPINNER_PID" >/dev/null 2>&1; then
+        kill "$SPINNER_PID" >/dev/null 2>&1
+        wait "$SPINNER_PID" >/dev/null 2>&1
         SPINNER_PID=""
         printf "\r\033[K"
     fi

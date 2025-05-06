@@ -9,4 +9,5 @@ RUN useradd -m -s /bin/sh appuser -G sudo
 USER appuser
 WORKDIR /home/appuser
 
-CMD [ "sh", "/shared/install.sh" ]
+CMD [ "sh" ]
+

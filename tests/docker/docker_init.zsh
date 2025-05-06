@@ -3,6 +3,8 @@
 # FICHIER /tests/docker/docker_init.zsh
 ###############################
 
+TEST_CMD="sh \"${FILE_INSTALLER}\" brew"
+
 # TODO: add "opensuse-tumbleweed"
 SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "opensuse-leap" "mageia")
 
@@ -11,7 +13,7 @@ DIR_DOCKERFILES="${DIR_DOCKER}/dockerfiles"
 DIR_CONTEXT="${DIR_DOCKER}/context"
 
 DIR_LOCAL_GACLI="${DIR_DOCKER}/../.."
-FILE_INSTALLER="${DIR_LOCAL_GACLI}/installer/manual/install.sh"
+FILE_INSTALLER="${DIR_LOCAL_GACLI}/installer/ipkg.sh"
 
 VOLUME_LOCAL="${DIR_DOCKER}/shared"
 VOLUME_VIRTUAL="/shared"
@@ -26,16 +28,20 @@ ARCH_FALLBACK=""
 main() {
 
     # Source helpers
+    source "${DIR_DOCKER}/../../src/helpers/string.zsh"
+    source "${DIR_DOCKER}/../../src/helpers/loader.zsh"
     source "${DIR_DOCKER}/../../src/helpers/style.zsh"
     source "${DIR_DOCKER}/../../src/helpers/arch.zsh"
 
-    printui header-highlight "Building images..."
+    echo
     docker_init         || exit 1
-    docker_build_images || exit 2
 
-    printui header-highlight "Running tests into containers..."
-    # TODO: uncomment after style.zsh tests
-    # docker_run          || exit 3
+    echo
+    docker_build_images || exit 2
+    echo
+
+    docker_run          || exit 3
+    echo
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -51,28 +57,28 @@ docker_init() {
 _docker_install() {
 
     if command -v docker >/dev/null 2>&1; then
-        printui info-mid "Detected → Docker"
+        printui info "Detected → Docker"
         return 0
     fi
 
     if ! command -v brew >/dev/null 2>&1; then
-        printui error-mid "Unable to install ${ORANGE}Docker${NONE} → ${ORANGE}Homebrew${NONE} is missing"
+        printui error "Unable to install ${ORANGE}Docker${NONE} → ${ORANGE}Homebrew${NONE} is missing"
         return 1
     fi
 
     printui wait "Installing Docker with Homebrew..."
     if ! brew install --cask docker >/dev/null 2>&1; then
-        printui error-mid "Unable to install ${ORANGE}Docker${NONE}"
+        printui error "Unable to install ${ORANGE}Docker${NONE}"
         return 1
     fi
 
-    printui passed-mid "Installed: ${GREEN}Docker${NONE}"
+    printui passed "Installed: ${GREEN}Docker${NONE}"
 }
 
 _docker_install_buildx() {
 
     if docker buildx version >/dev/null 2>&1; then
-        printui info-mid "Detected → Docker Buildx"
+        printui info "Detected → Docker Buildx"
         return 0
     fi
 
@@ -83,27 +89,27 @@ _docker_install_buildx() {
     local url="https://github.com/docker/buildx/releases/latest/download/buildx-linux-${arch}"
 
     mkdir -p "${plugin_dir}" || {
-        printui error-mid "Failed to create plugin dir: ${CYAN}${plugin_dir}${NONE}"
+        printui error "Failed to create plugin dir: ${CYAN}${plugin_dir}${NONE}"
         return 1
     }
 
-    printui wait-mid "Downloading Docker Buildx for ${arch}..."
+    printui wait "Downloading Docker Buildx for ${arch}..."
     if ! curl -fsSL "${url}" -o "${plugin_path}"; then
-        printui error-mid "Failed to download ${ORANGE}buildx${NONE} binary"
+        printui error "Failed to download ${ORANGE}buildx${NONE} binary"
         return 1
     fi
 
     chmod +x "${plugin_path}" || {
-        printui error-mid "Failed to make binary ${ORANGE}executable${NONE}"
+        printui error "Failed to make binary ${ORANGE}executable${NONE}"
         return 1
     }
 
     if ! docker buildx version >/dev/null 2>&1; then
-        printui error-mid "Install failed: ${ORANGE}Buildx${NONE}"
+        printui error "Install failed: ${ORANGE}Buildx${NONE}"
         return 1
     fi
 
-    printui passed-mid "Installed: ${ORANGE}Docker Buildx${NONE}"
+    printui passed "Installed: ${ORANGE}Docker Buildx${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -117,17 +123,19 @@ docker_build_images() {
     local failed=0
     local result=0
 
+    printui block-highlight "Building images..."
     for distro in "${SUPPORTED_DISTROS[@]}"; do
         _docker_build_distro "${distro}"
         result=$?
         if (( $result == 0 )); then
-            printui passed-mid "Built    → ${GREEN}${distro}${NONE}"
+            printui passed "Built    → ${GREEN}${distro}${NONE}"
         elif (( $result == 1 )); then
-            printui fallback-mid "Fallback → ${distro} ${ARCH_FALLBACK}"
+            printui fallback "Fallback → ${distro} ${ARCH_FALLBACK}"
         fi
     done
 
     printui results bot $passed $fallback $failed
+    echo
 }
 
 _docker_build_distro() {
@@ -138,7 +146,7 @@ _docker_build_distro() {
     local return_value=0
 
     if [ -z "${distro}" ]; then
-        printui error-mid "Expected: <distro>; received: '${1}'"
+        printui error "Expected: <distro>; received: '${1}'"
         return 1
     fi
 
@@ -168,7 +176,7 @@ _docker_build_with_fallback() {
     local platform=""
 
     [[ ! -f "${file}" || -z "${image}" ]] && {
-        printui error-mid "[_docker_build_with_fallback] Expected: <file> <image> (received: '${1}' '${2}')"
+        printui error "[_docker_build_with_fallback] Expected: <file> <image> (received: '${1}' '${2}')"
         return 1
     }
 
@@ -189,7 +197,7 @@ _docker_build_with_fallback() {
         fi
     done
 
-    printui error-mid "Failed → ${image}"
+    printui error "Failed → ${image}"
     (( failed++ ))
     return 2
 }
@@ -205,7 +213,8 @@ docker_run() {
     local failed=0
 
     for distro in "${SUPPORTED_DISTROS[@]}"; do
-        _docker_run_distro "${distro}" && printui passed-mid "Passed  → ${GREEN}${distro}${NONE}"
+        printui block-highlight "Testing ${distro}..."
+        _docker_run_distro "${distro}"
     done
 
     printui results bot $passed $fallback $failed
@@ -219,7 +228,7 @@ _docker_run_distro() {
     local return_value=0
 
     if [ -z "${distro}" ]; then
-        printui error-mid "Expected: <distro>; received: '${1}'"
+        printui error "Expected: <distro>; received: '${1}'"
         return 1
     fi
 
@@ -231,18 +240,24 @@ _docker_run_distro() {
         image="${${file:t}#Dockerfile.}"
 
         mkdir -p "${VOLUME_LOCAL}" || {
-            printui error-mid "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
+            printui error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
             return 1
         }
         cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}" || {
-            printui error-mid "Unable to copy installer"
+            printui error "Unable to copy installer"
             return 1
         }
 
-        if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" >/dev/null 2>&1; then
+        loader_start "Testing → ${image}"
+
+        TEST_CMD="sh \"${FILE_INSTALLER}\" brew"
+        if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" sh /shared/ipkg.sh brew >/dev/null 2>&1; then
+            loader_stop
+            printui passed "Passed  → ${GREEN}${image}${GREY}"
             (( passed++ ))
         else
-            printui error-mid "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
+            loader_stop
+            printui error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
             return_value=1
             (( failed++ ))
         fi

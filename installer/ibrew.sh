@@ -21,15 +21,14 @@ main() {
         return 0
     fi
 
-    # TODO: Linux only ??
-    printStyled wait "Installing Homebrew dependencies..."
-
-    # TODO: waiting for ipkg auto-install update then replace 'pkg_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
-    if ! pkg_install $BREW_DEPS; then
-        printStyled error "Unable to install Homebrew dependencies"
-        return 1
+    if [ "$(uname -s)" = "Linux" ]; then
+        # TODO: waiting for ipkg auto-install update then replace 'pkg_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
+        if ! pkg_install $BREW_DEPS; then
+            printStyled error "Unable to install Homebrew dependencies"
+            return 1
+        fi
+        update-ca-certificates --fresh >/dev/null 2>&1
     fi
-    update-ca-certificates --fresh >/dev/null 2>&1
 
     _brew_install_with_fallback || return 1
     
@@ -56,16 +55,14 @@ _brew_install_with_fallback() {
     loader_start "Installing  → Homebrew"
     if ! eval "${install_cmd}"; then
 
-        loader_stop
         printStyled warning "Failed      → Fallback on API-less method..."
-        printStyled warning "${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
-        loader_start "Installing  → Homebrew API-less (fallback)"
+        printStyled warning "🥱 ${ORANGE}This may take a few minutes - time for a coffee?${NONE} ☕️"
 
-        eval "HOMEBREW_NO_INSTALL_FROM_API=1 ${install_cmd}" || {
+        if ! eval "HOMEBREW_NO_INSTALL_FROM_API=1 ${install_cmd}"; then
             loader_stop
             printStyled error "Unable to install ${ORANGE}Homebrew${NONE}"
             return 1
-        }
+        fi
     fi
 
     printStyled success "Installed   → ${GREEN}Homebrew${NONE}"

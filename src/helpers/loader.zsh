@@ -22,7 +22,7 @@ loader_start() {
     {
         while true; do
             for frame in "${FRAMES[@]}"; do
-                printf "\r\033[K%s %s" "${frame}" "${MESSAGE}"
+                printf "\r\033[K%s %s" "${ORANGE}${frame}${NONE}" "${ORANGE}${MESSAGE}${NONE}"
                 sleep $DELAY
             done
         done
@@ -40,9 +40,9 @@ loader_pause() {
 
 loader_stop() {
 
-    if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" 2>/dev/null; then
-        kill "$SPINNER_PID" 2>/dev/null
-        wait "$SPINNER_PID" 2>/dev/null
+    if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" >/dev/null 2>&1; then
+        kill "$SPINNER_PID" >/dev/null 2>&1
+        wait "$SPINNER_PID" >/dev/null 2>&1
         SPINNER_PID=""
         printf "\r\033[K"
     fi
