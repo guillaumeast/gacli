@@ -5,160 +5,163 @@
 
 # Requires ipkg (Interface for Package Managers)
 
+REPO="guillaumeast/gacli"
+BRANCH="dev" # TODO: make it "master" for prod (via ENV variable ?)
+URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
+GACLI_DEPS_LINUX="curl tar"
+GACLI_DEPS_COMMON="zsh coreutils jq"
+
+DIR_DEST=".gacli"
+ENTRY_POINT="${DIR_DEST}/main.zsh"
+SYMDIR=".local/bin"
+SYMLINK="${SYMDIR}/gacli"
+DIR_TMP="/tmp/gacli"
+FILE_ZSHRC=".zshrc"
+
 # ────────────────────────────────────────────────────────────────
-# GACLI - INSTALL
+# MAIN
 # ────────────────────────────────────────────────────────────────
 
-# Retrieves GACLI source (curl, wget or git) into the installer directory, honouring --force
-gacli_download() {
+main() {
+    
+    if command -v gacli >/dev/null 2>&1; then
+        printStyled success "Detected    → ${GREEN}Gacli${NONE}"
+        return 0
+    fi
 
-    printStyled wait "Downloading GACLI..."
+    # TODO: waiting for ipkg auto-install update then replace 'pkg_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
+    deps=$GACLI_DEPS_COMMON
+    [ "$(uname -s)" = "Linux" ] && deps="${deps} ${GACLI_DEPS_LINUX}"
+
+    pkg_install $deps
+    
+    _gacli_download || return 1
+
+    chmod +x "${ENTRY_POINT}" || {
+        printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
+        return 1
+    }
+    printStyled success "Entry point → ${GREEN}Executable${NONE}"
+
+    _create_wrapper || return 1
+    _update_zshrc   || return 1
+    _cleanup        || return 1
+    
+    if ! command -v gacli >/dev/null 2>&1; then
+        printStyled error "Failed to install ${ORANGE}Gacli${NONE}"
+        return 1
+    fi
+
+    printStyled success "Ready       → ${GREEN}Gacli${NONE}"
+}
+
+# ────────────────────────────────────────────────────────────────
+# PRIVATE
+# ────────────────────────────────────────────────────────────────
+
+_gacli_download() {
+
+    loader_start "Downloading → Gacli"
 
     if [ -d "${DIR_DEST}" ]; then
 
-        if [ "${FORCE_MODE}" != "true" ]; then
-            printStyled error "Gacli already installed. Use --force to overwrite"
-            return 1
-        fi
+        # TODO: Ask for confirmation
 
         rm -rf "${DIR_DEST}" || {
+            loader_stop
             printStyled error "Unable to delete previous install: ${CYAN}${DIR_DEST}${NONE}"
             return 1
         }
     fi
 
     curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 >/dev/null 2>&1 || {
+        loader_stop
         printStyled error "Download failed"
         return 1
     }
 
     mv "${DIR_TMP_SRC}" "${DIR_DEST}" || {
-        printStyled error "Unable to move files into: ${DIR_DEST}"
+        loader_stop
+        printStyled error "Unable to move files into: ${CYAN}${DIR_DEST}${NONE}"
         return 1
     }
 
-    printStyled success "Downloaded: ${GREEN}GACLI${NONE}"
+    loader_stop
+    printStyled success "Downloaded  → ${GREEN}GACLI${NONE}"
 }
 
-# Runs brew bundle on the downloaded FILE_TMP_BREWFILE to install required formulae and casks
-gacli_install_deps() {
-
-    printStyled wait "Installing GACLI dependencies..."
-
-    # Check Brewfile integrity
-    [ -f "${FILE_TMP_BREWFILE}" ] || {
-        printStyled error "Unable to find dependencies descriptor at: ${CYAN}${FILE_TMP_BREWFILE}${NONE}"
-        return 1
-    }
-
-    # Check Homebrew install
-    command -v brew >/dev/null 2>&1 || {
-        printStyled error "Unable to find ${ORANGE}Homebrew${NONE}"
-        return 1     
-    }
-
-    ###############################
-    # WIP
-
-    # ==> Pouring coreutils--9.7.arm64_linux.bottle.tar.gz
-    #     Error: Could not rename binutils keg! Check/fix its permissions:
-    #     sudo chown -R root /home/linuxbrew/.linuxbrew/Cellar/binutils/2.44
-
-    # -> Permission is not the real issue
-    # -> Real issue: /home/linuxbrew/.linuxbrew/Cellar/binutils/2.44 does not exist
-
-    # ---> Try to find why binutils is not in linuxbrew ?
-
-    # WIP
-    ###############################
-
-    # Install dependencies
-    brew bundle --file="${FILE_TMP_BREWFILE}" || { # TODO WIP: >/dev/null 2>&1
-        printStyled error "Failed to install dependencies with ${ORANGE}Homebrew${NONE}"
-        return 1
-    }
-    
-    printStyled success "Installed: ${GREEN}GACLI dependencies${NONE}"
-}
-
-# ────────────────────────────────────────────────────────────────
-# GACLI - CONFIG
-# ────────────────────────────────────────────────────────────────
-
-gacli_config() {
-
-    # Adds execute permission to the downloaded GACLI entry‑point script
-    chmod +x "${ENTRY_POINT}" || {
-        printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
-        return 1
-    }
-    printStyled success "Made executable: ${GREEN}Entry point${NONE}"
-
-    _create_wrapper || return 1
-    _update_zshrc || return 1
-    _cleanup || return 1
-}
-
-# Generates a wrapper in $HOME/.local/bin that relays args to the entry point via zsh
 _create_wrapper() {
 
-    # Create symlink dir if missing
+    loader_start "Creating    → Wrapper"
+
     mkdir -p "${SYMDIR}" || {
-        printStyled warning "Failed to create ${CYAN}${SYMDIR}${NONE}"; return 1
+        loader_stop
+        printStyled error "Failed to create ${CYAN}${SYMDIR}${NONE}"
+        return 1
     }
 
-    # Delete symlink if already exists
     if [ -f "${SYMLINK}" ] || [ -d "${SYMLINK}" ] || [ -L "${SYMLINK}" ]; then
         rm -f "${SYMLINK}"
     fi
 
-    # Create symlink
     {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec \"$(command -v zsh)\" \"${ENTRY_POINT}\" \"\$@\""
     } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
-        printStyled warning "Failed to create ${ORANGE}wrapper${NONE}"; return 1
+        loader_stop
+        printStyled error "Failed to create ${ORANGE}wrapper${NONE}"
+        return 1
     }
 
-    # Success
-    printStyled success "Created: ${GREEN}wrapper${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${ENTRY_POINT}${NONE}"
+    loader_stop
+    printStyled success "Created     → ${GREEN}wrapper${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${ENTRY_POINT}${NONE}"
 }
 
-# Appends PATH export and source command to the user’s .zshrc when missing
 _update_zshrc() {
+
+    loader_start "Updating    → zsh config file"
 
     touch "${FILE_ZSHRC}" || {
         printStyled error "Unable to create .zshrc file: ${CYAN}${FILE_ZSHRC}${NONE}"
         return 1
     }
 
-    if grep -q '# GACLI' "${FILE_ZSHRC}"; then
-        printStyled success "Zsh : ${GREEN}configured${NONE}"
-        return 0
-    fi
+    line1="# GACLI"
+    line2="export PATH=\"${SYMDIR}:$PATH\""
+    line3="source ${ENTRY_POINT}"
     {
-        printf '\n\n# GACLI\n'
-        printf 'export PATH="%s:$PATH"\n' "${SYMDIR}"
-        printf 'source "%s"\n' "${ENTRY_POINT}"
+        grep -q "${line1}" || printf "\n\n${line1}\n"
+        grep -q "${line2}" || printf "${line2}\n"
+        grep -q "${line3}" || printf "${line3}\n"
     } >> "${FILE_ZSHRC}" || {
-        printStyled warning "Failed update ${FILE_ZSHRC}"; return 1
+        loader_stop
+        printStyled error "Failed to update ${FILE_ZSHRC}"
+        return 1
     }
-    printStyled success "Configured: ${GREEN}zsh${NONE}"
+
+    loader_stop
+    printStyled success "Updated     → ${GREEN}zsh${GREY} config file"
 }
 
-# Deletes installer and temporary files
 _cleanup() {
 
     # TODO: create a wrapper for cleanup + exit to ensure tmp files are always deleted after installer succeed or failed
 
+    loader_start "Processing  → cleanup"
+
     # Resolve installer symlinks
     installer="$0"
     while [ -L "${installer}" ]; do
+
         dir="$(dirname "${installer}")"
         installer="$(readlink "${installer}")"
+
         case "${installer}" in
-        /*) ;;
-        *) installer="${dir}/${installer}" ;;
+            /*)
+                ;;
+            *)
+                installer="${dir}/${installer}"
+                ;;
         esac
     done
     dir="$(dirname "${installer}")"
@@ -166,17 +169,23 @@ _cleanup() {
 
     # Move to installer directory and get absolute path
     # TODO: do not change activ dir !!
-    cd "${dir}" >/dev/null 2>&1 || return 1
-    abs_dir="$(pwd -P)" || return 1
+    cd "${dir}" >/dev/null 2>&1 || {
+        loader_stop
+        printStyled fallback "Unable to delete installer"
+        return 1
+    }
+    abs_dir="$(pwd -P)" || {
+        loader_stop
+        printStyled fallback "Unable to delete installer"
+        return 1
+    }
     installer="${abs_dir}/${base}"
 
-    # Delete installer
     [ -f "${installer}" ] && rm -f "${installer}"
-
-    # Delete temporary files
     [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
 
-    printStyled success "Cleanup: ${GREEN}completed${NONE}"
+    loader_stop
+    printStyled success "Completed   → ${GREEN}cleanup${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ GH_RAW_URL="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
 # MAIN
 # ────────────────────────────────────────────────────────────────
 
+# TODO: check if packets are installed with command -v ?
 # TODO: add --install       → install ipkg command
 # TODO: add --bulk          → install all deps at once
 # TODO: add --no-update     → don't update before install

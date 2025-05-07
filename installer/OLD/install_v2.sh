@@ -13,7 +13,7 @@
 # TODO: add git one-liner install cmd into README
 
 BRANCH="dev" # TODO: make it "master" for prod (via ENV variable ?)
-GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead !
+GACLI_DEPS="zsh coreutils jq" # TODO: use Brewfile instead ?
 
 # ────────────────────────────────────────────────────────────────
 # VARIABLES
