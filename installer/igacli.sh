@@ -23,15 +23,11 @@ FILE_ZSHRC=".zshrc"
 # ────────────────────────────────────────────────────────────────
 
 main() {
-
-    printStyled debug "Hi, I'm gacli installer 👋"
     
     if command -v gacli >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Gacli${NONE}"
         return 0
     fi
-
-    printStyled debug "Still there 👍"
 
     # TODO: waiting for ipkg auto-install update then replace 'pkg_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
     deps=$GACLI_DEPS_COMMON
@@ -95,7 +91,7 @@ _gacli_download() {
         }
     fi
 
-    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 >/dev/null 2>&1 || {
+    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 || { # TODO: >/dev/null 2>&1 after tests
         loader_stop
         printStyled error "Download failed"
         return 1
