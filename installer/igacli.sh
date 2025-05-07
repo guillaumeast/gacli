@@ -23,19 +23,29 @@ FILE_ZSHRC=".zshrc"
 # ────────────────────────────────────────────────────────────────
 
 main() {
+
+    printStyled debug "Hi, I'm gacli installer 👋"
     
     if command -v gacli >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Gacli${NONE}"
         return 0
     fi
 
+    printStyled debug "Still there 👍"
+
     # TODO: waiting for ipkg auto-install update then replace 'pkg_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
     deps=$GACLI_DEPS_COMMON
     [ "$(uname -s)" = "Linux" ] && deps="${deps} ${GACLI_DEPS_LINUX}"
 
+    printStyled debug "Let's install packages 👀 --->${deps}<---"
+
     pkg_install $deps
+
+    printStyled debug "Let's Download Gacli files 🤞"
     
     _gacli_download || return 1
+
+    printStyled debug "Let's make entry point executable 🤖"
 
     chmod +x "${ENTRY_POINT}" || {
         printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
@@ -43,9 +53,20 @@ main() {
     }
     printStyled success "Entry point → ${GREEN}Executable${NONE}"
 
+    printStyled debug "Let's create the wrapper 🔗"
+
     _create_wrapper || return 1
+
+    printStyled debug "Let's update .zshrc 📇"
+    
     _update_zshrc   || return 1
+    
+    printStyled debug "Let's cleanup things 🧹"
+    
     _cleanup        || return 1
+    
+    printStyled debug "Let's check if gacli is correctly installed 🙈"
+    
     
     if ! command -v gacli >/dev/null 2>&1; then
         printStyled error "Failed to install ${ORANGE}Gacli${NONE}"
