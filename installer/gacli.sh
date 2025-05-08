@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 ###############################
-# FICHIER /installer/igacli.sh
+# FICHIER /installer/gacli.sh
 ###############################
 
 # Requires ipkg (Interface for Package Managers)
@@ -9,7 +9,7 @@ REPO="guillaumeast/gacli"
 BRANCH="dev" # TODO: make it "master" for prod (via ENV variable ?)
 URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 GACLI_DEPS_LINUX="curl tar"
-GACLI_DEPS_COMMON="zsh brew coreutils jq"
+GACLI_DEPS_COMMON="brew zsh coreutils jq"
 
 DIR_DEST=".gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
@@ -19,21 +19,26 @@ DIR_TMP="/tmp/gacli"
 FILE_ZSHRC=".zshrc"
 
 # ────────────────────────────────────────────────────────────────
-# MAIN
+# PUBLIC
 # ────────────────────────────────────────────────────────────────
 
-main() {
+# Used by ipkg to fetch installer dependencies
+get_deps() {
+
+    deps=$GACLI_DEPS_COMMON
+
+    [ "$(uname -s)" = "Linux" ] && deps="${deps} ${GACLI_DEPS_LINUX}"
+
+    echo $deps
+}
+
+# Called by ipkg after deps install
+install() {
     
     if command -v gacli >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Gacli${NONE}"
         return 0
     fi
-
-    # TODO: waiting for ipkg auto-install update then replace 'main_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
-    deps=$GACLI_DEPS_COMMON
-    [ "$(uname -s)" = "Linux" ] && deps="${deps} ${GACLI_DEPS_LINUX}"
-
-    main_install $deps
     
     _gacli_download || return 1
 
@@ -48,6 +53,11 @@ main() {
     _update_zshrc   || return 1
     
     _cleanup        || return 1
+
+    if ! zsh -c 'command -v gacli' >/dev/null 2>&1; then
+        printStyled error "Unable to install ${ORANGE}Gacli${NONE}"
+        return 1
+    fi
 
     printStyled success "Ready       → ${GREEN}Gacli${NONE}"
 
@@ -199,10 +209,4 @@ _cleanup() {
     loader_stop
     printStyled success "Completed   → ${GREEN}cleanup${NONE}"
 }
-
-# ────────────────────────────────────────────────────────────────
-# RUN
-# ────────────────────────────────────────────────────────────────
-
-main "$@"
 

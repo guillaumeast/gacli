@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 ###############################
-# FICHIER /installer/ibrew.sh
+# FICHIER /installer/brew.sh
 ###############################
 
 # Requires ipkg (Interface for Package Managers)
@@ -10,19 +10,24 @@ FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}
 BREW_DEPS="bash git curl file gcc make binutils gawk gzip ca-certificates perl brotli ruby procps cyrus-sasl nghttp2"
 
 # ────────────────────────────────────────────────────────────────
-# MAIN
+# PUBLIC
 # ────────────────────────────────────────────────────────────────
 
+# Used by ipkg to fetch installer dependencies
+get_deps() {
+
+    [ "$(uname -s)" = "Linux" ] && echo $deps
+}
+
+# Called by ipkg after deps install
 main() {
     
     if command -v brew >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Homebrew${NONE}"
-        printStyled success "Detected    → ${GREEN}Gacli${NONE}"
         return 0
     fi
 
-    # TODO: waiting for ipkg auto-install update then replace 'main_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
-    [ "$(uname -s)" = "Linux" ] && main_install $BREW_DEPS && update-ca-certificates --fresh >/dev/null 2>&1
+    [ "$(uname -s)" = "Linux" ] && update-ca-certificates --fresh >/dev/null 2>&1
 
     _brew_install_with_fallback || return 1
     
@@ -105,6 +110,4 @@ _brew_get_path() {
     printStyled error "Unable to locate ${ORANGE}Homebrew${RED} binary"
     return 1
 }
-
-main "$@"
 

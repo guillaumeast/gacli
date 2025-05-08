@@ -8,7 +8,9 @@
 
 REPO="guillaumeast/gacli" # TODO: Create own repo ?
 BRANCH="dev"
-GH_RAW_URL="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
+URL_INSTALLERS_DIR="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
+INSTALLERS="brew gacli"
+DIR_TMP="/tmp/ipkg"
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -23,44 +25,48 @@ GH_RAW_URL="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
 # TODO: add --quiet         → only show error messages
 # TODO: add --verbose       → show all raw commands outputs
 
-main_install() {
+main() {
 
-    raw_packets="$@"
-    
+    args="$@"
+  
     echo
     posix_guard     || exit 1
     force_sudo "$@" || exit 2
     pkg_check       || exit 3
     http_check
 
-    install_brew="false"
-    install_gacli="false"
-    formatted_packets=""
-    for packet in $raw_packets; do
-        
-        [ $packet = "brew" ] && install_brew="true" && continue
-        [ $packet = "gacli" ] && install_gacli="true" && continue
+    installers=""
+    packages=""
 
-        [ -z "$formatted_packets" ] && formatted_packets="${packet}" && continue
-        formatted_packets="${formatted_packets} ${packet}"
-    done
+    trap '[ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"' EXIT
+    parse_deps "$@" || exit 4
 
-    if [ -n "${formatted_packets}" ]; then
+    printStyled debug "installers → ${installers}"
+    printStyled debug "packages   → ${packages}"
+
+    if [ -n "${packages}" ]; then
         echo
         printStyled wait "Installing packages..."
-        pkg_install "$formatted_packets" || exit 4
+        pkg_install "$packages" || exit 4
         echo
     fi
 
-    if [ $install_brew = "true" ]; then
-        install_brew || exit 5
-        echo
-    fi
+    [ -z "${installers}" ] && return 0
 
-    if [ $install_gacli = "true" ]; then
-        install_gacli || exit 6
-        echo
-    fi
+    printStyled wait "Running installers..."
+
+    for installer in $installers; do
+        
+        if ! . "${DIR_TMP}/${installer}.sh"; then
+            printStyled warning "${RED}${installer}${NONE} → Unable to source installer"
+            continue
+        fi
+
+        if ! install; then
+            printStyled warning "${RED}${installer}${NONE} → Install failed"
+            continue
+        fi
+    done
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -102,6 +108,64 @@ force_sudo() {
     # No sudo → Warn install may fail
     printStyled fallback "Privilege   → ${ORANGE}non-root user${GREY} (${ORANGE}sudo${GREY} not detected)${NONE}"
     printStyled warning "Non-root install may fail"
+}
+
+parse_deps() {
+
+    deps="${1}"
+
+    for item in $deps; do
+
+        if is_installer "${item}"; then
+            installers="${installers} ${item}"
+            continue
+        fi
+
+        packages="${packages} ${item}"
+    done
+
+    if [ -n "${installers}" ]; then
+
+        mkdir -p "${DIR_TMP}" || {
+            printStyled error "Unable to create tmp dir: ${CYAN}${DIR_TMP}${NONE}"
+            return 1
+        }
+
+        for installer in $installers; do
+            fetch_installer "${installer}" # Recursive call to parse_deps
+        done
+    fi
+}
+
+is_installer() {
+
+    for installer in $INSTALLERS; do
+        [ "${installer}" = "${1}" ] && return 0
+    done
+
+    return 1
+}
+
+fetch_installer() {
+
+    installer="${1}"
+
+    tmp_file="${DIR_TMP}/${installer}.sh"
+
+    if ! http_download "${URL_INSTALLERS_DIR}/${installer}.sh" "${tmp_file}"; then
+        printStyled warning "${RED}${installer}${NONE} → Unable to download installer"
+        continue
+    fi
+
+    if ! . "${tmp_file}"; then
+        printStyled warning "${RED}${installer}${NONE} → Unable to source installer"
+        continue
+    fi
+
+    if ! parse_deps "$(get_deps)"; then
+        printStyled warning "${RED}${installer}${NONE} → Unable to parse dependencies"
+        continue
+    fi
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -489,42 +553,6 @@ http_check() {
 }
 
 # ────────────────────────────────────────────────────────────────
-# INSTALLERS
-# ────────────────────────────────────────────────────────────────
-
-INSTALLER_BREW="${GH_RAW_URL}/installer/ibrew.sh"
-
-install_brew() {
-    
-    tmp_installer="/tmp/ibrew.sh"
-    trap 'rm -f "${tmp_installer}"' EXIT
-    
-    echo
-    printStyled highlight "Launching Homebrew installer..."
-    echo
-
-    http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
-
-    . "${tmp_installer}" || return 1
-}
-
-INSTALLER_GACLI="${GH_RAW_URL}/installer/igacli.sh"
-
-install_gacli() {
-
-    tmp_installer="/tmp/install_gacli.sh"
-    trap 'rm -f "${tmp_installer}"' EXIT
-
-    echo
-    printStyled highlight "Launching Gacli installer..."
-    echo
-
-    http_download "${INSTALLER_GACLI}" "${tmp_installer}" || return 1
-
-    . "${tmp_installer}" || return 1
-}
-
-# ────────────────────────────────────────────────────────────────
 # LOADER
 # ────────────────────────────────────────────────────────────────
 
@@ -688,5 +716,5 @@ printStyled() {
 # RUN
 # ────────────────────────────────────────────────────────────────
 
-main_install "$@"
+main "$@"
 
