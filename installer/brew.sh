@@ -20,7 +20,7 @@ get_deps() {
 }
 
 # Called by ipkg after deps install
-main() {
+run() {
     
     if command -v brew >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Homebrew${NONE}"

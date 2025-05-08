@@ -35,25 +35,18 @@ main() {
     pkg_check       || exit 3
     http_check
 
-    installers=""
-    packages=""
-
     mkdir -p "${DIR_TMP_IPKG}" || {
         printStyled error "Unable to create tmp dir: ${CYAN}${DIR_TMP_IPKG}${NONE}"
         return 1
     }
     trap '[ -d "${DIR_TMP_IPKG}" ] && rm -rf "${DIR_TMP_IPKG}"' EXIT
 
-    merge_deps "$@" || exit 4
-
-    printStyled debug "installers → ${installers}"
-    printStyled debug "packages   → ${packages}"
+    merged_deps="$(merge_deps "$@")" || exit 4
+    installers="$(printf %s "$merged_deps" | cut -d'|' -f1)"
+    packages="$(printf %s "$merged_deps" | cut -d'|' -f2)"
 
     if [ -n "${packages}" ]; then
-        echo
-        printStyled wait "Installing packages..."
         pkg_install "$packages" || exit 4
-        echo
     fi
 
     [ -z "${installers}" ] && return 0
@@ -67,10 +60,7 @@ main() {
             continue
         fi
 
-        if ! install; then
-            printStyled warning "${RED}${installer}${NONE} → Install failed"
-            continue
-        fi
+        run
     done
 }
 
@@ -118,13 +108,15 @@ force_sudo() {
 merge_deps() {
 
     deps="$@"
+    installers=""
+    packages=""
 
     for item in $deps; do
 
         if is_installer "${item}"; then
             tmp_file="${DIR_TMP_IPKG}/${installer}.sh"
 
-            if ! http_download "${URL_INSTALLERS_DIR}/${installer}.sh" "${tmp_file}"; then
+            if ! http_download "${URL_INSTALLERS_DIR}/${installer}.sh" "${tmp_file}" >/dev/null; then # TODO: remove >/dev/null after tests
                 printStyled warning "${RED}${installer}${YELLOW} → Unable to download installer"
                 continue
             fi
@@ -134,17 +126,39 @@ merge_deps() {
                 continue
             fi
 
-            nested_deps="$(get_deps)"
-            if ! merge_deps $nested_deps; then
+            if ! nested="$(merge_deps $(get_deps))"; then
                 printStyled warning "${RED}${installer}${YELLOW} → Unable to parse dependencies"
                 continue
             fi
 
-            installers="${installers}${installer} "
+            nested_installers="$installers$(printf %s "$nested" | cut -d'|' -f1)${item} "
+            nested_packages="$packages$(printf %s "$nested" | cut -d'|' -f2) "
+
+            for installer in $nested_installers; do
+                already_exists="false"
+                for i in $installers; do
+                    [ "${i}" = "${installer}" ] && already_exists="true" && break
+                done
+                [ "${already_exists}" = "false" ] && installers="${installers}${installer} "
+            done
+
+            for package in $nested_packages; do
+                already_exists="false"
+                for p in $packages; do
+                    [ "${p}" = "${package}" ] && already_exists="true" && break
+                done
+                [ "${already_exists}" = "false" ] && packages="${packages}${package} "
+            done
         else
-            packages="${packages}${item} "
+            already_exists="false"
+            for package in $packages; do
+                [ "${package}" = "${item}" ] && already_exists="true" && break
+            done
+            [ "${already_exists}" = "false" ] && packages="${packages}${item} "
         fi
     done
+
+    printf "%s|%s" "$installers" "$packages"
 }
 
 is_installer() {
@@ -175,6 +189,7 @@ FORMAT_ZYPPER="procps-ng=procps nghttp2="
 pkg_install() {
 
     raw_deps="$@"
+    return_value=0
 
     if [ -z "${raw_deps}" ]; then
         printStyled error "Expected: <@packet_names>; received: '$@'"
@@ -183,17 +198,16 @@ pkg_install() {
     fi
 
     pkg_manager=$(pkg_get_current) || return 1
-
     formatted_deps=$(_pkg_format_deps "${pkg_manager}" $raw_deps) || return 1
 
     echo
-    return_value=0
-
-    _pkg_update "${pkg_manager}" || printStyled warning "Package manager update failed"    
-    _pkg_install "${pkg_manager}" "${formatted_deps}" || return_value=1
-    _pkg_clean "${pkg_manager}" || printStyled warning "Cleanup failed"
-    
+    _pkg_update "${pkg_manager}" || printStyled warning "Package manager update failed"
     echo
+    _pkg_install "${pkg_manager}" "${formatted_deps}" || return_value=1
+    echo
+    _pkg_clean "${pkg_manager}" || printStyled warning "Cleanup failed"
+    echo
+
     return $return_value
 }
 
@@ -316,7 +330,7 @@ _pkg_update() {
         return 1
     fi
 
-    loader_start "Updating    → ${pkg_manager}"
+    loader_start "Updating    → pkg_manager"
     trap 'loader_stop' EXIT
 
     case "${pkg_manager}" in
@@ -356,7 +370,7 @@ _pkg_update() {
     esac
 
     loader_stop
-    printStyled success "Updated     → ${GREEN}${pkg_manager}${NONE}"
+    printStyled success "Updated     → ${GREEN}${pkg_manager}${GREY} (package manager)${NONE}"
 }
 
 _pkg_install() {
@@ -424,7 +438,7 @@ _pkg_clean() {
         return 1
     fi
 
-    loader_start "Cleaning"
+    loader_start "Performing  → cleanup"
     trap 'loader_stop' EXIT
 
     case "${pkg_manager}" in
@@ -457,7 +471,7 @@ _pkg_clean() {
     esac
 
     loader_stop
-    printStyled success "Cleaned"
+    printStyled success "Done        → ${GREEN}cleanup${NONE}"
 }
 
 # ────────────────────────────────────────────────────────────────

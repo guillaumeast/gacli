@@ -1,0 +1,8 @@
+{
+  "formulae": [
+    "curl",
+    "coreutils",
+    "jq"
+  ],
+  "casks": []
+}

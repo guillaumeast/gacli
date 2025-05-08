@@ -33,7 +33,7 @@ get_deps() {
 }
 
 # Called by ipkg after deps install
-install() {
+run() {
     
     if command -v gacli >/dev/null 2>&1; then
         printStyled success "Detected    → ${GREEN}Gacli${NONE}"
