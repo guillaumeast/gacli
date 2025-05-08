@@ -16,7 +16,7 @@ BREW_DEPS="bash git curl file gcc make binutils gawk gzip ca-certificates perl b
 # Used by ipkg to fetch installer dependencies
 get_deps() {
 
-    [ "$(uname -s)" = "Linux" ] && echo $deps
+    [ "$(uname -s)" = "Linux" ] && echo $BREW_DEPS
 }
 
 # Called by ipkg after deps install

@@ -15,7 +15,7 @@ DIR_DEST=".gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
 SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
-DIR_TMP="/tmp/gacli"
+DIR_TMP_GACLI="/tmp/gacli"
 FILE_ZSHRC=".zshrc"
 
 # ────────────────────────────────────────────────────────────────
@@ -85,18 +85,18 @@ _gacli_download() {
         }
     fi
 
-    mkdir -p "${DIR_TMP}" || {
-        printStyled error "Unable to create folder: ${CYAN}${DIR_TMP}${NONE}"
+    mkdir -p "${DIR_TMP_GACLI}" || {
+        printStyled error "Unable to create folder: ${CYAN}${DIR_TMP_GACLI}${NONE}"
         return 1
     }
 
-    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 || { # TODO: >/dev/null 2>&1 after tests
+    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP_GACLI}" --strip-components=1 || { # TODO: >/dev/null 2>&1 after tests
         loader_stop
         printStyled error "Download failed"
         return 1
     }
 
-    mv "${DIR_TMP}/src" "${DIR_DEST}" || {
+    mv "${DIR_TMP_GACLI}/src" "${DIR_DEST}" || {
         loader_stop
         printStyled error "Unable to move files into: ${CYAN}${DIR_DEST}${NONE}"
         return 1
@@ -204,7 +204,7 @@ _cleanup() {
     installer="${abs_dir}/${base}"
 
     [ -f "${installer}" ] && rm -f "${installer}"
-    [ -d "${DIR_TMP}" ] && rm -rf "${DIR_TMP}"
+    [ -d "${DIR_TMP_GACLI}" ] && rm -rf "${DIR_TMP_GACLI}"
 
     loader_stop
     printStyled success "Completed   → ${GREEN}cleanup${NONE}"
