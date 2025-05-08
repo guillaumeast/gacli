@@ -23,7 +23,7 @@ GH_RAW_URL="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}"
 # TODO: add --quiet         → only show error messages
 # TODO: add --verbose       → show all raw commands outputs
 
-main() {
+main_install() {
 
     raw_packets="$@"
     
@@ -37,13 +37,20 @@ main() {
     install_gacli="false"
     formatted_packets=""
     for packet in $raw_packets; do
+
+        printStyled debug "Formatting packet --->${packet}<---"
         
         [ $packet = "brew" ] && install_brew="true" && continue
         [ $packet = "gacli" ] && install_gacli="true" && continue
 
         [ -z "$formatted_packets" ] && formatted_packets="${packet}" && continue
+        printStyled debug "Added to packets"
         formatted_packets="${formatted_packets} ${packet}"
     done
+
+    printStyled debug "Formatted packets --->${formatted_packets}<---"
+    printStyled debug "install_brew = ${install_brew}"
+    printStyled debug "install_gacli = ${install_gacli}"
 
     if [ -n "${formatted_packets}" ]; then
         echo
@@ -137,9 +144,9 @@ pkg_install() {
     echo
     return_value=0
 
-    _pkg_update "${pkg_manager}" || printStyled warning "  → Package manager update failed"    
+    _pkg_update "${pkg_manager}" || printStyled warning "Package manager update failed"    
     _pkg_install "${pkg_manager}" "${formatted_deps}" || return_value=1
-    _pkg_clean "${pkg_manager}" || printStyled warning "  → Cleanup failed"
+    _pkg_clean "${pkg_manager}" || printStyled warning "Cleanup failed"
     
     echo
     return $return_value
@@ -357,7 +364,7 @@ _pkg_install() {
         if [ $is_installed = "true" ]; then
             printStyled success "Installed   → ${GREEN}${dep}${NONE}"
         else
-            printStyled warning "  → ${RED}${dep}${YELLOW} install failed"
+            printStyled warning "${RED}${dep}${YELLOW} install failed"
         fi
     done
 }
@@ -517,6 +524,10 @@ install_gacli() {
 
     http_download "${INSTALLER_GACLI}" "${tmp_installer}" || return 1
 
+    echo
+    printStyled highlight "Launching Gacli installer..."
+    echo
+
     . "${tmp_installer}" || return 1
 }
 
@@ -605,14 +616,14 @@ printStyled() {
 
     case "${style}" in
         error)
-            prefix="Error       → "
+            prefix="Error      → "
             color_text=$RED
             color_emoji=$RED
             emoji=$EMOJI_ERR
             output_stream=2
             ;;
         warning)
-            prefix="Warning     → "
+            prefix="Warning    → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_WARN
@@ -654,7 +665,7 @@ printStyled() {
             output_stream=1
             ;;
         debug)
-            prefix="Debug       → "
+            prefix="Debug      → "
             color_text=$YELLOW
             color_emoji=$YELLOW
             emoji=$EMOJI_DEBUG
@@ -684,5 +695,5 @@ printStyled() {
 # RUN
 # ────────────────────────────────────────────────────────────────
 
-main "$@"
+main_install "$@"
 

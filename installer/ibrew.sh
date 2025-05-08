@@ -21,8 +21,8 @@ main() {
         return 0
     fi
 
-    # TODO: waiting for ipkg auto-install update then replace 'pkg_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
-    [ "$(uname -s)" = "Linux" ] && pkg_install $BREW_DEPS && update-ca-certificates --fresh >/dev/null 2>&1
+    # TODO: waiting for ipkg auto-install update then replace 'main_install $BREW_DEPS' →  'ipkg install $BREW_DEPS'
+    [ "$(uname -s)" = "Linux" ] && main_install $BREW_DEPS && update-ca-certificates --fresh >/dev/null 2>&1
 
     _brew_install_with_fallback || return 1
     

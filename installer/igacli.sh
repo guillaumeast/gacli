@@ -9,7 +9,7 @@ REPO="guillaumeast/gacli"
 BRANCH="dev" # TODO: make it "master" for prod (via ENV variable ?)
 URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 GACLI_DEPS_LINUX="curl tar"
-GACLI_DEPS_COMMON="zsh coreutils jq"
+GACLI_DEPS_COMMON="zsh brew coreutils jq"
 
 DIR_DEST=".gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
@@ -17,6 +17,12 @@ SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
 DIR_TMP="/tmp/gacli"
 FILE_ZSHRC=".zshrc"
+
+#######################
+# TODO: delete after tests !
+. /shared/ipkg.sh
+# TODO: delete after tests !
+#######################
 
 # ────────────────────────────────────────────────────────────────
 # MAIN
@@ -29,19 +35,13 @@ main() {
         return 0
     fi
 
-    # TODO: waiting for ipkg auto-install update then replace 'pkg_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
+    # TODO: waiting for ipkg auto-install update then replace 'main_install $GACLI_DEPS_LINUX' →  'ipkg install $GACLI_DEPS_LINUX'
     deps=$GACLI_DEPS_COMMON
     [ "$(uname -s)" = "Linux" ] && deps="${deps} ${GACLI_DEPS_LINUX}"
 
-    printStyled debug "Let's install packages 👀 --->${deps}<---"
-
-    pkg_install $deps
-
-    printStyled debug "Let's Download Gacli files 🤞"
+    main_install $deps
     
     _gacli_download || return 1
-
-    printStyled debug "Let's make entry point executable 🤖"
 
     chmod +x "${ENTRY_POINT}" || {
         printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
@@ -49,27 +49,17 @@ main() {
     }
     printStyled success "Entry point → ${GREEN}Executable${NONE}"
 
-    printStyled debug "Let's create the wrapper 🔗"
-
     _create_wrapper || return 1
-
-    printStyled debug "Let's update .zshrc 📇"
     
     _update_zshrc   || return 1
     
-    printStyled debug "Let's cleanup things 🧹"
-    
     _cleanup        || return 1
-    
-    printStyled debug "Let's check if gacli is correctly installed 🙈"
-    
-    
-    if ! command -v gacli >/dev/null 2>&1; then
-        printStyled error "Failed to install ${ORANGE}Gacli${NONE}"
-        return 1
-    fi
 
     printStyled success "Ready       → ${GREEN}Gacli${NONE}"
+
+    echo
+    printStyled highlight "Restart your terminal or run ${YELLOW}exec zsh${NONE}"
+    echo
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -91,13 +81,18 @@ _gacli_download() {
         }
     fi
 
+    mkdir -p "${DIR_TMP}" || {
+        printStyled error "Unable to create folder: ${CYAN}${DIR_TMP}${NONE}"
+        return 1
+    }
+
     curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP}" --strip-components=1 || { # TODO: >/dev/null 2>&1 after tests
         loader_stop
         printStyled error "Download failed"
         return 1
     }
 
-    mv "${DIR_TMP_SRC}" "${DIR_DEST}" || {
+    mv "${DIR_TMP}/src" "${DIR_DEST}" || {
         loader_stop
         printStyled error "Unable to move files into: ${CYAN}${DIR_DEST}${NONE}"
         return 1
@@ -143,18 +138,24 @@ _update_zshrc() {
         return 1
     }
 
-    line1="# GACLI"
-    line2="export PATH=\"${SYMDIR}:$PATH\""
-    line3="source ${ENTRY_POINT}"
-    {
-        grep -q "${line1}" || printf "\n\n${line1}\n"
-        grep -q "${line2}" || printf "${line2}\n"
-        grep -q "${line3}" || printf "${line3}\n"
-    } >> "${FILE_ZSHRC}" || {
-        loader_stop
-        printStyled error "Failed to update ${FILE_ZSHRC}"
-        return 1
-    }
+    missing=""
+    for line in \
+        '# GACLI' \
+        "export PATH=\"${SYMDIR}:\$PATH\"" \
+        "source ${ENTRY_POINT}"
+    do
+        if ! grep -Fq "$line" "$FILE_ZSHRC"; then
+            missing="${missing}\n${line}"
+        fi
+    done
+
+    if [ -n "${missing}" ]; then
+        printf "${missing}\n" >> "${FILE_ZSHRC}" || {
+            loader_stop
+            printStyled error "Failed to update ${FILE_ZSHRC}"
+            return 1
+        }
+    fi
 
     loader_stop
     printStyled success "Updated     → ${GREEN}zsh${GREY} config file"
