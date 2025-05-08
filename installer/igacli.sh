@@ -18,12 +18,6 @@ SYMLINK="${SYMDIR}/gacli"
 DIR_TMP="/tmp/gacli"
 FILE_ZSHRC=".zshrc"
 
-#######################
-# TODO: delete after tests !
-. /shared/ipkg.sh
-# TODO: delete after tests !
-#######################
-
 # ────────────────────────────────────────────────────────────────
 # MAIN
 # ────────────────────────────────────────────────────────────────

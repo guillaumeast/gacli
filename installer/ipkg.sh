@@ -499,11 +499,11 @@ install_brew() {
     tmp_installer="/tmp/ibrew.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
     
-    http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
-
     echo
     printStyled highlight "Launching Homebrew installer..."
     echo
+
+    http_download "${INSTALLER_BREW}" "${tmp_installer}" || return 1
 
     . "${tmp_installer}" || return 1
 }
@@ -515,11 +515,11 @@ install_gacli() {
     tmp_installer="/tmp/install_gacli.sh"
     trap 'rm -f "${tmp_installer}"' EXIT
 
-    http_download "${INSTALLER_GACLI}" "${tmp_installer}" || return 1
-
     echo
     printStyled highlight "Launching Gacli installer..."
     echo
+
+    http_download "${INSTALLER_GACLI}" "${tmp_installer}" || return 1
 
     . "${tmp_installer}" || return 1
 }
