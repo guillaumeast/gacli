@@ -17,8 +17,6 @@ SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
 FILE_ZSHRC="${HOME}/.zshrc"
 
-FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
-
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
@@ -141,27 +139,24 @@ _gacli_update_path() {
         return 1
     }
 
-    for file in $FILES_RC; do
-
-        missing=""
-        for line in \
-            '# GACLI' \
-            "export PATH=\"${SYMDIR}:\$PATH\"" \
-            "source ${ENTRY_POINT}"
-        do
-            if ! grep -Fq "$line" "$file"; then
-                missing="${missing}\n${line}"
-            fi
-        done
-
-        if [ -n "${missing}" ]; then
-            printf "${missing}\n" >> "${file}" || {
-                loader_stop
-                printStyled error "Failed to update ${file}"
-                return 1
-            }
+    missing=""
+    for line in \
+        '# GACLI' \
+        "export PATH=\"${SYMDIR}:\$PATH\"" \
+        "source ${ENTRY_POINT}"
+    do
+        if ! grep -Fq "${line}" "${FILE_ZSHRC}"; then
+            missing="${missing}\n${line}"
         fi
     done
+
+    if [ -n "${missing}" ]; then
+        printf "${missing}\n" >> "${FILE_ZSHRC}" || {
+            loader_stop
+            printStyled error "Failed to update ${file}"
+            return 1
+        }
+    fi
 
     loader_stop
     printStyled success "Configured  → ${GREEN}PATH${NONE}"
