@@ -32,33 +32,60 @@ ARGS_PACKAGES=""
 # TODO: add --quiet         → only show error messages
 # TODO: add --verbose       → show all raw commands outputs
 
+ipkg_exit() {
+
+    exit_code=$1
+
+    loader_stop
+
+    [ -d "${DIR_TMP_IPKG}" ] && rm -rf "${DIR_TMP_IPKG}"
+
+    exit $exit_code
+}
+
 main() {
 
     args="$@"
   
     echo
-    posix_guard     || exit 1
-    force_sudo "$@" || exit 2
-    pkg_check       || exit 3
+    posix_guard     || ipkg_exit 1
+    force_sudo "$@" || ipkg_exit 2
+    pkg_check       || ipkg_exit 3
     http_check
 
     mkdir -p "${DIR_TMP_IPKG}" || {
         printStyled error "Unable to create tmp dir: ${CYAN}${DIR_TMP_IPKG}${NONE}"
         return 1
     }
-    # TODO: uncomment after tests → trap 'rm -rf "${DIR_TMP_IPKG}"' EXIT
 
-    echo
-    printStyled wait "Fetchnig nested dependencies..."
-    echo
+    for arg in $args; do
 
-    merge_deps "$@" || exit 4
+        found="false"
+        for installer in $INSTALLERS; do
 
+            [ "$installer" != "$arg" ] && continue
+            found="true"
+            break
+        done
+
+        [ "$found" = "false" ] && continue
+
+        echo
+        printStyled wait "Fetchnig nested dependencies..."
+        echo
+        break
+    done
+
+    merge_deps "$@" || ipkg_exit 4
+
+    exit_code=0
     if [ -n "${ARGS_PACKAGES}" ]; then
+
         echo
         printStyled wait "Installing packages..."
         echo
-        pkg_install "$ARGS_PACKAGES" || exit 4
+
+        pkg_install "$ARGS_PACKAGES" || exit_code=4
         echo
     fi
 
@@ -74,9 +101,11 @@ main() {
             continue
         fi
 
-        run
+        run || exit_code=5
         echo
     done
+
+    ipkg_exit $exit_code
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -393,6 +422,7 @@ _pkg_install() {
     pkg_manager="${1}"
     shift
     deps="$@"
+    return_value=0
 
     if [ -z "${pkg_manager}" ] || [ -z "${deps}" ]; then
         printStyled error "[_pkg_install] Expected: <pkg_manager> <@deps>"
@@ -437,9 +467,12 @@ _pkg_install() {
         if [ $is_installed = "true" ]; then
             printStyled success "Installed   → ${GREEN}${dep}${NONE}"
         else
+            return_value=1
             printStyled warning "${RED}${dep}${YELLOW} install failed"
         fi
     done
+
+    return $return_value
 }
 
 _pkg_clean() {
