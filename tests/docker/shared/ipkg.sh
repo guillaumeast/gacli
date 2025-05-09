@@ -46,7 +46,7 @@ main() {
         printStyled error "Unable to create tmp dir: ${CYAN}${DIR_TMP_IPKG}${NONE}"
         return 1
     }
-    trap 'rm -rf "${DIR_TMP_IPKG}"' EXIT
+    # TODO: uncomment after tests → trap 'rm -rf "${DIR_TMP_IPKG}"' EXIT
 
     echo
     printStyled wait "Fetchnig nested dependencies..."
@@ -521,7 +521,7 @@ http_download() {
             ;;
     esac
 
-    loader_start "Downloading from '${CYAN}${url}${ORANGE}'..."
+    loader_start "Downloading → ${CYAN}${url}${ORANGE}..."
 
     if ! ${download_cmd} "${url}" > "${destination}"; then # TODO: > /dev/null 2>&1
         loader_stop

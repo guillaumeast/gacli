@@ -521,7 +521,7 @@ http_download() {
             ;;
     esac
 
-    loader_start "Downloading from '${CYAN}${url}${ORANGE}'..."
+    loader_start "Downloading → ${CYAN}${url}${ORANGE}..."
 
     if ! ${download_cmd} "${url}" > "${destination}"; then # TODO: > /dev/null 2>&1
         loader_stop

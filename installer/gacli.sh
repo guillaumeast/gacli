@@ -17,6 +17,8 @@ SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
 FILE_ZSHRC=".zshrc"
 
+FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
+
 # ────────────────────────────────────────────────────────────────
 # PUBLIC
 # ────────────────────────────────────────────────────────────────
@@ -41,7 +43,7 @@ run() {
     
     _gacli_install          || return 1
     _gacli_create_wrapper   || return 1
-    _gacli_update_zshrc     || return 1
+    _gacli_update_path     || return 1
 
     loader_stop
     echo
@@ -129,9 +131,9 @@ _gacli_create_wrapper() {
     printStyled success "Created     → ${GREEN}wrapper${NONE}"
 }
 
-_gacli_update_zshrc() {
+_gacli_update_path() {
 
-    loader_start "Configuring → zsh"
+    loader_start "Configuring → PATH"
 
     touch "${FILE_ZSHRC}" || {
         loader_stop
@@ -139,26 +141,29 @@ _gacli_update_zshrc() {
         return 1
     }
 
-    missing=""
-    for line in \
-        '# GACLI' \
-        "export PATH=\"${SYMDIR}:\$PATH\"" \
-        "source ${ENTRY_POINT}"
-    do
-        if ! grep -Fq "$line" "$FILE_ZSHRC"; then
-            missing="${missing}\n${line}"
+    for file in $FILES_RC; do
+
+        missing=""
+        for line in \
+            '# GACLI' \
+            "export PATH=\"${SYMDIR}:\$PATH\"" \
+            "source ${ENTRY_POINT}"
+        do
+            if ! grep -Fq "$line" "$FILE_ZSHRC"; then
+                missing="${missing}\n${line}"
+            fi
+        done
+
+        if [ -n "${missing}" ]; then
+            printf "${missing}\n" >> "${FILE_ZSHRC}" || {
+                loader_stop
+                printStyled error "Failed to update ${FILE_ZSHRC}"
+                return 1
+            }
         fi
     done
-
-    if [ -n "${missing}" ]; then
-        printf "${missing}\n" >> "${FILE_ZSHRC}" || {
-            loader_stop
-            printStyled error "Failed to update ${FILE_ZSHRC}"
-            return 1
-        }
-    fi
-
+    
     loader_stop
-    printStyled success "Configured  → ${GREEN}zsh${NONE}"
+    printStyled success "Configured  → ${GREEN}PATH${NONE}"
 }
 

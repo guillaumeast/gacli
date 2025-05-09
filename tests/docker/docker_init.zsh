@@ -3,8 +3,6 @@
 # FICHIER /tests/docker/docker_init.zsh
 ###############################
 
-TEST_CMD="sh \"${FILE_INSTALLER}\" brew"
-
 # TODO: add "opensuse-tumbleweed"
 SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "opensuse-leap" "mageia")
 
@@ -18,9 +16,6 @@ FILE_INSTALLER="${DIR_LOCAL_GACLI}/installer/ipkg.sh"
 VOLUME_LOCAL="${DIR_DOCKER}/shared"
 VOLUME_VIRTUAL="/shared"
 
-IMAGES_BUILT=()
-ARCH_FALLBACK=""
-
 # ────────────────────────────────────────────────────────────────
 # MAIN
 # ────────────────────────────────────────────────────────────────
@@ -33,15 +28,9 @@ main() {
     source "${DIR_DOCKER}/../../src/helpers/style.zsh"
     source "${DIR_DOCKER}/../../src/helpers/arch.zsh"
 
-    echo
     docker_init         || exit 1
-
-    echo
-    docker_build_images || exit 2
-    echo
-
+    docker_build        || exit 2
     docker_run          || exit 3
-    echo
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -49,9 +38,11 @@ main() {
 # ────────────────────────────────────────────────────────────────
 
 docker_init() {
-
+    
+    echo
     _docker_install || return 1
     _docker_install_buildx || return 2
+    echo
 }
 
 _docker_install() {
@@ -116,7 +107,7 @@ _docker_install_buildx() {
 # BUILD IMAGES
 # ────────────────────────────────────────────────────────────────
 
-docker_build_images() {
+docker_build() {
 
     local passed=0
     local fallback=0
@@ -124,81 +115,65 @@ docker_build_images() {
     local result=0
 
     printui block-highlight "Building images..."
-    for distro in "${SUPPORTED_DISTROS[@]}"; do
-        _docker_build_distro "${distro}"
-        result=$?
-        if (( $result == 0 )); then
-            printui passed "Built    → ${GREEN}${distro}${NONE}"
-        elif (( $result == 1 )); then
-            printui fallback "Fallback → ${GREEN}${distro} ${ORANGE}${ARCH_FALLBACK}${NONE}"
+
+    # Avoid iterating on non-matching patterns (Zsh expands to literal string)
+    setopt null_glob
+    for file in "${DIR_DOCKERFILES}"/**/Dockerfile.*; do
+
+        if ! _docker_build_with_fallback "${file}" "${image_name}"; then
+            return_value=1
+            continue
         fi
     done
+    unsetopt null_glob
 
     printui results bot $passed $fallback $failed
     echo
 }
 
-_docker_build_distro() {
-    
-    local distro=$1
-    local file=""
-    local image_name=""
-    local return_value=0
-
-    if [ -z "${distro}" ]; then
-        printui error "Expected: <distro>; received: '${1}'"
-        return 1
-    fi
-
-    # Avoid iterating on non-matching patterns (Zsh expands to literal string)
-    setopt null_glob
-    for file in "${DIR_DOCKERFILES}"/**/Dockerfile."${distro}"*; do
-
-        [[ ! -f "${file}" ]] && continue
-        image_name="${${file:t}#Dockerfile.}"
-
-        if _docker_build_with_fallback "${file}" "${image_name}"; then
-            IMAGES_BUILT+=("${image_name}")
-        else
-            return_value=$?
-        fi
-    done
-    unsetopt null_glob
-
-    return $return_value
-}
-
 _docker_build_with_fallback() {
 
     local file="${1}"
-    local image="${2}"
-    local fallbacks=()
-    local platform=""
+    local image="${${file:t}#Dockerfile.}"
 
-    [[ ! -f "${file}" || -z "${image}" ]] && {
+    [[ ! -f "${file}" ]] && {
+        (( failed++ ))
         printui error "[_docker_build_with_fallback] Expected: <file> <image> (received: '${1}' '${2}')"
         return 1
     }
 
+    loader_start "Building → ${image}"
+
     if docker build -f "${file}" -t "${image}" "${DIR_CONTEXT}" > /dev/null 2>&1; then
         (( passed++ ))
+        loader_stop
+        printui passed "Success  → ${GREEN}${image}${NONE}"
         return 0
     fi
 
+    local fallbacks=()
+    local platform=""
+
     fallbacks=("$(get_arch_fallbacks)") || return 1
-    ARCH_FALLBACK=""
+
     for arch in "${fallbacks[@]}"; do
+
         [[ -z "$arch" ]] && continue
+
         platform="--platform=linux/${arch}"
+
         if docker build ${platform} -f "${file}" -t "${image}" "${DIR_CONTEXT}" > /dev/null 2>&1; then
-            ARCH_FALLBACK=$platform
+
             (( fallback++ ))
+            loader_stop
+            printui fallback "Fallback → ${GREEN}${image}${ORANGE} ${platform}"
             return 1
         fi
     done
 
-    printui error "Failed → ${image}"
     (( failed++ ))
+    loader_stop
+    printui error "Failed → ${image}"
     return 2
 }
 
@@ -207,64 +182,60 @@ _docker_build_with_fallback() {
 # ────────────────────────────────────────────────────────────────
 
 docker_run() {
-
+    
+    local file=""
+    local image=""
+    local return_value=0
     local passed=0
     local fallback=0
     local failed=0
 
-    for distro in "${SUPPORTED_DISTROS[@]}"; do
-        printui block-highlight "Testing ${distro}..."
-        _docker_run_distro "${distro}"
-    done
-
-    printui results bot $passed $fallback $failed
-}
-
-_docker_run_distro() {
-    
-    local distro=$1
-    local file=""
-    local image=""
-    local return_value=0
-
-    if [ -z "${distro}" ]; then
-        printui error "Expected: <distro>; received: '${1}'"
-        return 1
-    fi
+    printui block-highlight "Running tests..."
 
     # Avoid iterating on non-matching patterns (Zsh expands to literal string)
     setopt null_glob
-    for file in "${DIR_DOCKERFILES}"/**/Dockerfile."${distro}"*; do
+    for file in "${DIR_DOCKERFILES}"/**/Dockerfile.*; do
 
         [[ ! -f "${file}" ]] && continue
         image="${${file:t}#Dockerfile.}"
 
-        mkdir -p "${VOLUME_LOCAL}" || {
-            printui error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
-            return 1
-        }
-        cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}" || {
-            printui error "Unable to copy installer"
-            return 1
-        }
-
         loader_start "Testing → ${image}"
 
-        TEST_CMD="sh \"${FILE_INSTALLER}\" brew"
-        if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" sh /shared/ipkg.sh brew >/dev/null 2>&1; then
+        if ! docker_copy_installer; then
+            (( failed++ ))
+            loader_stop
+            return 1
+        fi
+
+        if docker run -it -v "${VOLUME_LOCAL}:${VOLUME_VIRTUAL}" "${image}" sh /shared/ipkg.sh gacli >/dev/null 2>&1; then
+            (( passed++ ))
             loader_stop
             printui passed "Passed  → ${GREEN}${image}${GREY}"
-            (( passed++ ))
         else
-            loader_stop
-            printui error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
             return_value=1
             (( failed++ ))
+            loader_stop
+            printui error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
         fi
     done
     unsetopt null_glob
 
+    loader_stop
+    printui results bot $passed $fallback $failed
     return $return_value
+}
+
+docker_copy_installer() {
+
+    if ! mkdir -p "${VOLUME_LOCAL}"; then
+        printui error "Unable to find local volume: ${CYAN}'${VOLUME_LOCAL}'${CYAN}"
+        return 1
+    fi
+
+    if ! cp -r "${FILE_INSTALLER}" "${VOLUME_LOCAL}/${FILE_INSTALLER:t}"; then
+        printui error "Unable to copy installer"
+        return 1
+    fi
 }
 
 # ────────────────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ run() {
 
     _brew_update_ca_certificates
     _brew_install_with_fallback || return 1
-    _brew_config_path
+    _brew_update_path
     _brew_install_gcc
 
     if ! command -v brew >/dev/null 2>&1; then
@@ -85,7 +85,7 @@ _brew_install_with_fallback() {
     printStyled success "Installed   → ${GREEN}brew${NONE}"
 }
 
-_brew_config_path() {
+_brew_update_path() {
 
     [ "$(uname -s)" != "Linux" ] && return 0
 
