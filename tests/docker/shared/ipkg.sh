@@ -50,12 +50,16 @@ main() {
 
     echo
     printStyled wait "Fetchnig nested dependencies..."
+    echo
+
     merge_deps "$@" || exit 4
 
     if [ -n "${ARGS_PACKAGES}" ]; then
         echo
         printStyled wait "Installing packages..."
+        echo
         pkg_install "$ARGS_PACKAGES" || exit 4
+        echo
     fi
 
     [ -z "${ARGS_INSTALLERS}" ] && return 0
@@ -207,18 +211,15 @@ pkg_install() {
 
     if [ -z "${raw_deps}" ]; then
         printStyled error "Expected: <@packet_names>; received: '$@'"
-        echo
         return 1
     fi
 
     pkg_manager=$(pkg_get_current) || return 1
     formatted_deps=$(_pkg_format_deps "${pkg_manager}" $raw_deps) || return 1
 
-    echo
     _pkg_update "${pkg_manager}" || printStyled warning "Package manager update failed"
     _pkg_install "${pkg_manager}" "${formatted_deps}" || return_value=1
     _pkg_clean "${pkg_manager}" || printStyled warning "Cleanup failed"
-    echo
 
     return $return_value
 }
@@ -539,6 +540,9 @@ _http_install() {
     for client in $HTTP_CLIENTS; do
         if pkg_install "${client}"; then
             HTTP_CLIENT="$client"
+            echo
+            printStyled success "HTTP client → ${GREEN}${HTTP_CLIENT}${NONE}"
+            echo
             return 0
         fi
     done
@@ -637,7 +641,7 @@ EMOJI_INFO="✧"
 EMOJI_TBD="⚐"
 EMOJI_HIGHLIGHT="👉"
 EMOJI_DEBUG="🔎"
-EMOJI_WAIT="⏳"
+EMOJI_WAIT="👇"
 
 printStyled() {
 
