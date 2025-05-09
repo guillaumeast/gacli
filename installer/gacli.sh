@@ -66,12 +66,6 @@ _gacli_install() {
         }
     fi
 
-    mkdir -p "${DIR_TMP_GACLI}" || {
-        loader_stop
-        printStyled error "Unable to create folder: ${CYAN}${DIR_TMP_GACLI}${NONE}"
-        return 1
-    }
-
     tmp_archive="${DIR_TMP_IPKG}/gacli_archive.tar.gz"
     tmp_extracted="${DIR_TMP_IPKG}/gacli"
     http_download "${URL_ARCHIVE}" "${tmp_archive}"

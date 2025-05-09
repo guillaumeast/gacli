@@ -60,10 +60,11 @@ main() {
 
     [ -z "${ARGS_INSTALLERS}" ] && return 0
 
-    printStyled wait "Running installers..."
-    echo
     for installer in $ARGS_INSTALLERS; do
         
+        printStyled wait "Running ${installer} installer..."
+        echo
+
         if ! . "${DIR_TMP_IPKG}/${installer}.sh"; then
             printStyled warning "${RED}${installer}${NONE} → Unable to source installer"
             continue
