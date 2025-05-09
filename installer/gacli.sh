@@ -72,6 +72,12 @@ _gacli_install() {
 
     loader_start "Extracting  → ${tmp_extracted}"
 
+    mkdir -p "${tmp_extracted}" || {
+        loader_stop
+        printStyled error "Failed to create ${CYAN}${tmp_extracted}${NONE}"
+        return 1
+    }
+
     tar -xzf "${tmp_archive}" -C "${tmp_extracted}" --strip-components=1  >/dev/null 2>&1 || {
         loader_stop
         printStyled error "Extraction failed"
