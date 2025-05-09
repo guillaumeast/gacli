@@ -3,7 +3,7 @@
 # FICHIER /tests/docker/docker_init.zsh
 ###############################
 
-# TODO: add "opensuse-tumbleweed"
+# TODO: add "opensuse-tumbleweed, kali, parot, alpine..."
 SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "opensuse-leap" "mageia")
 
 DIR_DOCKER="${${(%):-%x}:A:h}"
@@ -212,16 +212,18 @@ docker_run() {
             loader_stop
             printui passed "Passed  → ${GREEN}${image}${GREY}"
         else
+            container_exit_code=$?
             return_value=1
             (( failed++ ))
             loader_stop
-            printui error "Failed  → ${RED}${image}${GREY} → ${RED}'exit ${?}'${NONE}"
+            printui error "Failed  → ${RED}${image}${GREY} → ${RED}exit ${container_exit_code}${NONE}"
         fi
     done
     unsetopt null_glob
 
     loader_stop
     printui results bot $passed $fallback $failed
+    echo
     return $return_value
 }
 

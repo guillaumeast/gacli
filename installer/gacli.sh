@@ -47,7 +47,7 @@ run() {
 
     loader_stop
     echo
-    printStyled highlight "Installed   → ${GREEN}gacli${NONE} → Restart your terminal or run ${YELLOW}exec zsh${NONE}"
+    printStyled highlight "Restart your terminal or run ${YELLOW}exec zsh${NONE}"
     echo
 }
 
@@ -162,7 +162,7 @@ _gacli_update_path() {
             }
         fi
     done
-    
+
     loader_stop
     printStyled success "Configured  → ${GREEN}PATH${NONE}"
 }

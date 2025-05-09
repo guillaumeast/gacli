@@ -32,17 +32,6 @@ ARGS_PACKAGES=""
 # TODO: add --quiet         → only show error messages
 # TODO: add --verbose       → show all raw commands outputs
 
-ipkg_exit() {
-
-    exit_code=$1
-
-    loader_stop
-
-    [ -d "${DIR_TMP_IPKG}" ] && rm -rf "${DIR_TMP_IPKG}"
-
-    exit $exit_code
-}
-
 main() {
 
     args="$@"
@@ -89,23 +78,35 @@ main() {
         echo
     fi
 
-    [ -z "${ARGS_INSTALLERS}" ] && return 0
+    if [ -n "${ARGS_INSTALLERS}" ]; then
 
-    for installer in $ARGS_INSTALLERS; do
-        
-        printStyled wait "Running ${installer} installer..."
-        echo
+        for installer in $ARGS_INSTALLERS; do
+            
+            printStyled wait "Running ${installer} installer..."
+            echo
 
-        if ! . "${DIR_TMP_IPKG}/${installer}.sh"; then
-            printStyled warning "${RED}${installer}${NONE} → Unable to source installer"
-            continue
-        fi
+            if ! . "${DIR_TMP_IPKG}/${installer}.sh"; then
+                printStyled warning "${RED}${installer}${NONE} → Unable to source installer"
+                continue
+            fi
 
-        run || exit_code=5
-        echo
-    done
+            run || exit_code=5
+            echo
+        done
+    fi
 
     ipkg_exit $exit_code
+}
+
+ipkg_exit() {
+
+    exit_code=$1
+
+    loader_stop
+
+    [ -d "${DIR_TMP_IPKG}" ] && rm -rf "${DIR_TMP_IPKG}"
+
+    exit "$exit_code"
 }
 
 # ────────────────────────────────────────────────────────────────
@@ -231,12 +232,10 @@ FORMAT_ZYPPER="procps-ng=procps nghttp2="
 
 UPDATE_IS_DONE="false"
 
-# TODO: pkg_install → update x 1 → install x N → clean x 1
-# TODO: progress bar (current = installed / total)
 pkg_install() {
 
     raw_deps="$@"
-    return_value=0
+    is_failure="false"
 
     if [ -z "${raw_deps}" ]; then
         printStyled error "Expected: <@packet_names>; received: '$@'"
@@ -247,10 +246,11 @@ pkg_install() {
     formatted_deps=$(_pkg_format_deps "${pkg_manager}" $raw_deps) || return 1
 
     _pkg_update "${pkg_manager}" || printStyled warning "Package manager update failed"
-    _pkg_install "${pkg_manager}" "${formatted_deps}" || return_value=1
+    _pkg_install "${pkg_manager}" "${formatted_deps}" || is_failure="true"
     _pkg_clean "${pkg_manager}" || printStyled warning "Cleanup failed"
 
-    return $return_value
+    [ "$is_failure" = "true" ] && return 1
+    return 0
 }
 
 pkg_get_current() {
@@ -422,7 +422,7 @@ _pkg_install() {
     pkg_manager="${1}"
     shift
     deps="$@"
-    return_value=0
+    return_failure="false"
 
     if [ -z "${pkg_manager}" ] || [ -z "${deps}" ]; then
         printStyled error "[_pkg_install] Expected: <pkg_manager> <@deps>"
@@ -467,12 +467,13 @@ _pkg_install() {
         if [ $is_installed = "true" ]; then
             printStyled success "Installed   → ${GREEN}${dep}${NONE}"
         else
-            return_value=1
+            return_failure="true"
             printStyled warning "${RED}${dep}${YELLOW} install failed"
         fi
     done
 
-    return $return_value
+    [ "$return_failure" = "true" ] && printStyled debug "[_pkg_install] failed" && return 1
+    return 0
 }
 
 _pkg_clean() {
