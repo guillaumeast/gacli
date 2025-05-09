@@ -6,8 +6,12 @@
 
 # Interface for Package Managers
 
+# Test it by simply running:
+# cp "/Users/gui/Repos/gacli/gacli/installer/ipkg.sh" "/Users/gui/Repos/gacli/gacli/tests/docker/shared/ipkg.sh"
+# docker run -it --rm  -v "/Users/gui/Repos/gacli/gacli/tests/docker/shared:/shared" ubuntu sh /shared/ipkg.sh gacli
+
 REPO="guillaumeast/gacli" # TODO: Create own repo ?
-BRANCH="dev"
+BRANCH="dev" # TODO: master
 URL_INSTALLERS_DIR="https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/installer"
 INSTALLERS="brew gacli"
 DIR_TMP_IPKG="/tmp/ipkg"
@@ -42,7 +46,7 @@ main() {
         printStyled error "Unable to create tmp dir: ${CYAN}${DIR_TMP_IPKG}${NONE}"
         return 1
     }
-    trap '[ -d "${DIR_TMP_IPKG}" ] && rm -rf "${DIR_TMP_IPKG}"' EXIT
+    trap 'rm -rf "${DIR_TMP_IPKG}"' EXIT
 
     echo
     printStyled wait "Fetchnig nested dependencies..."
@@ -340,7 +344,6 @@ _pkg_update() {
     fi
 
     loader_start "Updating    → pkg_manager"
-    trap 'loader_stop' EXIT
 
     case "${pkg_manager}" in
         brew)
@@ -397,7 +400,6 @@ _pkg_install() {
 
     for dep in $deps; do
         loader_start "Installing  → ${dep}"
-        trap 'loader_stop' EXIT
 
         is_installed="true"
         case "${pkg_manager}" in
@@ -449,7 +451,6 @@ _pkg_clean() {
     fi
 
     loader_start "Processing  → cleanup"
-    trap 'loader_stop' EXIT
 
     case "${pkg_manager}" in
         brew)
@@ -519,7 +520,6 @@ http_download() {
     esac
 
     loader_start "Downloading from '${CYAN}${url}${ORANGE}'..."
-    trap 'loader_stop' EXIT
 
     if ! ${download_cmd} "${url}" > "${destination}"; then # TODO: > /dev/null 2>&1
         loader_stop
@@ -572,7 +572,6 @@ DEFAULT_MESSAGE="Loading..."
 MESSAGE=""
 SPINNER_PID=""
 
-# ⚠️ Don't forget in calling function → trap 'loader_stop' EXIT
 loader_start() {
 
     message="${1:-$DEFAULT_MESSAGE}"

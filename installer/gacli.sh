@@ -15,7 +15,6 @@ DIR_DEST=".gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
 SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
-DIR_TMP_GACLI="/tmp/gacli"
 FILE_ZSHRC=".zshrc"
 
 # ────────────────────────────────────────────────────────────────
@@ -40,35 +39,13 @@ run() {
         return 0
     fi
     
-    _gacli_download || return 1
-
-    loader_start "Installing  → gacli"
-    chmod +x "${ENTRY_POINT}" || {
-        loader_stop
-        printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
-        return 1
-    }
-    _create_wrapper || {
-        loader_stop
-        printStyled warning "Failed to create wrapper"
-        return 1
-    }
-    _update_zshrc || {
-        loader_stop
-        printStyled warning "Failed to update .zshrc file"
-        return 1
-    }
-    _cleanup || {
-        loader_stop
-        printStyled warning "Failed to cleanup install files"
-        return 1
-    }
+    _gacli_install          || return 1
+    _gacli_create_wrapper   || return 1
+    _gacli_update_zshrc     || return 1
 
     loader_stop
-    printStyled success "Installed   → ${GREEN}gacli${NONE}"
-
     echo
-    printStyled highlight "Restart your terminal or run ${YELLOW}exec zsh${NONE}"
+    printStyled highlight "Installed   → ${GREEN}gacli${NONE} → Restart your terminal or run ${YELLOW}exec zsh${NONE}"
     echo
 }
 
@@ -76,9 +53,7 @@ run() {
 # PRIVATE
 # ────────────────────────────────────────────────────────────────
 
-_gacli_download() {
-
-    loader_start "Downloading → ${CYAN}${URL_ARCHIVE}${NONE}"
+_gacli_install() {
 
     if [ -d "${DIR_DEST}" ]; then
 
@@ -92,27 +67,44 @@ _gacli_download() {
     fi
 
     mkdir -p "${DIR_TMP_GACLI}" || {
+        loader_stop
         printStyled error "Unable to create folder: ${CYAN}${DIR_TMP_GACLI}${NONE}"
         return 1
     }
 
-    curl -fsSL "${URL_ARCHIVE}" | tar -xzf - -C "${DIR_TMP_GACLI}" --strip-components=1 || { # TODO: >/dev/null 2>&1 after tests
+    tmp_archive="${DIR_TMP_IPKG}/gacli_archive.tar.gz"
+    tmp_extracted="${DIR_TMP_IPKG}/gacli"
+    http_download "${URL_ARCHIVE}" "${tmp_archive}"
+
+    loader_start "Extracting  → ${tmp_extracted}"
+
+    tar -xzf "${tmp_archive}" -C "${tmp_extracted}" --strip-components=1  >/dev/null 2>&1 || {
         loader_stop
-        printStyled error "Download failed"
+        printStyled error "Extraction failed"
         return 1
     }
 
-    mv "${DIR_TMP_GACLI}/src" "${DIR_DEST}" || {
+    loader_start "Moving to   → ${DIR_DEST}"
+
+    mv "${tmp_extracted}/src" "${DIR_DEST}" || {
         loader_stop
         printStyled error "Unable to move files into: ${CYAN}${DIR_DEST}${NONE}"
         return 1
     }
 
     loader_stop
-    printStyled success "Downloaded  → ${CYAN}${URL_ARCHIVE}${NONE}"
+    printStyled success "Installed   → ${GREEN}gacli${NONE}"
 }
 
-_create_wrapper() {
+_gacli_create_wrapper() {
+
+    loader_start "Creating    → wrapper"
+
+    chmod +x "${ENTRY_POINT}" || {
+        loader_stop
+        printStyled warning "Failed to make executable → ${CYAN}${ENTRY_POINT}${YELLOW}"
+        return 1
+    }
 
     mkdir -p "${SYMDIR}" || {
         loader_stop
@@ -128,14 +120,21 @@ _create_wrapper() {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec \"$(command -v zsh)\" \"${ENTRY_POINT}\" \"\$@\""
     } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
+        loader_stop
         printStyled error "Failed to create ${ORANGE}wrapper${NONE}"
         return 1
     }
+
+    loader_stop
+    printStyled success "Created     → ${GREEN}wrapper${NONE}"
 }
 
-_update_zshrc() {
+_gacli_update_zshrc() {
+
+    loader_start "Configuring → zsh"
 
     touch "${FILE_ZSHRC}" || {
+        loader_stop
         printStyled error "Unable to create .zshrc file: ${CYAN}${FILE_ZSHRC}${NONE}"
         return 1
     }
@@ -153,45 +152,13 @@ _update_zshrc() {
 
     if [ -n "${missing}" ]; then
         printf "${missing}\n" >> "${FILE_ZSHRC}" || {
+            loader_stop
             printStyled error "Failed to update ${FILE_ZSHRC}"
             return 1
         }
     fi
-}
 
-_cleanup() {
-
-    # Resolve installer symlinks
-    installer="$0"
-    while [ -L "${installer}" ]; do
-
-        dir="$(dirname "${installer}")"
-        installer="$(readlink "${installer}")"
-
-        case "${installer}" in
-            /*)
-                ;;
-            *)
-                installer="${dir}/${installer}"
-                ;;
-        esac
-    done
-    dir="$(dirname "${installer}")"
-    base="$(basename "${installer}")"
-
-    # Move to installer directory and get absolute path
-    # TODO: do not change activ dir !!
-    cd "${dir}" >/dev/null 2>&1 || {
-        printStyled fallback "Unable to delete installer"
-        return 1
-    }
-    abs_dir="$(pwd -P)" || {
-        printStyled fallback "Unable to delete installer"
-        return 1
-    }
-    installer="${abs_dir}/${base}"
-
-    [ -f "${installer}" ] && rm -f "${installer}"
-    [ -d "${DIR_TMP_GACLI}" ] && rm -rf "${DIR_TMP_GACLI}"
+    loader_stop
+    printStyled success "Configured  → ${GREEN}zsh${NONE}"
 }
 
