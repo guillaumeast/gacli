@@ -60,15 +60,15 @@ _brew_update_ca_certificates() {
 
 _brew_install_with_fallback() {
 
-    bash_path="$(command -v bash || printf %s '/bin/bash')"
-    install_cmd="yes '' | ${bash_path} ${tmp_installer} >/dev/null 2>&1"
-    fallback_cmd="HOMEBREW_NO_INSTALL_FROM_API=1 ${install_cmd}"
-
     tmp_installer="${DIR_TMP_IPKG}/homebrew_official_installer.sh"
     http_download "${URL_OFFICIAL_BREW_INSTALLER}" "${tmp_installer}" || return 1
 
     loader_start "Installing  → brew"
 
+    bash_path="$(command -v bash || printf %s '/bin/bash')"
+    install_cmd="yes '' | ${bash_path} ${tmp_installer} >/dev/null 2>&1"
+    fallback_cmd="HOMEBREW_NO_INSTALL_FROM_API=1 ${install_cmd}"
+    
     if ! eval "${install_cmd}"; then
 
         printStyled warning "Failed      → Fallback on API-less method..."
