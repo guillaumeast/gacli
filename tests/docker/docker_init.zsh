@@ -3,8 +3,8 @@
 # FICHIER /tests/docker/docker_init.zsh
 ###############################
 
-# TODO: add "opensuse-tumbleweed, kali, parot, alpine..."
-SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "opensuse-leap" "mageia")
+# TODO: add "alpine..."
+SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "mageia" "kalilinux/kali-rolling" "parrotsec/core" "opensuse-leap" "opensuse-tumbleweed")
 
 DIR_DOCKER="${${(%):-%x}:A:h}"
 DIR_DOCKERFILES="${DIR_DOCKER}/dockerfiles"

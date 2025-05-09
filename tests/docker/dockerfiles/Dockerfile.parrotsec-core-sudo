@@ -1,0 +1,16 @@
+FROM parrotsec/core
+
+# Add sudo
+RUN apt-get update && \
+    apt-get install -y sudo && \
+    apt-get clean
+
+RUN groupadd -f sudo
+RUN echo "%sudo ALL=(ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
+
+RUN useradd -m -s /bin/sh appuser -G sudo
+USER appuser
+WORKDIR /home/appuser
+
+CMD [ "sh" ]
+

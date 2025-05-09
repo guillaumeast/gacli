@@ -15,7 +15,7 @@ DIR_DEST=".gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
 SYMDIR=".local/bin"
 SYMLINK="${SYMDIR}/gacli"
-FILE_ZSHRC=".zshrc"
+FILE_ZSHRC="${HOME}/.zshrc"
 
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
 
@@ -149,15 +149,15 @@ _gacli_update_path() {
             "export PATH=\"${SYMDIR}:\$PATH\"" \
             "source ${ENTRY_POINT}"
         do
-            if ! grep -Fq "$line" "$FILE_ZSHRC"; then
+            if ! grep -Fq "$line" "$file"; then
                 missing="${missing}\n${line}"
             fi
         done
 
         if [ -n "${missing}" ]; then
-            printf "${missing}\n" >> "${FILE_ZSHRC}" || {
+            printf "${missing}\n" >> "${file}" || {
                 loader_stop
-                printStyled error "Failed to update ${FILE_ZSHRC}"
+                printStyled error "Failed to update ${file}"
                 return 1
             }
         fi
