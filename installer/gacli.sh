@@ -42,24 +42,30 @@ run() {
     
     _gacli_download || return 1
 
+    loader_start "Installing  → gacli"
     chmod +x "${ENTRY_POINT}" || {
+        loader_stop
         printStyled warning "Failed to make ${CYAN}${ENTRY_POINT}${YELLOW} executable"
         return 1
     }
-    printStyled success "Entry point → ${GREEN}Executable${NONE}"
-
-    _create_wrapper || return 1
-    
-    _update_zshrc   || return 1
-    
-    _cleanup        || return 1
-
-    if ! zsh -c 'command -v gacli' >/dev/null 2>&1; then
-        printStyled error "Unable to install ${ORANGE}Gacli${NONE}"
+    _create_wrapper || {
+        loader_stop
+        printStyled warning "Failed to create wrapper"
         return 1
-    fi
+    }
+    _update_zshrc || {
+        loader_stop
+        printStyled warning "Failed to update .zshrc file"
+        return 1
+    }
+    _cleanup || {
+        loader_stop
+        printStyled warning "Failed to cleanup install files"
+        return 1
+    }
 
-    printStyled success "Ready       → ${GREEN}Gacli${NONE}"
+    loader_stop
+    printStyled success "Installed   → ${GREEN}gacli${NONE}"
 
     echo
     printStyled highlight "Restart your terminal or run ${YELLOW}exec zsh${NONE}"
@@ -72,7 +78,7 @@ run() {
 
 _gacli_download() {
 
-    loader_start "Downloading → Gacli"
+    loader_start "Downloading → ${CYAN}${URL_ARCHIVE}${NONE}"
 
     if [ -d "${DIR_DEST}" ]; then
 
@@ -103,12 +109,10 @@ _gacli_download() {
     }
 
     loader_stop
-    printStyled success "Downloaded  → ${GREEN}GACLI${NONE}"
+    printStyled success "Downloaded  → ${CYAN}${URL_ARCHIVE}${NONE}"
 }
 
 _create_wrapper() {
-
-    loader_start "Creating    → Wrapper"
 
     mkdir -p "${SYMDIR}" || {
         loader_stop
@@ -124,18 +128,12 @@ _create_wrapper() {
         printf '%s\n' '#!/usr/bin/env sh'
         printf '%s\n' "exec \"$(command -v zsh)\" \"${ENTRY_POINT}\" \"\$@\""
     } > "${SYMLINK}" && chmod +x "${SYMLINK}" || {
-        loader_stop
         printStyled error "Failed to create ${ORANGE}wrapper${NONE}"
         return 1
     }
-
-    loader_stop
-    printStyled success "Created     → ${GREEN}wrapper${GREY} → ${CYAN}${SYMLINK}${GREY} → ${CYAN}${ENTRY_POINT}${NONE}"
 }
 
 _update_zshrc() {
-
-    loader_start "Updating    → zsh config file"
 
     touch "${FILE_ZSHRC}" || {
         printStyled error "Unable to create .zshrc file: ${CYAN}${FILE_ZSHRC}${NONE}"
@@ -155,21 +153,13 @@ _update_zshrc() {
 
     if [ -n "${missing}" ]; then
         printf "${missing}\n" >> "${FILE_ZSHRC}" || {
-            loader_stop
             printStyled error "Failed to update ${FILE_ZSHRC}"
             return 1
         }
     fi
-
-    loader_stop
-    printStyled success "Updated     → ${GREEN}zsh${GREY} config file"
 }
 
 _cleanup() {
-
-    # TODO: create a wrapper for cleanup + exit to ensure tmp files are always deleted after installer succeed or failed
-
-    loader_start "Processing  → cleanup"
 
     # Resolve installer symlinks
     installer="$0"
@@ -192,12 +182,10 @@ _cleanup() {
     # Move to installer directory and get absolute path
     # TODO: do not change activ dir !!
     cd "${dir}" >/dev/null 2>&1 || {
-        loader_stop
         printStyled fallback "Unable to delete installer"
         return 1
     }
     abs_dir="$(pwd -P)" || {
-        loader_stop
         printStyled fallback "Unable to delete installer"
         return 1
     }
@@ -205,8 +193,5 @@ _cleanup() {
 
     [ -f "${installer}" ] && rm -f "${installer}"
     [ -d "${DIR_TMP_GACLI}" ] && rm -rf "${DIR_TMP_GACLI}"
-
-    loader_stop
-    printStyled success "Completed   → ${GREEN}cleanup${NONE}"
 }
 
