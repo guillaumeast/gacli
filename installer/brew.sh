@@ -5,7 +5,7 @@
 
 # Requires ipkg (Interface for Package Managers)
 
-BREW_INSTALL_URL="https://raw.githubusercontent.com/brew/install/HEAD/install.sh"
+BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 FILES_RC="${HOME}/.profile ${HOME}/.kshrc ${HOME}/.bashrc ${HOME}/.zshrc ${HOME}/.dashrc ${HOME}/.tcshrc ${HOME}/.cshrc"
 BREW_DEPS="bash git curl file gcc make binutils gawk gzip ca-certificates perl brotli ruby procps cyrus-sasl nghttp2"
 
@@ -99,7 +99,7 @@ _brew_config() {
 _brew_get_path() {
 
     location_1="/home/linuxbrew/.linuxbrew/bin/brew"
-    location_2="/home/linuxbrew/.linuxbrew/brew/bin/brew"
+    location_2="/home/linuxbrew/.linuxbrew/Homebrew/bin/brew"
 
     command -v brew && echo "$(command -v brew)" && return 0
     [ -x "${location_1}" ] && echo "$location_1" && return 0
