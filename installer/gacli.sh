@@ -11,9 +11,9 @@ URL_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 GACLI_DEPS_LINUX="curl tar"
 GACLI_DEPS_COMMON="brew zsh coreutils jq"
 
-DIR_DEST=".gacli"
+DIR_DEST="${HOME}/.gacli"
 ENTRY_POINT="${DIR_DEST}/main.zsh"
-SYMDIR=".local/bin"
+SYMDIR="${HOME}/.local/bin"
 SYMLINK="${SYMDIR}/gacli"
 FILE_ZSHRC="${HOME}/.zshrc"
 
@@ -143,6 +143,7 @@ _gacli_update_path() {
     for line in \
         '# GACLI' \
         "export PATH=\"${SYMDIR}:\$PATH\"" \
+        "export GACLI_DIR=${DIR_DEST}" \
         "source ${ENTRY_POINT}"
     do
         if ! grep -Fq "${line}" "${FILE_ZSHRC}"; then

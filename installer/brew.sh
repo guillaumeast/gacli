@@ -121,11 +121,15 @@ _brew_get_path() {
     location_1="/home/linuxbrew/.linuxbrew/bin/brew"
     location_2="/home/linuxbrew/.linuxbrew/Homebrew/bin/brew"
 
-    command -v brew && echo "$(command -v brew)" && return 0
-    [ -x "${location_1}" ] && echo "$location_1" && return 0
-    [ -x "${location_2}" ] && echo "$location_2" && return 0
-
-    return 1
+    if command -v brew; then
+        echo "$(command -v brew)"
+    elif [ -x "${location_1}" ]; then
+        echo "$location_1"
+    elif [ -x "${location_2}" ]; then
+        echo "$location_2"
+    else
+        return 1
+    fi
 }
 
 _brew_install_gcc() {

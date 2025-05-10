@@ -3,7 +3,7 @@
 # FICHIER /tests/docker/docker_init.zsh
 ###############################
 
-# TODO: add "alpine..."
+# Alpine not supported because it uses musl instead of glibc
 SUPPORTED_DISTROS=("debian" "ubuntu" "archlinux" "fedora" "mageia" "kalilinux/kali-rolling" "parrotsec/core" "opensuse-leap" "opensuse-tumbleweed")
 
 DIR_DOCKER="${${(%):-%x}:A:h}"

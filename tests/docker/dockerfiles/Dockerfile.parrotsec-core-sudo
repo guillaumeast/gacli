@@ -12,5 +12,8 @@ RUN useradd -m -s /bin/sh appuser -G sudo
 USER appuser
 WORKDIR /home/appuser
 
+# Reset parrotsec custom entry point
+ENTRYPOINT []
+
 CMD [ "sh" ]
 
