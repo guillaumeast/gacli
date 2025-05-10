@@ -39,9 +39,9 @@ run() {
         return 0
     fi
     
-    _gacli_install          || return 1
-    _gacli_create_wrapper   || return 1
-    _gacli_update_path     || return 1
+    _gacli_install        || return 1
+    _gacli_create_wrapper || return 1
+    _gacli_update_path    || return 1
 
     loader_stop
     echo

@@ -24,7 +24,7 @@ ARGS_PACKAGES=""
 # ────────────────────────────────────────────────────────────────
 
 # TODO: check if packets are installed with command -v ?
-# TODO: add --install       → install ipkg command
+# TODO: create installer    → install `ipkg` command (should be a C program ??)
 # TODO: add --bulk          → install all deps at once
 # TODO: add --no-update     → don't update before install
 # TODO: add --force         → don't skip already installed packages
@@ -557,7 +557,7 @@ http_download() {
 
     loader_start "Downloading → ${CYAN}${url}${ORANGE}..."
 
-    if ! ${download_cmd} "${url}" > "${destination}"; then # TODO: > /dev/null 2>&1
+    if ! ${download_cmd} "${url}" > "${destination}"; then
         loader_stop
         printStyled error "Failed to download from '${CYAN}${url}${NONE}'"
         echo
